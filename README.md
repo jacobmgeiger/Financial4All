@@ -23,20 +23,21 @@ F4A utilizes the SEC's extensive public database, specifically the XBRL (eXtensi
 
 To get started with Financial4All, follow these simple steps:
 
-1.  **Insert Your Email**: The SEC API requires an email address in the User-Agent header for all requests. Open `data_loader.py` and replace the placeholder email with your own:
+
+
+1.  **Install Dependencies**: Navigate to the project's root directory in your terminal and install the required Python packages:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+2.  **Insert Your Email**: The SEC API requires an email address in the User-Agent header for all requests. Open `data_loader.py` and replace the placeholder email with your own:
     ```python
     EMAIL = 'your_email@example.com'  # Replace with your actual email
     ```
 
-2.  **Install Dependencies**: Navigate to the project's root directory in your terminal and install the required Python packages:
-    ```bash
-pip install -r requirements.txt
-    ```
-    (Note: A `requirements.txt` file should be created if not already present, containing `dash`, `dash-bootstrap-components`, `plotly`, `pandas`, `numpy`, and `requests`.)
-
 3.  **Run the Application**: Once dependencies are installed, run the main application script:
     ```bash
-python app.py
+    python app.py
     ```
 
 4.  **Access the Dashboard**: The application will start a local Flask dashboard, typically accessible at `http://127.0.0.1:8050/` in your web browser. You can then enter a ticker symbol and start exploring financial data! 
