@@ -1,0 +1,27 @@
+ipykernel
+python-dotenv
+requests
+
+# Data Science and Machine Learning
+numpy>=1.21.0
+pandas>=1.3.0
+matplotlib>=3.4.0
+
+# Utilities and Progress Bars
+tqdm>=4.62.0
+jupyter>=1.0.0
+ipython>=7.0.0
+
+# Visualization
+seaborn>=0.11.0
+
+# Additional utilities
+typing-extensions>=4.0.0
+
+customtkinter
+
+dash
+dash-core-components
+dash-html-components
+dash-table
+dash-bootstrap-components
