@@ -25,3 +25,9 @@ dash-core-components
 dash-html-components
 dash-table
 dash-bootstrap-components
+
+yfinance
+plotly
+statsmodels
+openpyxl
+py-xbrl
