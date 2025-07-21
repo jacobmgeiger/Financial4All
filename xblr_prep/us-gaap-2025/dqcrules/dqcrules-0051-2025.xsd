@@ -1,0 +1,109 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+2010-2025 Financial Accounting Foundation; (c) 2007-2010 XBRL US, Inc.; (c) 2020-2025 XBRL US, Inc. All Rights Reserved.
+Notice: Authorized Uses are Set Forth at https://xbrl.fasb.org/terms/TaxonomiesTermsConditions.html
+-->
+<xs:schema targetNamespace='http://fasb.org/dqcrules-0051/2025' elementFormDefault='qualified' xmlns:xs='http://www.w3.org/2001/XMLSchema' xmlns:dqcrules-0051='http://fasb.org/dqcrules-0051/2025' xmlns:dqcrules='http://fasb.org/dqcrules/2025' xmlns:us-gaap='http://fasb.org/us-gaap/2025' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:ref='http://www.xbrl.org/2006/ref' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xbrli='http://www.xbrl.org/2003/instance' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:xbrldt='http://xbrl.org/2005/xbrldt' xmlns='http://www.xbrl.org/2003/linkbase' xsi:schemaLocation='http://www.xbrl.org/2006/ref http://www.xbrl.org/2006/ref-2006-02-27.xsd http://fasb.org/dqcrules/2025 dqcrules-2025.xsd'>
+<xs:import namespace='http://www.xbrl.org/2003/instance' schemaLocation='http://www.xbrl.org/2003/xbrl-instance-2003-12-31.xsd'/>
+<xs:import namespace='http://www.xbrl.org/2003/linkbase' schemaLocation='http://www.xbrl.org/2003/xbrl-linkbase-2003-12-31.xsd'/>
+<xs:import namespace='http://www.xbrl.org/2006/ref' schemaLocation='http://www.xbrl.org/2006/ref-2006-02-27.xsd'/>
+<xs:import namespace='http://xbrl.org/2005/xbrldt' schemaLocation='http://www.xbrl.org/2005/xbrldt-2005.xsd'/>
+<xs:import namespace='http://fasb.org/dqcrules/2025' schemaLocation='dqcrules-2025.xsd'/>
+<xs:import namespace='http://fasb.org/us-roles/2025' schemaLocation='../elts/us-roles-2025.xsd'/>
+<xs:import namespace='http://fasb.org/us-gaap/2025' schemaLocation='../elts/us-gaap-2025.xsd'/>
+<xs:annotation>
+<xs:appinfo>
+<link:roleType roleURI='http://fasb.org/us-gaap/role/dqc/0051' id='dqc_0051'>
+<link:definition>DQC.US.0051</link:definition>
+<link:usedOn>link:definitionLink</link:usedOn>
+<link:usedOn>link:referenceLink</link:usedOn>
+<link:usedOn>link:labelLink</link:usedOn>
+</link:roleType>
+<link:linkbase id='lnk'>
+<link:roleRef roleURI='http://fasb.org/us-gaap/role/dqc/0051' xlink:type='simple' xlink:href='#dqc_0051'/>
+<link:roleRef roleURI='http://fasb.org/us-gaap/role/dqc/dqcNote' xlink:href='dqcrules-2025.xsd#dqcn' xlink:type='simple'/>
+<link:arcroleRef arcroleURI='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:href='dqcrules-2025.xsd#rule-concept' xlink:type='simple'/>
+<link:roleRef roleURI='http://fasb.org/us-gaap/role/dqc/ruleExclusions' xlink:href='dqcrules-2025.xsd#dqcre' xlink:type='simple'/>
+<link:roleRef roleURI='http://fasb.org/us-gaap/role/dqc/ruleID' xlink:href='dqcrules-2025.xsd#dqcrid' xlink:type='simple'/>
+<link:labelLink xlink:type='extended' xlink:role='http://fasb.org/us-gaap/role/dqc/0051'>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0051_Dqc_0051' xlink:label='loc_dqcrules_Dqc_0051'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0051_Dqc_0051_BeforeTaxItems' xlink:label='loc_dqcrules_Dqc_0051_BeforeTaxItems'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0051_Dqc_0051_CalculationCheck' xlink:label='loc_dqcrules_Dqc_0051_CalculationCheck'/>
+<link:label xlink:type='resource' xlink:role='http://www.xbrl.org/2003/role/label' xlink:label='lbl_dqcrules_Dqc_0051' xml:lang='en-US'>DQC.US.0051 [Abstract]</link:label>
+<link:label xlink:type='resource' xlink:role='http://www.xbrl.org/2003/role/label' xlink:label='lbl_dqcrules_Dqc_0051_BeforeTaxItems' xml:lang='en-US'>DQC.US.0051.Before Tax Items [Abstract]</link:label>
+<link:label xlink:type='resource' xlink:role='http://www.xbrl.org/2003/role/label' xlink:label='lbl_dqcrules_Dqc_0051_CalculationCheck' xml:lang='en-US'>DQC.US.0051.Calculation Check [Abstract]</link:label>
+<link:labelArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-label' xlink:from='loc_dqcrules_Dqc_0051' xlink:to='lbl_dqcrules_Dqc_0051'/>
+<link:labelArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-label' xlink:from='loc_dqcrules_Dqc_0051_BeforeTaxItems' xlink:to='lbl_dqcrules_Dqc_0051_BeforeTaxItems'/>
+<link:labelArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-label' xlink:from='loc_dqcrules_Dqc_0051_CalculationCheck' xlink:to='lbl_dqcrules_Dqc_0051_CalculationCheck'/>
+</link:labelLink>
+<link:definitionLink xlink:type='extended' xlink:role='http://fasb.org/us-gaap/role/dqc/0051'>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0051_Dqc_0051' xlink:label='loc_Dqc_0051'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0051_Dqc_0051_BeforeTaxItems' xlink:label='loc_Dqc_0051_BeforeTaxItems'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0051_Dqc_0051_CalculationCheck' xlink:label='loc_Dqc_0051_CalculationCheck'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_CurrentFederalStateAndLocalTaxExpenseBenefit' xlink:label='loc_CurrentFederalStateAndLocalTaxExpenseBenefit' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_CurrentFederalTaxExpenseBenefit' xlink:label='loc_CurrentFederalTaxExpenseBenefit' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_CurrentForeignTaxExpenseBenefit' xlink:label='loc_CurrentForeignTaxExpenseBenefit' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_CurrentIncomeTaxExpenseBenefit' xlink:label='loc_CurrentIncomeTaxExpenseBenefit' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_CurrentStateAndLocalTaxExpenseBenefit' xlink:label='loc_CurrentStateAndLocalTaxExpenseBenefit' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DeferredFederalIncomeTaxExpenseBenefit' xlink:label='loc_DeferredFederalIncomeTaxExpenseBenefit' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DeferredFederalStateAndLocalTaxExpenseBenefit' xlink:label='loc_DeferredFederalStateAndLocalTaxExpenseBenefit' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DeferredForeignIncomeTaxExpenseBenefit' xlink:label='loc_DeferredForeignIncomeTaxExpenseBenefit' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DeferredIncomeTaxExpenseBenefit' xlink:label='loc_DeferredIncomeTaxExpenseBenefit' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DeferredStateAndLocalIncomeTaxExpenseBenefit' xlink:label='loc_DeferredStateAndLocalIncomeTaxExpenseBenefit' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeLossAttributableToParent' xlink:label='loc_IncomeLossAttributableToParent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest' xlink:label='loc_IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeLossIncludingPortionAttributableToNoncontrollingInterest' xlink:label='loc_IncomeLossIncludingPortionAttributableToNoncontrollingInterest' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeTaxExpenseBenefit' xlink:label='loc_IncomeTaxExpenseBenefit' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherTaxExpenseBenefit' xlink:label='loc_OtherTaxExpenseBenefit' xlink:type='locator'/>
+<link:definitionArc order='1.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051' xlink:to='loc_Dqc_0051_BeforeTaxItems' xlink:type='arc'/>
+<link:definitionArc order='2.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051' xlink:to='loc_Dqc_0051_CalculationCheck' xlink:type='arc'/>
+<link:definitionArc order='1.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051_BeforeTaxItems' xlink:to='loc_IncomeLossIncludingPortionAttributableToNoncontrollingInterest' xlink:type='arc'/>
+<link:definitionArc order='2.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051_BeforeTaxItems' xlink:to='loc_IncomeLossAttributableToParent' xlink:type='arc'/>
+<link:definitionArc order='3.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051_BeforeTaxItems' xlink:to='loc_IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest' xlink:type='arc'/>
+<link:definitionArc order='1.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051_CalculationCheck' xlink:to='loc_IncomeTaxExpenseBenefit' xlink:type='arc'/>
+<link:definitionArc order='2.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051_CalculationCheck' xlink:to='loc_CurrentIncomeTaxExpenseBenefit' xlink:type='arc'/>
+<link:definitionArc order='3.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051_CalculationCheck' xlink:to='loc_CurrentForeignTaxExpenseBenefit' xlink:type='arc'/>
+<link:definitionArc order='4.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051_CalculationCheck' xlink:to='loc_CurrentFederalStateAndLocalTaxExpenseBenefit' xlink:type='arc'/>
+<link:definitionArc order='5.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051_CalculationCheck' xlink:to='loc_CurrentFederalTaxExpenseBenefit' xlink:type='arc'/>
+<link:definitionArc order='6.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051_CalculationCheck' xlink:to='loc_CurrentStateAndLocalTaxExpenseBenefit' xlink:type='arc'/>
+<link:definitionArc order='7.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051_CalculationCheck' xlink:to='loc_DeferredIncomeTaxExpenseBenefit' xlink:type='arc'/>
+<link:definitionArc order='8.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051_CalculationCheck' xlink:to='loc_DeferredForeignIncomeTaxExpenseBenefit' xlink:type='arc'/>
+<link:definitionArc order='9.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051_CalculationCheck' xlink:to='loc_DeferredFederalStateAndLocalTaxExpenseBenefit' xlink:type='arc'/>
+<link:definitionArc order='10.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051_CalculationCheck' xlink:to='loc_DeferredFederalIncomeTaxExpenseBenefit' xlink:type='arc'/>
+<link:definitionArc order='11.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051_CalculationCheck' xlink:to='loc_DeferredStateAndLocalIncomeTaxExpenseBenefit' xlink:type='arc'/>
+<link:definitionArc order='12.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0051_CalculationCheck' xlink:to='loc_OtherTaxExpenseBenefit' xlink:type='arc'/>
+</link:definitionLink>
+<link:referenceLink xlink:role='http://fasb.org/us-gaap/role/dqc/0051' xlink:type='extended'>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0051_Dqc_0051' xlink:label='loc_Dqc_0051'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0051_Dqc_0051_BeforeTaxItems' xlink:label='loc_Dqc_0051_BeforeTaxItems'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0051_Dqc_0051_CalculationCheck' xlink:label='loc_Dqc_0051_CalculationCheck'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeLossAttributableToParent' xlink:label='loc_IncomeLossAttributableToParent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest' xlink:label='loc_IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeLossIncludingPortionAttributableToNoncontrollingInterest' xlink:label='loc_IncomeLossIncludingPortionAttributableToNoncontrollingInterest' xlink:type='locator'/>
+<link:reference xlink:label='dqc_0051' xlink:role='http://fasb.org/us-gaap/role/dqc/dqcNote' xlink:type='resource'>
+<ref:Publisher>XBRL US</ref:Publisher>
+<dqcrules:ruleId>DQC.0051</dqcrules:ruleId>
+<dqcrules:ruleName>Before Tax Items</dqcrules:ruleName>
+<dqcrules:ruleDocumentation>This rule tests whether the included elements are not represented as after-tax elements.</dqcrules:ruleDocumentation>
+<ref:URI>https://xbrl.us/data-rule/dqc_0051/</ref:URI>
+</link:reference>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_Dqc_0051' xlink:to='dqc_0051' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_Dqc_0051_BeforeTaxItems' xlink:to='dqc_0051' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_Dqc_0051_CalculationCheck' xlink:to='dqc_0051' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_IncomeLossIncludingPortionAttributableToNoncontrollingInterest' xlink:to='dqc_0051' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_IncomeLossAttributableToParent' xlink:to='dqc_0051' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest' xlink:to='dqc_0051' xlink:type='arc'/>
+<link:reference xlink:type='resource' xlink:label='DQC_US_0051_7484' xlink:role='http://fasb.org/us-gaap/role/dqc/ruleID'><dqcrules:ruleElementId>DQC.US.0051.7484</dqcrules:ruleElementId></link:reference>
+<link:reference xlink:type='resource' xlink:label='DQC_US_0051_7485' xlink:role='http://fasb.org/us-gaap/role/dqc/ruleID'><dqcrules:ruleElementId>DQC.US.0051.7485</dqcrules:ruleElementId></link:reference>
+<link:reference xlink:type='resource' xlink:label='DQC_US_0051_7486' xlink:role='http://fasb.org/us-gaap/role/dqc/ruleID'><dqcrules:ruleElementId>DQC.US.0051.7486</dqcrules:ruleElementId></link:reference>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_IncomeLossIncludingPortionAttributableToNoncontrollingInterest' xlink:to='DQC_US_0051_7484' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_IncomeLossAttributableToParent' xlink:to='DQC_US_0051_7485' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest' xlink:to='DQC_US_0051_7486' xlink:type='arc'/>
+</link:referenceLink>
+</link:linkbase>
+</xs:appinfo>
+</xs:annotation>
+<xs:element name='Dqc_0051' id='dqcrules-0051_Dqc_0051' type='xbrli:stringItemType' substitutionGroup='xbrli:item' abstract='true' nillable='true' xbrli:periodType='duration'/>
+<xs:element name='Dqc_0051_BeforeTaxItems' id='dqcrules-0051_Dqc_0051_BeforeTaxItems' type='xbrli:stringItemType' substitutionGroup='xbrli:item' abstract='true' nillable='true' xbrli:periodType='duration'/>
+<xs:element name='Dqc_0051_CalculationCheck' id='dqcrules-0051_Dqc_0051_CalculationCheck' type='xbrli:stringItemType' substitutionGroup='xbrli:item' abstract='true' nillable='true' xbrli:periodType='duration'/>
+</xs:schema>

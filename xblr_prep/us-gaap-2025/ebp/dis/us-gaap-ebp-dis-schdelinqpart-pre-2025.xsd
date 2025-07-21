@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='UTF-8'?>
+
+<!--
+(c) 2010-2025 Financial Accounting Foundation; (c) 2007-2010 XBRL US, Inc.  All Rights Reserved.
+Notice: Authorized Uses are Set Forth at https://xbrl.fasb.org/terms/TaxonomiesTermsConditions.html
+  -->
+<xs:schema elementFormDefault='qualified' targetNamespace='http://fasb.org/dis/ebp-schdelinqpart-pre/2025' xmlns:dis-ebp-schdelinqpart-pre='http://fasb.org/dis/ebp-schdelinqpart-pre/2025' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:xs='http://www.w3.org/2001/XMLSchema'>
+  <xs:annotation>
+    <xs:appinfo>
+      <link:linkbase id='lnk'>
+        <link:roleRef roleURI='http://fasb.org/us-gaap/role/disclosure/EBPScheduleDelinquentParticipantContributions' xlink:href='../../elts/us-roles-2025.xsd#ebp-schdelinqpart' xlink:type='simple' />
+        <link:presentationLink xlink:role='http://fasb.org/us-gaap/role/disclosure/EBPScheduleDelinquentParticipantContributions' xlink:type='extended'>
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionAbstract' xlink:label='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionAbstract' xlink:type='locator' />
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionTable' xlink:label='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionTable' xlink:type='locator' />
+          <link:loc xlink:href='https://xbrl.sec.gov/dei/2025/dei-2025.xsd#dei_LegalEntityAxis' xlink:label='loc_LegalEntityAxis' xlink:type='locator' />
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_UseLegalEntityAxisOnEveryXbrlFactTaggedInEachEmployeeBenefitPlanFilingGuidance' xlink:label='loc_UseLegalEntityAxisOnEveryXbrlFactTaggedInEachEmployeeBenefitPlanFilingGuidance' xlink:type='locator' />
+          <link:loc xlink:href='https://xbrl.sec.gov/dei/2025/dei-2025.xsd#dei_EntityDomain' xlink:label='loc_EntityDomain' xlink:type='locator' />
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_CreatePlanSpecificMemberWithLegalEntityAxisForEmployeeBenefitPlanFilingInFollowingFormatEbpEmployerIdentificationNumbePlanNumberForExampleEbpMemberGuidance' xlink:label='loc_CreatePlanSpecificMemberWithLegalEntityAxisForEmployeeBenefitPlanFilingInFollowingFormatEbpEmployerIdentificationNumbePlanNumberForExampleEbpMemberGuidance' xlink:type='locator' />
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionLineItems' xlink:label='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionLineItems' xlink:type='locator' />
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionTableTextBlock' xlink:label='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionTableTextBlock' xlink:type='locator' />
+          <link:loc xlink:href='https://xbrl.sec.gov/dei/2025/dei-2025.xsd#dei_EntityTaxIdentificationNumber' xlink:label='loc_EntityTaxIdentificationNumber' xlink:type='locator' />
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_EmployeeBenefitPlanPlanNumber' xlink:label='loc_EmployeeBenefitPlanPlanNumber' xlink:type='locator' />
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_EbpPlanName' xlink:label='loc_EbpPlanName' xlink:type='locator' />
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionTransferredLateToPlan' xlink:label='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionTransferredLateToPlan' xlink:type='locator' />
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionLateRepaymentIncluded' xlink:label='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionLateRepaymentIncluded' xlink:type='locator' />
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionNotCorrected' xlink:label='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionNotCorrected' xlink:type='locator' />
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionCorrectedOutsideVfcp' xlink:label='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionCorrectedOutsideVfcp' xlink:type='locator' />
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionPendingCorrectionInVfcp' xlink:label='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionPendingCorrectionInVfcp' xlink:type='locator' />
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionCorrected' xlink:label='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionCorrected' xlink:type='locator' />
+          <link:presentationArc order='10' priority='10' xlink:arcrole='http://www.xbrl.org/2003/arcrole/parent-child' xlink:from='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionAbstract' xlink:to='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionTable' xlink:type='arc' />
+          <link:presentationArc order='10' priority='10' xlink:arcrole='http://www.xbrl.org/2003/arcrole/parent-child' xlink:from='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionTable' xlink:to='loc_LegalEntityAxis' xlink:type='arc' />
+          <link:presentationArc order='10' priority='10' xlink:arcrole='http://www.xbrl.org/2003/arcrole/parent-child' xlink:from='loc_LegalEntityAxis' xlink:to='loc_UseLegalEntityAxisOnEveryXbrlFactTaggedInEachEmployeeBenefitPlanFilingGuidance' xlink:type='arc' />
+          <link:presentationArc order='20' priority='10' xlink:arcrole='http://www.xbrl.org/2003/arcrole/parent-child' xlink:from='loc_LegalEntityAxis' xlink:to='loc_EntityDomain' xlink:type='arc' />
+          <link:presentationArc order='10' priority='10' xlink:arcrole='http://www.xbrl.org/2003/arcrole/parent-child' xlink:from='loc_EntityDomain' xlink:to='loc_CreatePlanSpecificMemberWithLegalEntityAxisForEmployeeBenefitPlanFilingInFollowingFormatEbpEmployerIdentificationNumbePlanNumberForExampleEbpMemberGuidance' xlink:type='arc' />
+          <link:presentationArc order='20' priority='10' xlink:arcrole='http://www.xbrl.org/2003/arcrole/parent-child' xlink:from='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionTable' xlink:to='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionLineItems' xlink:type='arc' />
+          <link:presentationArc order='10' priority='10' xlink:arcrole='http://www.xbrl.org/2003/arcrole/parent-child' xlink:from='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionLineItems' xlink:to='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionTableTextBlock' xlink:type='arc' />
+          <link:presentationArc order='20' priority='10' xlink:arcrole='http://www.xbrl.org/2003/arcrole/parent-child' xlink:from='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionLineItems' xlink:to='loc_EntityTaxIdentificationNumber' xlink:type='arc' />
+          <link:presentationArc order='30' priority='10' xlink:arcrole='http://www.xbrl.org/2003/arcrole/parent-child' xlink:from='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionLineItems' xlink:to='loc_EmployeeBenefitPlanPlanNumber' xlink:type='arc' />
+          <link:presentationArc order='40' priority='10' xlink:arcrole='http://www.xbrl.org/2003/arcrole/parent-child' xlink:from='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionLineItems' xlink:to='loc_EbpPlanName' xlink:type='arc' />
+          <link:presentationArc order='50' priority='10' xlink:arcrole='http://www.xbrl.org/2003/arcrole/parent-child' xlink:from='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionLineItems' xlink:to='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionTransferredLateToPlan' xlink:type='arc' />
+          <link:presentationArc order='60' priority='10' xlink:arcrole='http://www.xbrl.org/2003/arcrole/parent-child' xlink:from='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionLineItems' xlink:to='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionLateRepaymentIncluded' xlink:type='arc' />
+          <link:presentationArc order='70' priority='10' xlink:arcrole='http://www.xbrl.org/2003/arcrole/parent-child' xlink:from='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionLineItems' xlink:to='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionNotCorrected' xlink:type='arc' />
+          <link:presentationArc order='80' priority='10' xlink:arcrole='http://www.xbrl.org/2003/arcrole/parent-child' xlink:from='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionLineItems' xlink:to='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionCorrectedOutsideVfcp' xlink:type='arc' />
+          <link:presentationArc order='90' priority='10' xlink:arcrole='http://www.xbrl.org/2003/arcrole/parent-child' xlink:from='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionLineItems' xlink:to='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionPendingCorrectionInVfcp' xlink:type='arc' />
+          <link:presentationArc order='100' priority='10' xlink:arcrole='http://www.xbrl.org/2003/arcrole/parent-child' xlink:from='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionLineItems' xlink:to='loc_EmployeeBenefitPlanScheduleOfDelinquentParticipantContributionCorrected' xlink:type='arc' />
+        </link:presentationLink>
+      </link:linkbase>
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:import namespace='http://fasb.org/us-gaap-ebp-std/2025' schemaLocation='../elts/us-gaap-ebp-std-2025.xsd' />
+</xs:schema>

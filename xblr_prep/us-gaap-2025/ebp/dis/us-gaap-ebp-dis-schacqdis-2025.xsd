@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='UTF-8'?>
+
+<!--
+(c) 2010-2025 Financial Accounting Foundation; (c) 2007-2010 XBRL US, Inc.  All Rights Reserved.
+Notice: Authorized Uses are Set Forth at https://xbrl.fasb.org/terms/TaxonomiesTermsConditions.html
+  -->
+<xs:schema elementFormDefault='qualified' targetNamespace='http://fasb.org/dis/ebp-schacqdis/2025' xmlns:ebp-schacqdis='http://fasb.org/dis/ebp-schacqdis/2025' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:xbrli='http://www.xbrl.org/2003/instance' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:xs='http://www.w3.org/2001/XMLSchema'>
+  <xs:annotation>
+    <xs:appinfo />
+    <xs:documentation>
+                This file is the entry point file for disclosure Employee Benefit Plan, Schedule, Asset Acquired and Disposed of within Year (ebp-schacqdis).
+
+                The DTS starting with this entry point includes the following presentation, calculation and definition linkbases:
+                961154 - Disclosure - Employee Benefit Plan, Schedule, Asset Acquired and Disposed of within Year  (presentation)
+                961154 - Disclosure - Employee Benefit Plan, Schedule, Asset Acquired and Disposed of within Year  (definition)
+                </xs:documentation>
+  </xs:annotation>
+  <xs:import namespace='http://www.xbrl.org/2003/instance' schemaLocation='http://www.xbrl.org/2003/xbrl-instance-2003-12-31.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-schacqdis-pre/2025' schemaLocation='us-gaap-ebp-dis-schacqdis-pre-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-schacqdis-def/2025' schemaLocation='us-gaap-ebp-dis-schacqdis-def-2025.xsd' />
+</xs:schema>

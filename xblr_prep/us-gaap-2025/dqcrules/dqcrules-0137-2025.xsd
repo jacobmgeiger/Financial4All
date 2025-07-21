@@ -1,0 +1,70 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+2010-2025 Financial Accounting Foundation; (c) 2007-2010 XBRL US, Inc.; (c) 2020-2025 XBRL US, Inc. All Rights Reserved.
+Notice: Authorized Uses are Set Forth at https://xbrl.fasb.org/terms/TaxonomiesTermsConditions.html
+-->
+<xs:schema targetNamespace='http://fasb.org/dqcrules-0137/2025' elementFormDefault='qualified' xmlns:xs='http://www.w3.org/2001/XMLSchema' xmlns:dqcrules-0137='http://fasb.org/dqcrules-0137/2025' xmlns:dqcrules='http://fasb.org/dqcrules/2025' xmlns:us-gaap='http://fasb.org/us-gaap/2025' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:ref='http://www.xbrl.org/2006/ref' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xbrli='http://www.xbrl.org/2003/instance' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:xbrldt='http://xbrl.org/2005/xbrldt' xmlns='http://www.xbrl.org/2003/linkbase' xsi:schemaLocation='http://www.xbrl.org/2006/ref http://www.xbrl.org/2006/ref-2006-02-27.xsd http://fasb.org/dqcrules/2025 dqcrules-2025.xsd'>
+<xs:import namespace='http://www.xbrl.org/2003/instance' schemaLocation='http://www.xbrl.org/2003/xbrl-instance-2003-12-31.xsd'/>
+<xs:import namespace='http://www.xbrl.org/2003/linkbase' schemaLocation='http://www.xbrl.org/2003/xbrl-linkbase-2003-12-31.xsd'/>
+<xs:import namespace='http://www.xbrl.org/2006/ref' schemaLocation='http://www.xbrl.org/2006/ref-2006-02-27.xsd'/>
+<xs:import namespace='http://xbrl.org/2005/xbrldt' schemaLocation='http://www.xbrl.org/2005/xbrldt-2005.xsd'/>
+<xs:import namespace='http://fasb.org/dqcrules/2025' schemaLocation='dqcrules-2025.xsd'/>
+<xs:import namespace='http://fasb.org/us-roles/2025' schemaLocation='../elts/us-roles-2025.xsd'/>
+<xs:import namespace='http://fasb.org/us-gaap/2025' schemaLocation='../elts/us-gaap-2025.xsd'/>
+<xs:annotation>
+<xs:appinfo>
+<link:roleType roleURI='http://fasb.org/us-gaap/role/dqc/0137' id='dqc_0137'>
+<link:definition>DQC.US.0137</link:definition>
+<link:usedOn>link:definitionLink</link:usedOn>
+<link:usedOn>link:referenceLink</link:usedOn>
+<link:usedOn>link:labelLink</link:usedOn>
+</link:roleType>
+<link:linkbase id='lnk'>
+<link:roleRef roleURI='http://fasb.org/us-gaap/role/dqc/0137' xlink:type='simple' xlink:href='#dqc_0137'/>
+<link:roleRef roleURI='http://fasb.org/us-gaap/role/dqc/dqcNote' xlink:href='dqcrules-2025.xsd#dqcn' xlink:type='simple'/>
+<link:arcroleRef arcroleURI='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:href='dqcrules-2025.xsd#rule-concept' xlink:type='simple'/>
+<link:roleRef roleURI='http://fasb.org/us-gaap/role/dqc/ruleExclusions' xlink:href='dqcrules-2025.xsd#dqcre' xlink:type='simple'/>
+<link:roleRef roleURI='http://fasb.org/us-gaap/role/dqc/ruleID' xlink:href='dqcrules-2025.xsd#dqcrid' xlink:type='simple'/>
+<link:labelLink xlink:type='extended' xlink:role='http://fasb.org/us-gaap/role/dqc/0137'>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0137_Dqc_0137' xlink:label='loc_dqcrules_Dqc_0137'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0137_Dqc_0137_LocationAxisWithASingleMember' xlink:label='loc_dqcrules_Dqc_0137_LocationAxisWithASingleMember'/>
+<link:label xlink:type='resource' xlink:role='http://www.xbrl.org/2003/role/label' xlink:label='lbl_dqcrules_Dqc_0137' xml:lang='en-US'>DQC.US.0137 [Abstract]</link:label>
+<link:label xlink:type='resource' xlink:role='http://www.xbrl.org/2003/role/label' xlink:label='lbl_dqcrules_Dqc_0137_LocationAxisWithASingleMember' xml:lang='en-US'>DQC.US.0137.Location Axis With A Single Member [Abstract]</link:label>
+<link:labelArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-label' xlink:from='loc_dqcrules_Dqc_0137' xlink:to='lbl_dqcrules_Dqc_0137'/>
+<link:labelArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-label' xlink:from='loc_dqcrules_Dqc_0137_LocationAxisWithASingleMember' xlink:to='lbl_dqcrules_Dqc_0137_LocationAxisWithASingleMember'/>
+</link:labelLink>
+<link:definitionLink xlink:type='extended' xlink:role='http://fasb.org/us-gaap/role/dqc/0137'>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0137_Dqc_0137' xlink:label='loc_Dqc_0137'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0137_Dqc_0137_LocationAxisWithASingleMember' xlink:label='loc_Dqc_0137_LocationAxisWithASingleMember'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BalanceSheetLocationAxis' xlink:label='loc_BalanceSheetLocationAxis' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeStatementLocationAxis' xlink:label='loc_IncomeStatementLocationAxis' xlink:type='locator'/>
+<link:definitionArc order='1.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0137' xlink:to='loc_Dqc_0137_LocationAxisWithASingleMember' xlink:type='arc'/>
+<link:definitionArc order='1.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0137_LocationAxisWithASingleMember' xlink:to='loc_BalanceSheetLocationAxis' xlink:type='arc'/>
+<link:definitionArc order='2.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0137_LocationAxisWithASingleMember' xlink:to='loc_IncomeStatementLocationAxis' xlink:type='arc'/>
+</link:definitionLink>
+<link:referenceLink xlink:role='http://fasb.org/us-gaap/role/dqc/0137' xlink:type='extended'>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0137_Dqc_0137' xlink:label='loc_Dqc_0137'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0137_Dqc_0137_LocationAxisWithASingleMember' xlink:label='loc_Dqc_0137_LocationAxisWithASingleMember'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BalanceSheetLocationAxis' xlink:label='loc_BalanceSheetLocationAxis' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeStatementLocationAxis' xlink:label='loc_IncomeStatementLocationAxis' xlink:type='locator'/>
+<link:reference xlink:label='dqc_0137' xlink:role='http://fasb.org/us-gaap/role/dqc/dqcNote' xlink:type='resource'>
+<ref:Publisher>XBRL US</ref:Publisher>
+<dqcrules:ruleId>DQC.0137</dqcrules:ruleId>
+<dqcrules:ruleName>Location Axis With A Single Member</dqcrules:ruleName>
+<dqcrules:ruleDocumentation>This rule identifies cases where the location dimensions are used for the Balance Sheet or Income Statement with a single member instead of extensible enumeration elements.</dqcrules:ruleDocumentation>
+<ref:URI>https://xbrl.us/data-rule/dqc_0137/</ref:URI>
+</link:reference>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_Dqc_0137' xlink:to='dqc_0137' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_Dqc_0137_LocationAxisWithASingleMember' xlink:to='dqc_0137' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BalanceSheetLocationAxis' xlink:to='dqc_0137' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_IncomeStatementLocationAxis' xlink:to='dqc_0137' xlink:type='arc'/>
+<link:reference xlink:type='resource' xlink:label='DQC_US_0137_9838' xlink:role='http://fasb.org/us-gaap/role/dqc/ruleID'><dqcrules:ruleElementId>DQC.US.0137.9838</dqcrules:ruleElementId></link:reference>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BalanceSheetLocationAxis' xlink:to='DQC_US_0137_9838' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_IncomeStatementLocationAxis' xlink:to='DQC_US_0137_9838' xlink:type='arc'/>
+</link:referenceLink>
+</link:linkbase>
+</xs:appinfo>
+</xs:annotation>
+<xs:element name='Dqc_0137' id='dqcrules-0137_Dqc_0137' type='xbrli:stringItemType' substitutionGroup='xbrli:item' abstract='true' nillable='true' xbrli:periodType='duration'/>
+<xs:element name='Dqc_0137_LocationAxisWithASingleMember' id='dqcrules-0137_Dqc_0137_LocationAxisWithASingleMember' type='xbrli:stringItemType' substitutionGroup='xbrli:item' abstract='true' nillable='true' xbrli:periodType='duration'/>
+</xs:schema>
