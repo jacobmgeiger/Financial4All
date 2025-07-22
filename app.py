@@ -3,7 +3,7 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 import pandas as pd
-from data_loader import process_metrics, get_company_info
+from data_loader import process_metrics, get_company_info, get_financial_reports
 import dash_bootstrap_components as dbc
 import plotly.express as px
 from dash.dcc.express import send_string
@@ -50,102 +50,148 @@ app.layout = html.Div(
         # --- Hidden div to trigger the main data loading callback ---
         html.Div(id="load-trigger", style={"display": "none"}),
         html.Hr(style={"borderColor": "#555555"}),
-        # --- Metric Filtering and Selection ---
-        html.Div(
-            [
-                html.Label("Filter Metrics:", style={"color": "#B0B0B0"}),
-                dcc.Input(
-                    id="metric-filter-input",
-                    type="text",
-                    value="",
-                    placeholder="Type to filter metrics...",
-                    style={
-                        "width": "100%",
-                        "backgroundColor": "#333333",
-                        "color": "#E0E0E0",
-                        "border": "1px solid #555555",
-                    },
-                ),
-                dcc.Checklist(
-                    id="fill-rate-checkbox",
-                    options=[
-                        {
-                            "label": "Only show metrics with >= 80% data fill",
-                            "value": "80_percent",
-                        }
-                    ],
-                    value=[],
-                    style={"marginTop": "10px", "color": "#B0B0B0"},
-                ),
-                dcc.Checklist(
-                    id="only-financial-checkbox",
-                    options=[
-                        {
-                            "label": "Show only standardized metrics",
-                            "value": "standardized_only",
-                        }
-                    ],
-                    value=[
-                        "standardized_only"
-                    ],  # Default to showing only standard metrics
-                    style={"marginTop": "5px", "color": "#B0B0B0"},
-                ),
-                html.Hr(style={"borderColor": "#555555"}),
-                dcc.Checklist(
-                    id="linear-regression-checkbox",
-                    options=[
-                        {"label": "Show Linear Regression", "value": "show_regression"}
-                    ],
-                    value=[],
-                    style={"marginTop": "10px", "color": "#B0B0B0"},
-                ),
-                html.Label(
-                    "Select Metrics:",
-                    style={"marginTop": "10px", "display": "block", "color": "#B0B0B0"},
-                ),
-                dcc.Dropdown(
-                    id="available-metrics-selector",
-                    options=[],
-                    multi=True,
-                    value=[],
-                    placeholder="Select metrics to plot...",
-                    style={"backgroundColor": "#333333", "color": "#E0E0E0"},
-                ),
-            ],
-            style={"width": "80%", "margin": "auto", "padding": "10px"},
+        # --- Main Content Area with Loading Spinner ---
+        # The dcc.Loading component wraps the main part of the app.
+        # It will display a spinner automatically whenever a callback updating
+        # one of its children is running. This provides clear feedback to the
+        # user that data is being loaded.
+        dcc.Loading(
+            id="loading-indicator",
+            type="default",
+            children=html.Div(
+                id="main-content",
+                children=[
+                    # --- Metric Filtering and Selection ---
+                    html.Div(
+                        [
+                            html.Label("Filter Metrics:", style={"color": "#B0B0B0"}),
+                            dcc.Input(
+                                id="metric-filter-input",
+                                type="text",
+                                value="",
+                                placeholder="Type to filter metrics...",
+                                style={
+                                    "width": "100%",
+                                    "backgroundColor": "#333333",
+                                    "color": "#E0E0E0",
+                                    "border": "1px solid #555555",
+                                },
+                            ),
+                            dcc.Checklist(
+                                id="fill-rate-checkbox",
+                                options=[
+                                    {
+                                        "label": "Only show metrics with >= 80% data fill",
+                                        "value": "80_percent",
+                                    }
+                                ],
+                                value=[],
+                                style={"marginTop": "10px", "color": "#B0B0B0"},
+                            ),
+                            dcc.Checklist(
+                                id="only-financial-checkbox",
+                                options=[
+                                    {
+                                        "label": "Show only standardized metrics",
+                                        "value": "standardized_only",
+                                    }
+                                ],
+                                value=[
+                                    "standardized_only"
+                                ],  # Default to showing only standard metrics
+                                style={"marginTop": "5px", "color": "#B0B0B0"},
+                            ),
+                            html.Hr(style={"borderColor": "#555555"}),
+                            dcc.Checklist(
+                                id="linear-regression-checkbox",
+                                options=[
+                                    {
+                                        "label": "Show Linear Regression",
+                                        "value": "show_regression",
+                                    }
+                                ],
+                                value=[],
+                                style={"marginTop": "10px", "color": "#B0B0B0"},
+                            ),
+                            html.Label(
+                                "Select Metrics:",
+                                style={
+                                    "marginTop": "10px",
+                                    "display": "block",
+                                    "color": "#B0B0B0",
+                                },
+                            ),
+                            dcc.Dropdown(
+                                id="available-metrics-selector",
+                                options=[],
+                                multi=True,
+                                value=[],
+                                placeholder="Select metrics to plot...",
+                                style={
+                                    "backgroundColor": "#333333",
+                                    "color": "#E0E0E0",
+                                },
+                            ),
+                        ],
+                        style={"width": "80%", "margin": "auto", "padding": "10px"},
+                    ),
+                    html.Hr(style={"borderColor": "#555555"}),
+                    # --- Plot Output ---
+                    dcc.Graph(id="live-update-graph"),
+                    html.Hr(style={"borderColor": "#555555"}),
+                    # --- Action Buttons ---
+                    html.Div(
+                        [
+                            dbc.Button(
+                                "Export XBRL to CSV",
+                                id="export-excel-button",
+                                className="me-2",
+                                n_clicks=0,
+                                style={
+                                    "backgroundColor": "#007BFF",
+                                    "color": "white",
+                                },
+                            ),
+                            dbc.Button(
+                                "Show Standardized Income Statement",
+                                id="show-standard-is-button",
+                                className="me-2",
+                                n_clicks=0,
+                                style={
+                                    "backgroundColor": "#28A745",
+                                    "color": "white",
+                                },
+                            ),
+                            dbc.Button(
+                                "Download All 10-Ks",
+                                id="download-10k-button",
+                                className="me-2",
+                                n_clicks=0,
+                                style={
+                                    "backgroundColor": "#17A2B8",
+                                    "color": "white",
+                                },
+                            ),
+                        ],
+                        style={"textAlign": "center", "padding": "10px"},
+                    ),
+                    # --- Output Sections ---
+                    html.Div(id="standard-is-output", style={"marginTop": "20px"}),
+                    html.H2(
+                        "Selected Metrics Statistics:",
+                        style={
+                            "color": "#E0E0E0",
+                            "marginTop": "20px",
+                            "textAlign": "center",
+                        },
+                    ),
+                    html.Div(id="statistics-output", style={"color": "#E0E0E0"}),
+                ],
+            ),
         ),
-        html.Hr(style={"borderColor": "#555555"}),
-        # --- Plot Output ---
-        dcc.Graph(id="live-update-graph"),
-        html.Hr(style={"borderColor": "#555555"}),
-        # --- Action Buttons ---
-        html.Div(
-            [
-                dbc.Button(
-                    "Export to CSV",
-                    id="export-excel-button",
-                    className="me-2",
-                    n_clicks=0,
-                    style={"backgroundColor": "#007BFF", "color": "white"},
-                ),
-                dbc.Button(
-                    "Show Standardized Income Statement",
-                    id="show-standard-is-button",
-                    className="me-2",
-                    n_clicks=0,
-                    style={"backgroundColor": "#28A745", "color": "white"},
-                ),
-            ],
-            style={"textAlign": "center", "padding": "10px"},
-        ),
+        # --- Download and Store components are placed outside the main visible layout ---
         dcc.Download(id="download-dataframe-excel"),
-        # --- Output Sections ---
-        html.Div(id="standard-is-output", style={"marginTop": "20px"}),
-        html.H2(
-            "Selected Metrics Statistics:",
-            style={"color": "#E0E0E0", "marginTop": "20px", "textAlign": "center"},
-        ),
-        html.Div(id="statistics-output", style={"color": "#E0E0E0"}),
+        dcc.Download(id="download-10k-zip"),
         # --- Data Stores ---
         # dcc.Store components are used to store data in the user's browser,
         # avoiding the need for global variables and ensuring data persists between callbacks.
@@ -156,7 +202,9 @@ app.layout = html.Div(
         dcc.Store(
             id="is-selections-store", data={}
         ),  # NEW: Store for user's dropdown selections
-        dcc.Store(id="standard-metrics-store"),  # NEW: Store for the list of standard metrics
+        dcc.Store(
+            id="standard-metrics-store"
+        ),  # NEW: Store for the list of standard metrics
     ],
     style={
         "backgroundColor": "#1E1E1E",
@@ -718,6 +766,55 @@ def export_to_excel(n_clicks, current_df_json, ticker):
         f"{ticker.upper()}_income_statement.csv" if ticker else "income_statement.csv"
     )
     return send_string(buffer.getvalue(), file_name, type="text/csv")
+
+
+@app.callback(
+    Output("download-10k-zip", "data"),
+    [Input("download-10k-button", "n_clicks")],
+    [State("ticker-input", "value")],
+    prevent_initial_call=True,
+)
+def download_all_10ks(n_clicks, ticker):
+    """
+    Handles the logic for downloading all available 10-K filings for a given
+    ticker as a single zip archive. When the user clicks the 'Download All 10-Ks'
+    button, this function is triggered.
+
+    It performs the following steps:
+    1. Checks if the button was clicked and if a ticker is provided.
+    2. Calls the `get_financial_reports` function from `data_loader.py` to
+       fetch and zip the 10-K reports in memory.
+    3. If the zip file is successfully created, it sends the data to the user's
+       browser for download using `dcc.send_bytes`.
+    4. If no files are found or an error occurs, it does nothing.
+
+    Args:
+        n_clicks (int): The number of times the download button has been clicked.
+        ticker (str): The ticker symbol from the input field.
+
+    Returns:
+        A Dash `send_bytes` object for the browser to download, or None.
+    """
+    if n_clicks == 0 or not ticker:
+        return None
+
+    ticker_upper = ticker.strip().upper()
+    try:
+        # Fetch the zipped 10-K data.
+        zip_data = get_financial_reports(ticker_upper)
+        if zip_data:
+            # Send the zip file to the browser for download.
+            return dcc.send_bytes(
+                zip_data,
+                f"{ticker_upper}_10K_filings.zip",
+            )
+        else:
+            # If no data is returned, do not trigger a download.
+            return None
+    except Exception as e:
+        # Log the error and prevent the app from crashing.
+        print(f"Error generating 10-K zip for {ticker_upper}: {e}")
+        return None
 
 
 if __name__ == "__main__":

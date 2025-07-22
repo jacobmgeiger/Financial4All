@@ -5,6 +5,8 @@ import os
 import json
 from collections import defaultdict
 from functools import reduce
+import io
+import zipfile
 
 # data_loader.py
 # This script is responsible for fetching, processing, and enriching financial data from the SEC EDGAR database.
@@ -398,8 +400,8 @@ def process_metrics(ticker: str):
     df_solved, all_results = format_metrics_efficient(df_raw_extracted)
 
     # create_standard_income_statement takes the solved df and the cache
-    standard_is_df, alternatives, standard_metrics_list = create_standard_income_statement(
-        df_solved, all_results
+    standard_is_df, alternatives, standard_metrics_list = (
+        create_standard_income_statement(df_solved, all_results)
     )
 
     return df_solved, standard_is_df, alternatives, standard_metrics_list
@@ -505,3 +507,83 @@ def create_standard_income_statement(df, all_results):
     final_df.loc[(final_df.T == 0).all()] = np.nan
 
     return final_df.dropna(how="all", axis=0), alternatives, final_order
+
+
+def get_financial_reports(ticker):
+    """
+    Fetches all available 10-K filings for a given ticker and packages them into a
+    single zip archive.
+
+    This function performs the following steps:
+    1. Retrieves the company's CIK from its ticker.
+    2. Fetches the list of all company filings from the SEC.
+    3. Filters this list to include only 10-K (annual) reports.
+    4. For each 10-K filing, it constructs the URL to the `Financial_Report.xlsx`.
+    5. It attempts to download each report. Since not all filings have an associated
+       XLSX file (especially older ones), it validates the response.
+    6. All successfully downloaded reports are written into a zip archive in memory.
+    7. The zip archive is returned as a bytes object.
+
+    Args:
+        ticker (str): The stock ticker symbol for the company (e.g., 'AAPL').
+
+    Returns:
+        bytes or None: A bytes object representing the zip archive of 10-K reports,
+                       or None if no reports could be downloaded.
+    """
+    # Retrieve the CIK for the given ticker.
+    CIK = get_cik(ticker)
+    if not CIK:
+        raise ValueError(f"Could not find CIK for ticker {ticker}")
+
+    # Set the User-Agent for SEC requests.
+    headers = {"User-Agent": EMAIL}
+    url = f"https://data.sec.gov/submissions/CIK{CIK}.json"
+
+    # Fetch the filings metadata from the SEC.
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    data = response.json()
+
+    # Filter for 10-K filings.
+    df = pd.DataFrame(data["filings"]["recent"])
+    df_10k = df[df["form"] == "10-K"]
+
+    if df_10k.empty:
+        return None  # No 10-K filings found.
+
+    # Create an in-memory buffer for the zip file.
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_f:
+        for _, entry in df_10k.iterrows():
+            accession_number = entry["accessionNumber"].replace("-", "")
+            filing_date = entry["filingDate"]
+            report_url = f"https://www.sec.gov/Archives/edgar/data/{CIK}/{accession_number}/Financial_Report.xlsx"
+
+            try:
+                # Attempt to download the Excel report.
+                report_response = requests.get(report_url, headers=headers)
+                # Check for a successful response and that the content is an Excel file.
+                if (
+                    report_response.status_code == 200
+                    and "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    in report_response.headers.get("Content-Type", "")
+                ):
+                    file_name = f"{ticker.upper()}_{entry['form']}_{filing_date}_Financial_Report.xlsx"
+                    zip_f.writestr(file_name, report_response.content)
+                else:
+                    # Log if a report is not an xlsx file or if there's an error.
+                    print(
+                        f"Skipping non-xlsx or error response for {report_url} (status: {report_response.status_code})"
+                    )
+            except requests.exceptions.RequestException as e:
+                # Log any network-related errors during download.
+                print(f"Could not download report from {report_url}: {e}")
+                continue
+
+    # Only return the buffer if files were actually added to the zip.
+    if zip_f.namelist():
+        zip_buffer.seek(0)
+        return zip_buffer.getvalue()
+    else:
+        return None  # Return None if no files were successfully downloaded.
