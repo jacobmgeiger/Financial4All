@@ -1,0 +1,164 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+2010-2025 Financial Accounting Foundation; (c) 2007-2010 XBRL US, Inc.; (c) 2020-2025 XBRL US, Inc. All Rights Reserved.
+Notice: Authorized Uses are Set Forth at https://xbrl.fasb.org/terms/TaxonomiesTermsConditions.html
+-->
+<xs:schema targetNamespace='http://fasb.org/dqcrules-0134/2025' elementFormDefault='qualified' xmlns:xs='http://www.w3.org/2001/XMLSchema' xmlns:dqcrules-0134='http://fasb.org/dqcrules-0134/2025' xmlns:dqcrules='http://fasb.org/dqcrules/2025' xmlns:us-gaap='http://fasb.org/us-gaap/2025' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:ref='http://www.xbrl.org/2006/ref' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xbrli='http://www.xbrl.org/2003/instance' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:xbrldt='http://xbrl.org/2005/xbrldt' xmlns='http://www.xbrl.org/2003/linkbase' xsi:schemaLocation='http://www.xbrl.org/2006/ref http://www.xbrl.org/2006/ref-2006-02-27.xsd http://fasb.org/dqcrules/2025 dqcrules-2025.xsd'>
+<xs:import namespace='http://www.xbrl.org/2003/instance' schemaLocation='http://www.xbrl.org/2003/xbrl-instance-2003-12-31.xsd'/>
+<xs:import namespace='http://www.xbrl.org/2003/linkbase' schemaLocation='http://www.xbrl.org/2003/xbrl-linkbase-2003-12-31.xsd'/>
+<xs:import namespace='http://www.xbrl.org/2006/ref' schemaLocation='http://www.xbrl.org/2006/ref-2006-02-27.xsd'/>
+<xs:import namespace='http://xbrl.org/2005/xbrldt' schemaLocation='http://www.xbrl.org/2005/xbrldt-2005.xsd'/>
+<xs:import namespace='http://fasb.org/dqcrules/2025' schemaLocation='dqcrules-2025.xsd'/>
+<xs:import namespace='http://fasb.org/us-roles/2025' schemaLocation='../elts/us-roles-2025.xsd'/>
+<xs:import namespace='http://fasb.org/us-gaap/2025' schemaLocation='../elts/us-gaap-2025.xsd'/>
+<xs:annotation>
+<xs:appinfo>
+<link:roleType roleURI='http://fasb.org/us-gaap/role/dqc/0134' id='dqc_0134'>
+<link:definition>DQC.US.0134</link:definition>
+<link:usedOn>link:definitionLink</link:usedOn>
+<link:usedOn>link:referenceLink</link:usedOn>
+<link:usedOn>link:labelLink</link:usedOn>
+</link:roleType>
+<link:linkbase id='lnk'>
+<link:roleRef roleURI='http://fasb.org/us-gaap/role/dqc/0134' xlink:type='simple' xlink:href='#dqc_0134'/>
+<link:roleRef roleURI='http://fasb.org/us-gaap/role/dqc/dqcNote' xlink:href='dqcrules-2025.xsd#dqcn' xlink:type='simple'/>
+<link:arcroleRef arcroleURI='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:href='dqcrules-2025.xsd#rule-concept' xlink:type='simple'/>
+<link:roleRef roleURI='http://fasb.org/us-gaap/role/dqc/ruleExclusions' xlink:href='dqcrules-2025.xsd#dqcre' xlink:type='simple'/>
+<link:roleRef roleURI='http://fasb.org/us-gaap/role/dqc/ruleID' xlink:href='dqcrules-2025.xsd#dqcrid' xlink:type='simple'/>
+<link:labelLink xlink:type='extended' xlink:role='http://fasb.org/us-gaap/role/dqc/0134'>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0134_Dqc_0134' xlink:label='loc_dqcrules_Dqc_0134'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0134_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:label='loc_dqcrules_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0134_Dqc_0134_CheckedDimensions' xlink:label='loc_dqcrules_Dqc_0134_CheckedDimensions'/>
+<link:label xlink:type='resource' xlink:role='http://www.xbrl.org/2003/role/label' xlink:label='lbl_dqcrules_Dqc_0134' xml:lang='en-US'>DQC.US.0134 [Abstract]</link:label>
+<link:label xlink:type='resource' xlink:role='http://www.xbrl.org/2003/role/label' xlink:label='lbl_dqcrules_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xml:lang='en-US'>DQC.US.0134.Investment Schedule Financial Instrument Axis [Abstract]</link:label>
+<link:label xlink:type='resource' xlink:role='http://www.xbrl.org/2003/role/label' xlink:label='lbl_dqcrules_Dqc_0134_CheckedDimensions' xml:lang='en-US'>DQC.US.0134.Checked Dimensions [Abstract]</link:label>
+<link:labelArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-label' xlink:from='loc_dqcrules_Dqc_0134' xlink:to='lbl_dqcrules_Dqc_0134'/>
+<link:labelArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-label' xlink:from='loc_dqcrules_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='lbl_dqcrules_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis'/>
+<link:labelArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-label' xlink:from='loc_dqcrules_Dqc_0134_CheckedDimensions' xlink:to='lbl_dqcrules_Dqc_0134_CheckedDimensions'/>
+</link:labelLink>
+<link:definitionLink xlink:type='extended' xlink:role='http://fasb.org/us-gaap/role/dqc/0134'>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0134_Dqc_0134' xlink:label='loc_Dqc_0134'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0134_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:label='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0134_Dqc_0134_CheckedDimensions' xlink:label='loc_Dqc_0134_CheckedDimensions'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AvailableForSaleDebtSecuritiesAmortizedCostBasis' xlink:label='loc_AvailableForSaleDebtSecuritiesAmortizedCostBasis' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AvailableForSaleSecuritiesDebtSecurities' xlink:label='loc_AvailableForSaleSecuritiesDebtSecurities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AvailableForSaleSecuritiesDebtSecuritiesCurrent' xlink:label='loc_AvailableForSaleSecuritiesDebtSecuritiesCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AvailableForSaleSecuritiesDebtSecuritiesNoncurrent' xlink:label='loc_AvailableForSaleSecuritiesDebtSecuritiesNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_CashAndCashEquivalentsAxis' xlink:label='loc_CashAndCashEquivalentsAxis' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLoss' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLoss' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLossCurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLossCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLossNoncurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLossNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostCurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLoss' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLoss' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLossCurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLossCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLossNoncurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLossNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLoss' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLoss' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLossCurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLossCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLossNoncurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLossNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostNoncurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleExcludingAccruedInterest' xlink:label='loc_DebtSecuritiesAvailableForSaleExcludingAccruedInterest' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleExcludingAccruedInterestCurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleExcludingAccruedInterestCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleExcludingAccruedInterestNoncurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleExcludingAccruedInterestNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InvestmentTypeAxis' xlink:label='loc_InvestmentTypeAxis' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RestrictedCashAndCashEquivalentsCashAndCashEquivalentsAxis' xlink:label='loc_RestrictedCashAndCashEquivalentsCashAndCashEquivalentsAxis' xlink:type='locator'/>
+<link:definitionArc order='1.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134' xlink:to='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:type='arc'/>
+<link:definitionArc order='1.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_AvailableForSaleDebtSecuritiesAmortizedCostBasis' xlink:type='arc'/>
+<link:definitionArc order='2.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_DebtSecuritiesAvailableForSaleAmortizedCostCurrent' xlink:type='arc'/>
+<link:definitionArc order='3.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_DebtSecuritiesAvailableForSaleAmortizedCostNoncurrent' xlink:type='arc'/>
+<link:definitionArc order='4.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLoss' xlink:type='arc'/>
+<link:definitionArc order='5.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLossCurrent' xlink:type='arc'/>
+<link:definitionArc order='6.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLossNoncurrent' xlink:type='arc'/>
+<link:definitionArc order='7.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLoss' xlink:type='arc'/>
+<link:definitionArc order='8.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLossCurrent' xlink:type='arc'/>
+<link:definitionArc order='9.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLossNoncurrent' xlink:type='arc'/>
+<link:definitionArc order='10.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLoss' xlink:type='arc'/>
+<link:definitionArc order='11.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLossCurrent' xlink:type='arc'/>
+<link:definitionArc order='12.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLossNoncurrent' xlink:type='arc'/>
+<link:definitionArc order='13.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_AvailableForSaleSecuritiesDebtSecurities' xlink:type='arc'/>
+<link:definitionArc order='14.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_AvailableForSaleSecuritiesDebtSecuritiesCurrent' xlink:type='arc'/>
+<link:definitionArc order='15.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_AvailableForSaleSecuritiesDebtSecuritiesNoncurrent' xlink:type='arc'/>
+<link:definitionArc order='16.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_DebtSecuritiesAvailableForSaleExcludingAccruedInterest' xlink:type='arc'/>
+<link:definitionArc order='17.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_DebtSecuritiesAvailableForSaleExcludingAccruedInterestCurrent' xlink:type='arc'/>
+<link:definitionArc order='18.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='loc_DebtSecuritiesAvailableForSaleExcludingAccruedInterestNoncurrent' xlink:type='arc'/>
+<link:definitionArc order='1.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134' xlink:to='loc_Dqc_0134_CheckedDimensions' xlink:type='arc'/>
+<link:definitionArc order='1.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_CheckedDimensions' xlink:to='loc_CashAndCashEquivalentsAxis' xlink:type='arc'/>
+<link:definitionArc order='2.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_CheckedDimensions' xlink:to='loc_RestrictedCashAndCashEquivalentsCashAndCashEquivalentsAxis' xlink:type='arc'/>
+<link:definitionArc order='3.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0134_CheckedDimensions' xlink:to='loc_InvestmentTypeAxis' xlink:type='arc'/>
+</link:definitionLink>
+<link:referenceLink xlink:role='http://fasb.org/us-gaap/role/dqc/0134' xlink:type='extended'>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0134_Dqc_0134' xlink:label='loc_Dqc_0134'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0134_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:label='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0134_Dqc_0134_CheckedDimensions' xlink:label='loc_Dqc_0134_CheckedDimensions'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AvailableForSaleDebtSecuritiesAmortizedCostBasis' xlink:label='loc_AvailableForSaleDebtSecuritiesAmortizedCostBasis' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AvailableForSaleSecuritiesDebtSecurities' xlink:label='loc_AvailableForSaleSecuritiesDebtSecurities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AvailableForSaleSecuritiesDebtSecuritiesCurrent' xlink:label='loc_AvailableForSaleSecuritiesDebtSecuritiesCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AvailableForSaleSecuritiesDebtSecuritiesNoncurrent' xlink:label='loc_AvailableForSaleSecuritiesDebtSecuritiesNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLoss' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLoss' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLossCurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLossCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLossNoncurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLossNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostCurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLoss' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLoss' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLossCurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLossCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLossNoncurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLossNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLoss' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLoss' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLossCurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLossCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLossNoncurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLossNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleAmortizedCostNoncurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleAmortizedCostNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleExcludingAccruedInterest' xlink:label='loc_DebtSecuritiesAvailableForSaleExcludingAccruedInterest' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleExcludingAccruedInterestCurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleExcludingAccruedInterestCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtSecuritiesAvailableForSaleExcludingAccruedInterestNoncurrent' xlink:label='loc_DebtSecuritiesAvailableForSaleExcludingAccruedInterestNoncurrent' xlink:type='locator'/>
+<link:reference xlink:label='dqc_0134' xlink:role='http://fasb.org/us-gaap/role/dqc/dqcNote' xlink:type='resource'>
+<ref:Publisher>XBRL US</ref:Publisher>
+<dqcrules:ruleId>DQC.0134</dqcrules:ruleId>
+<dqcrules:ruleName>Investment Schedule - Financial Instrument Axis</dqcrules:ruleName>
+<dqcrules:ruleDocumentation>This rule ensures that values associated with the elements for debt securities are tagged with FinancialInstrumentAxis.</dqcrules:ruleDocumentation>
+<ref:URI>https://xbrl.us/data-rule/dqc_0134/</ref:URI>
+</link:reference>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_Dqc_0134' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_Dqc_0134_CheckedDimensions' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_AvailableForSaleDebtSecuritiesAmortizedCostBasis' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostCurrent' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostNoncurrent' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLoss' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLossCurrent' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLossNoncurrent' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLoss' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLossCurrent' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLossNoncurrent' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLoss' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLossCurrent' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLossNoncurrent' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_AvailableForSaleSecuritiesDebtSecurities' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_AvailableForSaleSecuritiesDebtSecuritiesCurrent' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_AvailableForSaleSecuritiesDebtSecuritiesNoncurrent' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleExcludingAccruedInterest' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleExcludingAccruedInterestCurrent' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleExcludingAccruedInterestNoncurrent' xlink:to='dqc_0134' xlink:type='arc'/>
+<link:reference xlink:type='resource' xlink:label='DQC_US_0134_9834' xlink:role='http://fasb.org/us-gaap/role/dqc/ruleID'><dqcrules:ruleElementId>DQC.US.0134.9834</dqcrules:ruleElementId></link:reference>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_AvailableForSaleDebtSecuritiesAmortizedCostBasis' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostCurrent' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostNoncurrent' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLoss' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLossCurrent' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestBeforeAllowanceForCreditLossNoncurrent' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLoss' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLossCurrent' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostExcludingAccruedInterestAfterAllowanceForCreditLossNoncurrent' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLoss' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLossCurrent' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleAmortizedCostAfterAllowanceForCreditLossNoncurrent' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_AvailableForSaleSecuritiesDebtSecurities' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_AvailableForSaleSecuritiesDebtSecuritiesCurrent' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_AvailableForSaleSecuritiesDebtSecuritiesNoncurrent' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleExcludingAccruedInterest' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleExcludingAccruedInterestCurrent' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_DebtSecuritiesAvailableForSaleExcludingAccruedInterestNoncurrent' xlink:to='DQC_US_0134_9834' xlink:type='arc'/>
+</link:referenceLink>
+</link:linkbase>
+</xs:appinfo>
+</xs:annotation>
+<xs:element name='Dqc_0134' id='dqcrules-0134_Dqc_0134' type='xbrli:stringItemType' substitutionGroup='xbrli:item' abstract='true' nillable='true' xbrli:periodType='duration'/>
+<xs:element name='Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' id='dqcrules-0134_Dqc_0134_InvestmentScheduleFinancialInstrumentAxis' type='xbrli:stringItemType' substitutionGroup='xbrli:item' abstract='true' nillable='true' xbrli:periodType='duration'/>
+<xs:element name='Dqc_0134_CheckedDimensions' id='dqcrules-0134_Dqc_0134_CheckedDimensions' type='xbrli:stringItemType' substitutionGroup='xbrli:item' abstract='true' nillable='true' xbrli:periodType='duration'/>
+</xs:schema>

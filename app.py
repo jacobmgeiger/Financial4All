@@ -156,6 +156,7 @@ app.layout = html.Div(
         dcc.Store(
             id="is-selections-store", data={}
         ),  # NEW: Store for user's dropdown selections
+        dcc.Store(id="standard-metrics-store"),  # NEW: Store for the list of standard metrics
     ],
     style={
         "backgroundColor": "#1E1E1E",
@@ -212,6 +213,7 @@ def on_ticker_submit(n_submit, ticker):
         Output("standard-is-store", "data"),
         Output("alternatives-store", "data"),
         Output("is-selections-store", "data"),
+        Output("standard-metrics-store", "data"),  # NEW: Output to the new store
     ],
     [Input("load-trigger", "children")],  # Triggered by the first callback
     prevent_initial_call=True,
@@ -227,12 +229,17 @@ def on_ticker_change(ticker_upper):
 
     try:
         # process_metrics now returns the comprehensive df, the standard IS, and alternatives
-        df_all_metrics, standard_is_df, alternatives = process_metrics(ticker_upper)
+        (
+            df_all_metrics,
+            standard_is_df,
+            alternatives,
+            standard_metrics,
+        ) = process_metrics(ticker_upper)
         if df_all_metrics is None or df_all_metrics.empty:
             status_message = html.P(
                 f"No data retrieved for {ticker_upper}.", style={"color": "orange"}
             )
-            return status_message, [], [], None, [], None, None, {}
+            return status_message, [], [], None, [], None, None, {}, []
 
         # --- Logic to determine best default formula based on non-zero count ---
         default_selections = {}
@@ -282,7 +289,13 @@ def on_ticker_change(ticker_upper):
         )
 
         filtered_options, current_selected_metrics = _apply_all_filters(
-            df_all_metrics, all_plottable_metrics, "", ["standardized_only"], [], []
+            df_all_metrics,
+            all_plottable_metrics,
+            "",
+            ["standardized_only"],
+            [],
+            [],
+            standard_metrics,
         )
         return (
             status_message,
@@ -293,12 +306,13 @@ def on_ticker_change(ticker_upper):
             transposed_df.to_json(date_format="iso", orient="split"),
             alternatives,
             default_selections,
+            standard_metrics,
         )
     except Exception as e:
         status_message = html.P(
             f"Error loading data for {ticker_upper}: {e}", style={"color": "red"}
         )
-        return status_message, [], [], None, [], None, None, {}
+        return status_message, [], [], None, [], None, None, {}, []
 
 
 def _apply_all_filters(
@@ -308,25 +322,11 @@ def _apply_all_filters(
     financial_checked,
     fill_rate_checked,
     current_selection,
+    standard_metrics,
 ):
     """
     A helper function to apply the user's selected filters to the list of available metrics.
     """
-    standard_metrics = [
-        "Revenue",
-        "Cost of Revenue",
-        "Gross Profit",
-        "R&D Expenses",
-        "SG&A Expenses",
-        "Other Operating Expenses",
-        "Operating Income",
-        "Interest Income",
-        "Interest Expense",
-        "Income Before Taxes",
-        "Taxes",
-        "Net Income",
-    ]
-
     filtered_metrics = []
 
     for metric_info in all_metrics:
@@ -367,6 +367,7 @@ def _apply_all_filters(
     [
         State("available-metrics-selector", "value"),
         State("all-plottable-metrics-store", "data"),
+        State("standard-metrics-store", "data"),
     ],
     prevent_initial_call=True,
 )
@@ -376,6 +377,7 @@ def update_metric_options(
     financial_checked,
     current_selected_metrics,
     all_plottable_metrics,
+    standard_metrics,
 ):
     """
     Updates the dropdown of available metrics based on the user's filter criteria.
@@ -391,6 +393,7 @@ def update_metric_options(
         financial_checked,
         fill_rate_checked,  # Corrected order
         current_selected_metrics,
+        standard_metrics,
     )
     return filtered_options, new_selection
 

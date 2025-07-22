@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='UTF-8'?>
+
+<!--
+(c) 2010-2025 Financial Accounting Foundation; (c) 2007-2010 XBRL US, Inc.  All Rights Reserved.
+Notice: Authorized Uses are Set Forth at https://xbrl.fasb.org/terms/TaxonomiesTermsConditions.html
+  -->
+<xs:schema elementFormDefault='qualified' targetNamespace='http://fasb.org/us-gaap-ebp-entryPoint-all/2025' xmlns:us-gaap-ebp-entryPoint-all='http://fasb.org/us-gaap-ebp-entryPoint-all/2025' xmlns:xbrli='http://www.xbrl.org/2003/instance' xmlns:xs='http://www.w3.org/2001/XMLSchema'>
+  <xs:annotation>
+    <xs:appinfo>
+      <link:linkbaseRef xlink:arcrole='http://www.w3.org/1999/xlink/properties/linkbase' xlink:href='../elts/us-gaap-ebp-depcon-pre-2025.xml' xlink:role='http://www.xbrl.org/2003/role/presentationLinkbaseRef' xlink:type='simple' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:xlink='http://www.w3.org/1999/xlink' />
+      <link:linkbaseRef xlink:arcrole='http://www.w3.org/1999/xlink/properties/linkbase' xlink:href='../elts/us-gaap-ebp-depcon-def-2025.xml' xlink:role='http://www.xbrl.org/2003/role/definitionLinkbaseRef' xlink:type='simple' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:xlink='http://www.w3.org/1999/xlink' />
+      <link:linkbaseRef xlink:arcrole='http://www.w3.org/1999/xlink/properties/linkbase' xlink:href='../elts/us-gaap-ebp-tin-ref-2025.xml' xlink:role='http://www.xbrl.org/2003/role/referenceLinkbaseRef' xlink:type='simple' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:xlink='http://www.w3.org/1999/xlink' />
+	  <link:linkbaseRef xlink:arcrole='http://www.w3.org/1999/xlink/properties/linkbase' xlink:href='../elts/us-gaap-ebp-tin-ver-ref-2025.xml' xlink:role='http://www.xbrl.org/2003/role/referenceLinkbaseRef' xlink:type='simple' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:xlink='http://www.w3.org/1999/xlink' />
+      <link:linkbaseRef xlink:arcrole='http://www.w3.org/1999/xlink/properties/linkbase' xlink:href='../elts/us-gaap-ebp-tin-def-2025.xml' xlink:role='http://www.xbrl.org/2003/role/definitionLinkbaseRef' xlink:type='simple' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:xlink='http://www.w3.org/1999/xlink' />
+      <link:linkbaseRef xlink:arcrole='http://www.w3.org/1999/xlink/properties/linkbase' xlink:href='../elts/us-gaap-ebp-cn-ref-2025.xml' xlink:role='http://www.xbrl.org/2003/role/referenceLinkbaseRef' xlink:type='simple' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:xlink='http://www.w3.org/1999/xlink' />
+      <link:linkbaseRef xlink:arcrole='http://www.w3.org/1999/xlink/properties/linkbase' xlink:href='../../elts/us-gaap-doc-2025.xml' xlink:role='http://www.xbrl.org/2003/role/labelLinkbaseRef' xlink:type='simple' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:xlink='http://www.w3.org/1999/xlink' />
+      <link:linkbaseRef xlink:arcrole='http://www.w3.org/1999/xlink/properties/linkbase' xlink:href='https://xbrl.fasb.org/srt/2025/elts/srt-doc-2025.xml' xlink:role='http://www.xbrl.org/2003/role/labelLinkbaseRef' xlink:type='simple' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:xlink='http://www.w3.org/1999/xlink' />
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:import namespace='http://www.xbrl.org/2003/instance' schemaLocation='http://www.xbrl.org/2003/xbrl-instance-2003-12-31.xsd' />
+  <xs:import namespace='http://fasb.org/stm/ebp-snaab/2025' schemaLocation='../stm/us-gaap-ebp-stm-snaab-2025.xsd' />
+  <xs:import namespace='http://fasb.org/stm/ebp-scnaab/2025' schemaLocation='../stm/us-gaap-ebp-stm-scnaab-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-sap/2025' schemaLocation='../dis/us-gaap-ebp-dis-sap-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-ctb/2025' schemaLocation='../dis/us-gaap-ebp-dis-ctb-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-contr/2025' schemaLocation='../dis/us-gaap-ebp-dis-contr-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-despl/2025' schemaLocation='../dis/us-gaap-ebp-dis-despl-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-fvnav/2025' schemaLocation='../dis/us-gaap-ebp-dis-fvnav-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-fbri/2025' schemaLocation='../dis/us-gaap-ebp-dis-fbri-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-mt/2025' schemaLocation='../dis/us-gaap-ebp-dis-mt-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-npdinv/2025' schemaLocation='../dis/us-gaap-ebp-dis-npdinv-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-relpart/2025' schemaLocation='../dis/us-gaap-ebp-dis-relpart-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-tax/2025' schemaLocation='../dis/us-gaap-ebp-dis-tax-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-recform5500/2025' schemaLocation='../dis/us-gaap-ebp-dis-recform5500-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-schheld/2025' schemaLocation='../dis/us-gaap-ebp-dis-schheld-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-schdelinqpart/2025' schemaLocation='../dis/us-gaap-ebp-dis-schdelinqpart-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-schallal/2025' schemaLocation='../dis/us-gaap-ebp-dis-schallal-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-schallinceq/2025' schemaLocation='../dis/us-gaap-ebp-dis-schallinceq-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-schacqdis/2025' schemaLocation='../dis/us-gaap-ebp-dis-schacqdis-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-schreptrans/2025' schemaLocation='../dis/us-gaap-ebp-dis-schreptrans-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-debt/2025' schemaLocation='../dis/us-gaap-ebp-dis-debt-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-contingency/2025' schemaLocation='../dis/us-gaap-ebp-dis-contingency-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-riskuncertainty/2025' schemaLocation='../dis/us-gaap-ebp-dis-riskuncertainty-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-derivative/2025' schemaLocation='../dis/us-gaap-ebp-dis-derivative-2025.xsd' />
+  <xs:import namespace='http://fasb.org/dis/ebp-subevent/2025' schemaLocation='../dis/us-gaap-ebp-dis-subevent-2025.xsd' />
+  <xs:import namespace='http://fasb.org/us-gaap-ebp-all/2025' schemaLocation='../elts/us-gaap-ebp-all-2025.xsd' />
+  <xs:import namespace='http://fasb.org/us-gaap-std/2025' schemaLocation='../../elts/us-gaap-std-2025.xsd' />
+  <xs:import namespace='http://fasb.org/srt-std/2025' schemaLocation='https://xbrl.fasb.org/srt/2025/elts/srt-std-2025.xsd' />
+</xs:schema>

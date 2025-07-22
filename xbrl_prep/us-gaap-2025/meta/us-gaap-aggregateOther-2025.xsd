@@ -1,0 +1,477 @@
+<?xml version='1.0' encoding='UTF-8'?><!--2010-2025 Financial Accounting Foundation; (c) 2007-2010 XBRL US, Inc.; (c) 2020-2025 XBRL US, Inc. All Rights Reserved.Notice: Authorized Uses are Set Forth at https://xbrl.fasb.org/terms/TaxonomiesTermsConditions.html--><xs:schema targetNamespace='http://fasb.org/us-gaap-aggregateOther/2025' elementFormDefault='qualified' xmlns:xs='http://www.w3.org/2001/XMLSchema' xmlns:us-gaap-ao='http://fasb.org/us-gaap-aggregateOther/2025' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:ref='http://www.xbrl.org/2006/ref' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xbrli='http://www.xbrl.org/2003/instance' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:xbrldt='http://xbrl.org/2005/xbrldt' xmlns='http://www.xbrl.org/2003/linkbase' xsi:schemaLocation='http://www.xbrl.org/2006/ref http://www.xbrl.org/2006/ref-2006-02-27.xsd' ><xs:import namespace='http://www.xbrl.org/2003/instance' schemaLocation='http://www.xbrl.org/2003/xbrl-instance-2003-12-31.xsd'/><xs:import namespace='http://www.xbrl.org/2003/linkbase' schemaLocation='http://www.xbrl.org/2003/xbrl-linkbase-2003-12-31.xsd' /><xs:import namespace='http://www.xbrl.org/2006/ref' schemaLocation='http://www.xbrl.org/2006/ref-2006-02-27.xsd' /><xs:import namespace='http://xbrl.org/2005/xbrldt' schemaLocation='http://www.xbrl.org/2005/xbrldt-2005.xsd'/><xs:import namespace='http://fasb.org/us-gaap-metaModel/2025' schemaLocation='us-gaap-metaModel-2025.xsd'/><xs:annotation><xs:appinfo><link:linkbase id='lnk'><link:roleRef roleURI='http://xbrl.us/metaModel/role' xlink:type='simple' xlink:href='us-gaap-metaModel-2025.xsd#metaModelRole'/><link:arcroleRef arcroleURI='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:href='us-gaap-metaModel-2025.xsd#aggregate-other' xlink:type='simple'/><link:definitionLink xlink:type='extended' xlink:role='http://xbrl.us/metaModel/role'>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AccountsAndOtherReceivablesNetCurrent' xlink:label='loc_AccountsAndOtherReceivablesNetCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AccrualForTaxesOtherThanIncomeTaxesCurrent' xlink:label='loc_AccrualForTaxesOtherThanIncomeTaxesCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment' xlink:label='loc_AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AdjustmentsToAdditionalPaidInCapitalSharebasedCompensationOtherLongtermIncentivePlansRequisiteServicePeriodRecognition' xlink:label='loc_AdjustmentsToAdditionalPaidInCapitalSharebasedCompensationOtherLongtermIncentivePlansRequisiteServicePeriodRecognition' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AdjustmentsToAdditionalPaidInCapitalSharebasedCompensationRequisiteServicePeriodRecognitionValue' xlink:label='loc_AdjustmentsToAdditionalPaidInCapitalSharebasedCompensationRequisiteServicePeriodRecognitionValue' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AllowanceForNotesAndLoansReceivableNoncurrent' xlink:label='loc_AllowanceForNotesAndLoansReceivableNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AmortizationOfDeferredCharges' xlink:label='loc_AmortizationOfDeferredCharges' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AssetImpairmentCharges' xlink:label='loc_AssetImpairmentCharges' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_Assets' xlink:label='loc_Assets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AssetsCurrent' xlink:label='loc_AssetsCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AssetsHeldForSaleNotPartOfDisposalGroup' xlink:label='loc_AssetsHeldForSaleNotPartOfDisposalGroup' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AssetsHeldForSaleNotPartOfDisposalGroupCurrent' xlink:label='loc_AssetsHeldForSaleNotPartOfDisposalGroupCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AssetsHeldForSaleNotPartOfDisposalGroupCurrentOther' xlink:label='loc_AssetsHeldForSaleNotPartOfDisposalGroupCurrentOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AssetsHeldForSaleNotPartOfDisposalGroupOther' xlink:label='loc_AssetsHeldForSaleNotPartOfDisposalGroupOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AssetsNoncurrent' xlink:label='loc_AssetsNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AssetsOfDisposalGroupIncludingDiscontinuedOperation' xlink:label='loc_AssetsOfDisposalGroupIncludingDiscontinuedOperation' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_AssetsOfDisposalGroupIncludingDiscontinuedOperationCurrent' xlink:label='loc_AssetsOfDisposalGroupIncludingDiscontinuedOperationCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedCurrentLiabilities' xlink:label='loc_BusinessCombinationRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedCurrentLiabilities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedCurrentLiabilitiesOther' xlink:label='loc_BusinessCombinationRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedCurrentLiabilitiesOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedNoncurrentLiabilities' xlink:label='loc_BusinessCombinationRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedNoncurrentLiabilities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedNoncurrentLiabilitiesOther' xlink:label='loc_BusinessCombinationRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedNoncurrentLiabilitiesOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ClosedBlockAssetsAndLiabilitiesMaximumFutureEarningsToBeRecognizedOtherAdjustments' xlink:label='loc_ClosedBlockAssetsAndLiabilitiesMaximumFutureEarningsToBeRecognizedOtherAdjustments' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ClosedBlockAssetsAndLiabilitiesMaximumFutureEarningsToBeRecognizedPeriodIncreaseDecrease' xlink:label='loc_ClosedBlockAssetsAndLiabilitiesMaximumFutureEarningsToBeRecognizedPeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ClosedBlockLiabilities' xlink:label='loc_ClosedBlockLiabilities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ClosedBlockLiabilitiesOtherClosedBlockLiabilities' xlink:label='loc_ClosedBlockLiabilitiesOtherClosedBlockLiabilities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ClosedBlockOperationsOtherRevenue' xlink:label='loc_ClosedBlockOperationsOtherRevenue' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ClosedBlockOperationsRevenue' xlink:label='loc_ClosedBlockOperationsRevenue' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_CommonStockOtherSharesOutstanding' xlink:label='loc_CommonStockOtherSharesOutstanding' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_CommonStockOtherValueOutstanding' xlink:label='loc_CommonStockOtherValueOutstanding' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_CommonStockSharesOutstanding' xlink:label='loc_CommonStockSharesOutstanding' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_CommonStockValueOutstanding' xlink:label='loc_CommonStockValueOutstanding' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_CostOfRevenue' xlink:label='loc_CostOfRevenue' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtInstrumentIncreaseDecreaseForPeriodNet' xlink:label='loc_DebtInstrumentIncreaseDecreaseForPeriodNet' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DebtInstrumentIncreaseDecreaseOtherNet' xlink:label='loc_DebtInstrumentIncreaseDecreaseOtherNet' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DeferredCompensationLiabilityCurrent' xlink:label='loc_DeferredCompensationLiabilityCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DeferredCostsCurrent' xlink:label='loc_DeferredCostsCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DeferredIncomeTaxesAndTaxCredits' xlink:label='loc_DeferredIncomeTaxesAndTaxCredits' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DeferredSalesInducementsAdjustments' xlink:label='loc_DeferredSalesInducementsAdjustments' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DeferredSalesInducementsPeriodIncreaseDecrease' xlink:label='loc_DeferredSalesInducementsPeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DefinedBenefitPlanBenefitObligationPeriodIncreaseDecrease' xlink:label='loc_DefinedBenefitPlanBenefitObligationPeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DefinedBenefitPlanOtherChanges' xlink:label='loc_DefinedBenefitPlanOtherChanges' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DepreciationAndAmortization' xlink:label='loc_DepreciationAndAmortization' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DisposalGroupIncludingDiscontinuedOperationAssetsNoncurrent' xlink:label='loc_DisposalGroupIncludingDiscontinuedOperationAssetsNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DisposalGroupIncludingDiscontinuedOperationOtherAssets' xlink:label='loc_DisposalGroupIncludingDiscontinuedOperationOtherAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DisposalGroupIncludingDiscontinuedOperationOtherCurrentAssets' xlink:label='loc_DisposalGroupIncludingDiscontinuedOperationOtherCurrentAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_DisposalGroupIncludingDiscontinuedOperationOtherNoncurrentAssets' xlink:label='loc_DisposalGroupIncludingDiscontinuedOperationOtherNoncurrentAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_EnergyRelatedInventory' xlink:label='loc_EnergyRelatedInventory' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_EnergyRelatedInventoryOtherFossilFuel' xlink:label='loc_EnergyRelatedInventoryOtherFossilFuel' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_EnvironmentalExpenseAndLiabilities' xlink:label='loc_EnvironmentalExpenseAndLiabilities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_FinancialInstrumentsOwnedAtFairValue' xlink:label='loc_FinancialInstrumentsOwnedAtFairValue' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_FinancialInstrumentsOwnedOtherAtFairValue' xlink:label='loc_FinancialInstrumentsOwnedOtherAtFairValue' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ForeclosedAssets' xlink:label='loc_ForeclosedAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_GainLossOnDispositionOfAssets1' xlink:label='loc_GainLossOnDispositionOfAssets1' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_GainLossOnDispositionOfOtherFinancialAssets' xlink:label='loc_GainLossOnDispositionOfOtherFinancialAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_GainLossOnSaleOfLoansAndLeases' xlink:label='loc_GainLossOnSaleOfLoansAndLeases' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_GainLossOnSaleOfOtherAssets' xlink:label='loc_GainLossOnSaleOfOtherAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_GainLossOnSaleOfOtherInvestments' xlink:label='loc_GainLossOnSaleOfOtherInvestments' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_GainLossOnSaleOfOtherLoansAndLeases' xlink:label='loc_GainLossOnSaleOfOtherLoansAndLeases' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_GainsLossesOnSalesOfAssets' xlink:label='loc_GainsLossesOnSalesOfAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_GeneralAndAdministrativeExpense' xlink:label='loc_GeneralAndAdministrativeExpense' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_GoodwillOtherIncreaseDecrease' xlink:label='loc_GoodwillOtherIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_GoodwillPeriodIncreaseDecrease' xlink:label='loc_GoodwillPeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeTaxReconciliationDeductions' xlink:label='loc_IncomeTaxReconciliationDeductions' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeTaxReconciliationDeductionsOther' xlink:label='loc_IncomeTaxReconciliationDeductionsOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeTaxReconciliationNondeductibleExpense' xlink:label='loc_IncomeTaxReconciliationNondeductibleExpense' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeTaxReconciliationNondeductibleExpenseOther' xlink:label='loc_IncomeTaxReconciliationNondeductibleExpenseOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeTaxReconciliationOtherAdjustments' xlink:label='loc_IncomeTaxReconciliationOtherAdjustments' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeTaxReconciliationOtherReconcilingItems' xlink:label='loc_IncomeTaxReconciliationOtherReconcilingItems' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeTaxReconciliationTaxContingencies' xlink:label='loc_IncomeTaxReconciliationTaxContingencies' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeTaxReconciliationTaxContingenciesOther' xlink:label='loc_IncomeTaxReconciliationTaxContingenciesOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeTaxReconciliationTaxCredits' xlink:label='loc_IncomeTaxReconciliationTaxCredits' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncomeTaxReconciliationTaxCreditsOther' xlink:label='loc_IncomeTaxReconciliationTaxCreditsOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInAccountsPayable' xlink:label='loc_IncreaseDecreaseInAccountsPayable' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInAccruedLiabilities' xlink:label='loc_IncreaseDecreaseInAccruedLiabilities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInDeferredLiabilities' xlink:label='loc_IncreaseDecreaseInDeferredLiabilities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInDeposits' xlink:label='loc_IncreaseDecreaseInDeposits' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInDueToOtherRelatedPartiesCurrent' xlink:label='loc_IncreaseDecreaseInDueToOtherRelatedPartiesCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInDueToRelatedPartiesCurrent' xlink:label='loc_IncreaseDecreaseInDueToRelatedPartiesCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInEmployeeRelatedLiabilities' xlink:label='loc_IncreaseDecreaseInEmployeeRelatedLiabilities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInOperatingAssets' xlink:label='loc_IncreaseDecreaseInOperatingAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInOperatingLiabilities' xlink:label='loc_IncreaseDecreaseInOperatingLiabilities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInOtherAccountsPayable' xlink:label='loc_IncreaseDecreaseInOtherAccountsPayable' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInOtherAccruedLiabilities' xlink:label='loc_IncreaseDecreaseInOtherAccruedLiabilities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInOtherDeferredLiability' xlink:label='loc_IncreaseDecreaseInOtherDeferredLiability' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInOtherDeposits' xlink:label='loc_IncreaseDecreaseInOtherDeposits' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInOtherEmployeeRelatedLiabilities' xlink:label='loc_IncreaseDecreaseInOtherEmployeeRelatedLiabilities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInOtherOperatingAssets' xlink:label='loc_IncreaseDecreaseInOtherOperatingAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInOtherOperatingLiabilities' xlink:label='loc_IncreaseDecreaseInOtherOperatingLiabilities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInOtherReceivables' xlink:label='loc_IncreaseDecreaseInOtherReceivables' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInOtherTimeDeposits' xlink:label='loc_IncreaseDecreaseInOtherTimeDeposits' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInReceivables' xlink:label='loc_IncreaseDecreaseInReceivables' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_IncreaseDecreaseInTimeDeposits' xlink:label='loc_IncreaseDecreaseInTimeDeposits' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestAndDividendIncomeOperating' xlink:label='loc_InterestAndDividendIncomeOperating' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestAndDividendIncomeSecurities' xlink:label='loc_InterestAndDividendIncomeSecurities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestAndDividendIncomeSecuritiesOther' xlink:label='loc_InterestAndDividendIncomeSecuritiesOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestAndFeeIncomeLoansAndLeasesHeldForSale' xlink:label='loc_InterestAndFeeIncomeLoansAndLeasesHeldForSale' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestAndFeeIncomeLoansAndLeasesHeldInPortfolio' xlink:label='loc_InterestAndFeeIncomeLoansAndLeasesHeldInPortfolio' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestAndFeeIncomeLoansConsumer' xlink:label='loc_InterestAndFeeIncomeLoansConsumer' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestAndFeeIncomeLoansOtherConsumer' xlink:label='loc_InterestAndFeeIncomeLoansOtherConsumer' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestAndFeeIncomeOtherLoans' xlink:label='loc_InterestAndFeeIncomeOtherLoans' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestAndFeeIncomeOtherLoansHeldForSale' xlink:label='loc_InterestAndFeeIncomeOtherLoansHeldForSale' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestExpense' xlink:label='loc_InterestExpense' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestExpenseDomesticDeposits' xlink:label='loc_InterestExpenseDomesticDeposits' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestExpenseLongTermDebt' xlink:label='loc_InterestExpenseLongTermDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestExpenseNonoperating' xlink:label='loc_InterestExpenseNonoperating' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestExpenseOther' xlink:label='loc_InterestExpenseOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestExpenseOtherDomesticDeposits' xlink:label='loc_InterestExpenseOtherDomesticDeposits' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestExpenseOtherLongTermDebt' xlink:label='loc_InterestExpenseOtherLongTermDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestExpenseOtherShortTermBorrowings' xlink:label='loc_InterestExpenseOtherShortTermBorrowings' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestExpenseShortTermBorrowingsExcludingFederalFundsAndSecuritiesSoldUnderAgreementsToRepurchase' xlink:label='loc_InterestExpenseShortTermBorrowingsExcludingFederalFundsAndSecuritiesSoldUnderAgreementsToRepurchase' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestIncomeDomesticDeposits' xlink:label='loc_InterestIncomeDomesticDeposits' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestIncomeInterestEarningAsset' xlink:label='loc_InterestIncomeInterestEarningAsset' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestIncomeOtherDomesticDeposits' xlink:label='loc_InterestIncomeOtherDomesticDeposits' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestIncomeSecuritiesOtherUSGovernment' xlink:label='loc_InterestIncomeSecuritiesOtherUSGovernment' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestIncomeSecuritiesUSTreasuryAndOtherUSGovernment' xlink:label='loc_InterestIncomeSecuritiesUSTreasuryAndOtherUSGovernment' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InterestIncomeShortTermInvestmentOther' xlink:label='loc_InterestIncomeShortTermInvestmentOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InventoryGross' xlink:label='loc_InventoryGross' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InventoryNoncurrent' xlink:label='loc_InventoryNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InventoryRawMaterialsAndSupplies' xlink:label='loc_InventoryRawMaterialsAndSupplies' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InventoryRealEstate' xlink:label='loc_InventoryRealEstate' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InventoryRealEstateOther' xlink:label='loc_InventoryRealEstateOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_Investments' xlink:label='loc_Investments' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_InvestmentsAndOtherNoncurrentAssets' xlink:label='loc_InvestmentsAndOtherNoncurrentAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_Liabilities' xlink:label='loc_Liabilities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_LiabilitiesCurrent' xlink:label='loc_LiabilitiesCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_LiabilitiesNoncurrent' xlink:label='loc_LiabilitiesNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_LiabilityForFuturePolicyBenefitExpectedFuturePolicyBenefitIncreaseDecreaseForOtherChange' xlink:label='loc_LiabilityForFuturePolicyBenefitExpectedFuturePolicyBenefitIncreaseDecreaseForOtherChange' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_LiabilityForFuturePolicyBenefitExpectedFuturePolicyBenefitPeriodIncreaseDecrease' xlink:label='loc_LiabilityForFuturePolicyBenefitExpectedFuturePolicyBenefitPeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_LiabilityForFuturePolicyBenefitExpectedNetPremiumIncreaseDecreaseForOtherChange' xlink:label='loc_LiabilityForFuturePolicyBenefitExpectedNetPremiumIncreaseDecreaseForOtherChange' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_LiabilityForFuturePolicyBenefitExpectedNetPremiumPeriodIncreaseDecrease' xlink:label='loc_LiabilityForFuturePolicyBenefitExpectedNetPremiumPeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_LineOfCreditFacilityIncreaseDecreaseForPeriodNet' xlink:label='loc_LineOfCreditFacilityIncreaseDecreaseForPeriodNet' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_LineOfCreditFacilityIncreaseDecreaseOtherNet' xlink:label='loc_LineOfCreditFacilityIncreaseDecreaseOtherNet' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_LongTermDebtCurrent' xlink:label='loc_LongTermDebtCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_LongTermDebtNoncurrent' xlink:label='loc_LongTermDebtNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_LongTermInvestments' xlink:label='loc_LongTermInvestments' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_MortgageLoansOnRealEstateOtherDeductions' xlink:label='loc_MortgageLoansOnRealEstateOtherDeductions' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_MortgageLoansOnRealEstatePeriodIncreaseDecrease' xlink:label='loc_MortgageLoansOnRealEstatePeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_NetCashProvidedByUsedInFinancingActivitiesContinuingOperations' xlink:label='loc_NetCashProvidedByUsedInFinancingActivitiesContinuingOperations' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_NetIncomeLossAttributableToNonredeemableNoncontrollingInterest' xlink:label='loc_NetIncomeLossAttributableToNonredeemableNoncontrollingInterest' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_NetIncomeLossAttributableToRedeemableNoncontrollingInterest' xlink:label='loc_NetIncomeLossAttributableToRedeemableNoncontrollingInterest' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_NoncontrollingInterestInNetIncomeLossOtherNoncontrollingInterestsNonredeemable' xlink:label='loc_NoncontrollingInterestInNetIncomeLossOtherNoncontrollingInterestsNonredeemable' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_NoncontrollingInterestInNetIncomeLossOtherNoncontrollingInterestsRedeemable' xlink:label='loc_NoncontrollingInterestInNetIncomeLossOtherNoncontrollingInterestsRedeemable' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_NonoperatingGainsLosses' xlink:label='loc_NonoperatingGainsLosses' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_NonoperatingIncomeExpense' xlink:label='loc_NonoperatingIncomeExpense' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_NontradeReceivables' xlink:label='loc_NontradeReceivables' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_NotesAndLoansReceivableGrossNoncurrent' xlink:label='loc_NotesAndLoansReceivableGrossNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_NotesAndLoansReceivableNetNoncurrent' xlink:label='loc_NotesAndLoansReceivableNetNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OperatingExpenses' xlink:label='loc_OperatingExpenses' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherAmortizationOfDeferredCharges' xlink:label='loc_OtherAmortizationOfDeferredCharges' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherAssetImpairmentCharges' xlink:label='loc_OtherAssetImpairmentCharges' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherAssets' xlink:label='loc_OtherAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherAssetsCurrent' xlink:label='loc_OtherAssetsCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherAssetsMiscellaneous' xlink:label='loc_OtherAssetsMiscellaneous' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherAssetsMiscellaneousCurrent' xlink:label='loc_OtherAssetsMiscellaneousCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherAssetsMiscellaneousNoncurrent' xlink:label='loc_OtherAssetsMiscellaneousNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherAssetsNoncurrent' xlink:label='loc_OtherAssetsNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherCostOfOperatingRevenue' xlink:label='loc_OtherCostOfOperatingRevenue' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherDeferredCompensationArrangementsLiabilityCurrent' xlink:label='loc_OtherDeferredCompensationArrangementsLiabilityCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherDeferredCostsNet' xlink:label='loc_OtherDeferredCostsNet' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherDepreciationAndAmortization' xlink:label='loc_OtherDepreciationAndAmortization' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherExpenses' xlink:label='loc_OtherExpenses' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherForeclosedAssets' xlink:label='loc_OtherForeclosedAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherGeneralAndAdministrativeExpense' xlink:label='loc_OtherGeneralAndAdministrativeExpense' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherGeneralExpense' xlink:label='loc_OtherGeneralExpense' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherIncreaseDecreaseInEnvironmentalLiabilities' xlink:label='loc_OtherIncreaseDecreaseInEnvironmentalLiabilities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherInterestAndDividendIncome' xlink:label='loc_OtherInterestAndDividendIncome' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherInventory' xlink:label='loc_OtherInventory' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherInventoryNoncurrent' xlink:label='loc_OtherInventoryNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherInventorySupplies' xlink:label='loc_OtherInventorySupplies' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherInvestments' xlink:label='loc_OtherInvestments' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherLiabilities' xlink:label='loc_OtherLiabilities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherLiabilitiesCurrent' xlink:label='loc_OtherLiabilitiesCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherLiabilitiesNoncurrent' xlink:label='loc_OtherLiabilitiesNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherLongTermDebtCurrent' xlink:label='loc_OtherLongTermDebtCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherLongTermDebtNoncurrent' xlink:label='loc_OtherLongTermDebtNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherLongTermInvestments' xlink:label='loc_OtherLongTermInvestments' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherNoncashIncomeTaxExpense' xlink:label='loc_OtherNoncashIncomeTaxExpense' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherNonoperatingAssetRelatedIncome' xlink:label='loc_OtherNonoperatingAssetRelatedIncome' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherNonoperatingGainsLosses' xlink:label='loc_OtherNonoperatingGainsLosses' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherNonoperatingIncomeExpense' xlink:label='loc_OtherNonoperatingIncomeExpense' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherPartnersCapital' xlink:label='loc_OtherPartnersCapital' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherPayablesToBrokerDealersAndClearingOrganizations' xlink:label='loc_OtherPayablesToBrokerDealersAndClearingOrganizations' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherPaymentsToAcquireBusinesses' xlink:label='loc_OtherPaymentsToAcquireBusinesses' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherPolicyholderFunds' xlink:label='loc_OtherPolicyholderFunds' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherPreferredStockDividendsAndAdjustments' xlink:label='loc_OtherPreferredStockDividendsAndAdjustments' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherPrepaidExpenseCurrent' xlink:label='loc_OtherPrepaidExpenseCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherReceivableAfterAllowanceForCreditLossNoncurrent' xlink:label='loc_OtherReceivableAfterAllowanceForCreditLossNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherReceivableAllowanceForCreditLossNoncurrent' xlink:label='loc_OtherReceivableAllowanceForCreditLossNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherReceivableBeforeAllowanceForCreditLossNoncurrent' xlink:label='loc_OtherReceivableBeforeAllowanceForCreditLossNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherReceivables' xlink:label='loc_OtherReceivables' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherReceivablesFromBrokerDealersAndClearingOrganizations' xlink:label='loc_OtherReceivablesFromBrokerDealersAndClearingOrganizations' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherRestrictedAssetsCurrent' xlink:label='loc_OtherRestrictedAssetsCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherRestrictedAssetsNoncurrent' xlink:label='loc_OtherRestrictedAssetsNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherRestructuringCosts' xlink:label='loc_OtherRestructuringCosts' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherSellingAndMarketingExpense' xlink:label='loc_OtherSellingAndMarketingExpense' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherSellingGeneralAndAdministrativeExpense' xlink:label='loc_OtherSellingGeneralAndAdministrativeExpense' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherShortTermBorrowings' xlink:label='loc_OtherShortTermBorrowings' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_OtherShortTermInvestments' xlink:label='loc_OtherShortTermInvestments' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PartnersCapital' xlink:label='loc_PartnersCapital' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PartnersCapitalAccountPeriodIncreaseDecrease' xlink:label='loc_PartnersCapitalAccountPeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PartnersCapitalOther' xlink:label='loc_PartnersCapitalOther' xlink:type='locator'/>
+<link:loc xlink:href='https://xbrl.fasb.org/srt/2025/elts/srt-2025.xsd#srt_PayablesToBrokerDealersAndClearingOrganizations' xlink:label='loc_PayablesToBrokerDealersAndClearingOrganizations' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PaymentsForProceedsFromOtherRealEstatePartnerships' xlink:label='loc_PaymentsForProceedsFromOtherRealEstatePartnerships' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PaymentsForProceedsFromRealEstatePartnershipInvestmentNet' xlink:label='loc_PaymentsForProceedsFromRealEstatePartnershipInvestmentNet' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PaymentsForRepurchaseOfEquity' xlink:label='loc_PaymentsForRepurchaseOfEquity' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PaymentsForRepurchaseOfOtherEquity' xlink:label='loc_PaymentsForRepurchaseOfOtherEquity' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PaymentsToAcquireBusinessesNetOfCashAcquired' xlink:label='loc_PaymentsToAcquireBusinessesNetOfCashAcquired' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PaymentsToAcquireLoansAndLeasesHeldForInvestment' xlink:label='loc_PaymentsToAcquireLoansAndLeasesHeldForInvestment' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PaymentsToAcquireOtherLoansAndLeasesHeldForInvestment' xlink:label='loc_PaymentsToAcquireOtherLoansAndLeasesHeldForInvestment' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PaymentsToAcquireOtherProductiveAssets' xlink:label='loc_PaymentsToAcquireOtherProductiveAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PaymentsToAcquireOtherPropertyPlantAndEquipment' xlink:label='loc_PaymentsToAcquireOtherPropertyPlantAndEquipment' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PaymentsToAcquireOtherReceivables' xlink:label='loc_PaymentsToAcquireOtherReceivables' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PaymentsToAcquireProductiveAssets' xlink:label='loc_PaymentsToAcquireProductiveAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PaymentsToAcquirePropertyPlantAndEquipment' xlink:label='loc_PaymentsToAcquirePropertyPlantAndEquipment' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PaymentsToAcquireReceivables' xlink:label='loc_PaymentsToAcquireReceivables' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PaymentsToPurchaseLoansHeldForSale' xlink:label='loc_PaymentsToPurchaseLoansHeldForSale' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PaymentsToPurchaseOtherLoansHeldForSale' xlink:label='loc_PaymentsToPurchaseOtherLoansHeldForSale' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PolicyholderAccountBalanceIncreaseDecreaseFromOtherChange' xlink:label='loc_PolicyholderAccountBalanceIncreaseDecreaseFromOtherChange' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PolicyholderAccountBalancePeriodIncreaseDecrease' xlink:label='loc_PolicyholderAccountBalancePeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PolicyholderFunds' xlink:label='loc_PolicyholderFunds' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PreferredStockDividendsAndOtherAdjustments' xlink:label='loc_PreferredStockDividendsAndOtherAdjustments' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PrepaidExpenseAndOtherAssets' xlink:label='loc_PrepaidExpenseAndOtherAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PrepaidExpenseAndOtherAssetsCurrent' xlink:label='loc_PrepaidExpenseAndOtherAssetsCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PrepaidExpenseAndOtherAssetsNoncurrent' xlink:label='loc_PrepaidExpenseAndOtherAssetsNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PrepaidExpenseCurrent' xlink:label='loc_PrepaidExpenseCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PrepaidExpenseNoncurrent' xlink:label='loc_PrepaidExpenseNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PrepaidExpenseOtherNoncurrent' xlink:label='loc_PrepaidExpenseOtherNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromCollectionOfLoansHeldForSale' xlink:label='loc_ProceedsFromCollectionOfLoansHeldForSale' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromCollectionOfOtherLoansHeldForSale' xlink:label='loc_ProceedsFromCollectionOfOtherLoansHeldForSale' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromIssuanceOfDebt' xlink:label='loc_ProceedsFromIssuanceOfDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromIssuanceOfLongTermDebt' xlink:label='loc_ProceedsFromIssuanceOfLongTermDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromIssuanceOfOtherLongTermDebt' xlink:label='loc_ProceedsFromIssuanceOfOtherLongTermDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromIssuanceOrSaleOfEquity' xlink:label='loc_ProceedsFromIssuanceOrSaleOfEquity' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromOtherDebt' xlink:label='loc_ProceedsFromOtherDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromOtherEquity' xlink:label='loc_ProceedsFromOtherEquity' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromOtherShortTermDebt' xlink:label='loc_ProceedsFromOtherShortTermDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromPaymentsForOtherFinancingActivities' xlink:label='loc_ProceedsFromPaymentsForOtherFinancingActivities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromRepaymentsOfDebt' xlink:label='loc_ProceedsFromRepaymentsOfDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromRepaymentsOfLongTermDebtAndCapitalSecurities' xlink:label='loc_ProceedsFromRepaymentsOfLongTermDebtAndCapitalSecurities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromRepaymentsOfOtherDebt' xlink:label='loc_ProceedsFromRepaymentsOfOtherDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromRepaymentsOfOtherLongTermDebt' xlink:label='loc_ProceedsFromRepaymentsOfOtherLongTermDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromSaleAndCollectionOfOtherReceivables' xlink:label='loc_ProceedsFromSaleAndCollectionOfOtherReceivables' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromSaleAndCollectionOfReceivables' xlink:label='loc_ProceedsFromSaleAndCollectionOfReceivables' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromSaleAndMaturityOfOtherInvestments' xlink:label='loc_ProceedsFromSaleAndMaturityOfOtherInvestments' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromSaleMaturityAndCollectionsOfInvestments' xlink:label='loc_ProceedsFromSaleMaturityAndCollectionsOfInvestments' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromSaleOfLoansHeldForSale' xlink:label='loc_ProceedsFromSaleOfLoansHeldForSale' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromSaleOfOtherLoansHeldForSale' xlink:label='loc_ProceedsFromSaleOfOtherLoansHeldForSale' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromSaleOfOtherProductiveAssets' xlink:label='loc_ProceedsFromSaleOfOtherProductiveAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromSaleOfOtherPropertyPlantAndEquipment' xlink:label='loc_ProceedsFromSaleOfOtherPropertyPlantAndEquipment' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromSaleOfProductiveAssets' xlink:label='loc_ProceedsFromSaleOfProductiveAssets' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromSaleOfPropertyPlantAndEquipment' xlink:label='loc_ProceedsFromSaleOfPropertyPlantAndEquipment' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProceedsFromShortTermDebt' xlink:label='loc_ProceedsFromShortTermDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PropertyPlantAndEquipmentGross' xlink:label='loc_PropertyPlantAndEquipmentGross' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PropertyPlantAndEquipmentNet' xlink:label='loc_PropertyPlantAndEquipmentNet' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PropertyPlantAndEquipmentOther' xlink:label='loc_PropertyPlantAndEquipmentOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PropertyPlantAndEquipmentOtherAccumulatedDepreciation' xlink:label='loc_PropertyPlantAndEquipmentOtherAccumulatedDepreciation' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PropertyPlantAndEquipmentOtherNet' xlink:label='loc_PropertyPlantAndEquipmentOtherNet' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProvisionForLoanLeaseAndOtherLosses' xlink:label='loc_ProvisionForLoanLeaseAndOtherLosses' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProvisionForOtherCreditLosses' xlink:label='loc_ProvisionForOtherCreditLosses' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ProvisionForOtherLosses' xlink:label='loc_ProvisionForOtherLosses' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PublicUtilitiesPropertyPlantAndEquipmentOtherPropertyPlantAndEquipment' xlink:label='loc_PublicUtilitiesPropertyPlantAndEquipmentOtherPropertyPlantAndEquipment' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_PublicUtilitiesPropertyPlantAndEquipmentPlantInService' xlink:label='loc_PublicUtilitiesPropertyPlantAndEquipmentPlantInService' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RealEstateAccumulatedDepreciationOtherDeductions' xlink:label='loc_RealEstateAccumulatedDepreciationOtherDeductions' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RealEstateAccumulatedDepreciationPeriodIncreaseDecrease' xlink:label='loc_RealEstateAccumulatedDepreciationPeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RealEstateInvestmentPropertyAtCost' xlink:label='loc_RealEstateInvestmentPropertyAtCost' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RealEstateInvestmentsOther' xlink:label='loc_RealEstateInvestmentsOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RealEstateOtherDeductions' xlink:label='loc_RealEstateOtherDeductions' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RealEstatePeriodIncreaseDecrease' xlink:label='loc_RealEstatePeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RealizedInvestmentGainsLosses' xlink:label='loc_RealizedInvestmentGainsLosses' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ReceivablesFromBrokersDealersAndClearingOrganizations' xlink:label='loc_ReceivablesFromBrokersDealersAndClearingOrganizations' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ReceivablesNetCurrent' xlink:label='loc_ReceivablesNetCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RedeemableNoncontrollingInterestEquityCarryingAmount' xlink:label='loc_RedeemableNoncontrollingInterestEquityCarryingAmount' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RedeemableNoncontrollingInterestEquityOtherCarryingAmount' xlink:label='loc_RedeemableNoncontrollingInterestEquityOtherCarryingAmount' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RepaymentsOfDebt' xlink:label='loc_RepaymentsOfDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RepaymentsOfLongTermDebt' xlink:label='loc_RepaymentsOfLongTermDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RepaymentsOfOtherDebt' xlink:label='loc_RepaymentsOfOtherDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RepaymentsOfOtherLongTermDebt' xlink:label='loc_RepaymentsOfOtherLongTermDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RepaymentsOfOtherShortTermDebt' xlink:label='loc_RepaymentsOfOtherShortTermDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RepaymentsOfShortTermDebt' xlink:label='loc_RepaymentsOfShortTermDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RestrictedCashAndInvestmentsCurrent' xlink:label='loc_RestrictedCashAndInvestmentsCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RestrictedCashAndInvestmentsNoncurrent' xlink:label='loc_RestrictedCashAndInvestmentsNoncurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RestructuringCharges' xlink:label='loc_RestructuringCharges' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ResultsOfOperationsExpenseFromOilAndGasProducingActivities' xlink:label='loc_ResultsOfOperationsExpenseFromOilAndGasProducingActivities' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ResultsOfOperationsExpenseOther' xlink:label='loc_ResultsOfOperationsExpenseOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_SecuredDebt' xlink:label='loc_SecuredDebt' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_SecuredDebtOther' xlink:label='loc_SecuredDebtOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_SellingAndMarketingExpense' xlink:label='loc_SellingAndMarketingExpense' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_SellingGeneralAndAdministrativeExpense' xlink:label='loc_SellingGeneralAndAdministrativeExpense' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ServicingAssetAtAmortizedValueOtherChangesThatAffectBalanceAmount' xlink:label='loc_ServicingAssetAtAmortizedValueOtherChangesThatAffectBalanceAmount' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ServicingAssetAtAmortizedValuePeriodIncreaseDecrease' xlink:label='loc_ServicingAssetAtAmortizedValuePeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ServicingAssetAtFairValueOtherChangesThatAffectBalance' xlink:label='loc_ServicingAssetAtFairValueOtherChangesThatAffectBalance' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ServicingAssetAtFairValuePeriodIncreaseDecrease' xlink:label='loc_ServicingAssetAtFairValuePeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ServicingLiabilityAtAmortizedCostOtherIncreaseDecreaseInObligation' xlink:label='loc_ServicingLiabilityAtAmortizedCostOtherIncreaseDecreaseInObligation' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ServicingLiabilityAtAmortizedValuePeriodIncreaseDecrease' xlink:label='loc_ServicingLiabilityAtAmortizedValuePeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ServicingLiabilityAtFairValueOtherChangesThatAffectBalance' xlink:label='loc_ServicingLiabilityAtFairValueOtherChangesThatAffectBalance' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ServicingLiabilityAtFairValuePeriodIncreaseDecrease' xlink:label='loc_ServicingLiabilityAtFairValuePeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardNonOptionEquityInstrumentsOther' xlink:label='loc_ShareBasedCompensationArrangementByShareBasedPaymentAwardNonOptionEquityInstrumentsOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardNonOptionEquityInstrumentsPeriodIncreaseDecrease' xlink:label='loc_ShareBasedCompensationArrangementByShareBasedPaymentAwardNonOptionEquityInstrumentsPeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOtherIncreasesDecreasesInPeriod' xlink:label='loc_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOtherIncreasesDecreasesInPeriod' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOutstandingPeriodIncreaseDecrease' xlink:label='loc_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOutstandingPeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ShortTermBorrowings' xlink:label='loc_ShortTermBorrowings' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_ShortTermInvestments' xlink:label='loc_ShortTermInvestments' xlink:type='locator'/>
+<link:loc xlink:href='https://xbrl.fasb.org/srt/2025/elts/srt-2025.xsd#srt_StandardizedMeasureOfDiscountedFutureNetCashFlowOfProvedOilAndGasReservesOther' xlink:label='loc_StandardizedMeasureOfDiscountedFutureNetCashFlowOfProvedOilAndGasReservesOther' xlink:type='locator'/>
+<link:loc xlink:href='https://xbrl.fasb.org/srt/2025/elts/srt-2025.xsd#srt_StandardizedMeasureOfDiscountedFutureNetCashFlowsRelatingToProvedOilAndGasReserves' xlink:label='loc_StandardizedMeasureOfDiscountedFutureNetCashFlowsRelatingToProvedOilAndGasReserves' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_StockholdersEquityOther' xlink:label='loc_StockholdersEquityOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_StockholdersEquityPeriodIncreaseDecrease' xlink:label='loc_StockholdersEquityPeriodIncreaseDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_SupplementalUnemploymentBenefits' xlink:label='loc_SupplementalUnemploymentBenefits' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_SupplementalUnemploymentBenefitsOtherPostemployment' xlink:label='loc_SupplementalUnemploymentBenefitsOtherPostemployment' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_TaxesExcludingIncomeAndExciseTaxes' xlink:label='loc_TaxesExcludingIncomeAndExciseTaxes' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_TaxesOther' xlink:label='loc_TaxesOther' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_TaxesPayableCurrent' xlink:label='loc_TaxesPayableCurrent' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_TemporaryEquityIssuePeriodIncreaseOrDecrease' xlink:label='loc_TemporaryEquityIssuePeriodIncreaseOrDecrease' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_TemporaryEquityOtherChanges' xlink:label='loc_TemporaryEquityOtherChanges' xlink:type='locator'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment' xlink:to='loc_PropertyPlantAndEquipmentOtherAccumulatedDepreciation' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_AdjustmentsToAdditionalPaidInCapitalSharebasedCompensationRequisiteServicePeriodRecognitionValue' xlink:to='loc_AdjustmentsToAdditionalPaidInCapitalSharebasedCompensationOtherLongtermIncentivePlansRequisiteServicePeriodRecognition' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_AllowanceForNotesAndLoansReceivableNoncurrent' xlink:to='loc_OtherReceivableAllowanceForCreditLossNoncurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_AmortizationOfDeferredCharges' xlink:to='loc_OtherAmortizationOfDeferredCharges' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_AssetImpairmentCharges' xlink:to='loc_OtherAssetImpairmentCharges' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_Assets' xlink:to='loc_PrepaidExpenseAndOtherAssets' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_Assets' xlink:to='loc_OtherAssetsMiscellaneous' order='20.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_Assets' xlink:to='loc_OtherAssets' order='30.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_AssetsCurrent' xlink:to='loc_OtherAssetsCurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_AssetsCurrent' xlink:to='loc_OtherAssetsMiscellaneousCurrent' order='20.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_AssetsCurrent' xlink:to='loc_PrepaidExpenseAndOtherAssetsCurrent' order='30.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_AssetsHeldForSaleNotPartOfDisposalGroup' xlink:to='loc_AssetsHeldForSaleNotPartOfDisposalGroupOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_AssetsHeldForSaleNotPartOfDisposalGroupCurrent' xlink:to='loc_AssetsHeldForSaleNotPartOfDisposalGroupCurrentOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_AssetsNoncurrent' xlink:to='loc_InvestmentsAndOtherNoncurrentAssets' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_AssetsNoncurrent' xlink:to='loc_OtherAssetsNoncurrent' order='20.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_AssetsNoncurrent' xlink:to='loc_OtherAssetsMiscellaneousNoncurrent' order='30.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_AssetsNoncurrent' xlink:to='loc_PrepaidExpenseAndOtherAssetsNoncurrent' order='40.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_AssetsOfDisposalGroupIncludingDiscontinuedOperation' xlink:to='loc_DisposalGroupIncludingDiscontinuedOperationOtherAssets' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_AssetsOfDisposalGroupIncludingDiscontinuedOperationCurrent' xlink:to='loc_DisposalGroupIncludingDiscontinuedOperationOtherCurrentAssets' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_BusinessCombinationRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedCurrentLiabilities' xlink:to='loc_BusinessCombinationRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedCurrentLiabilitiesOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_BusinessCombinationRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedNoncurrentLiabilities' xlink:to='loc_BusinessCombinationRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedNoncurrentLiabilitiesOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ClosedBlockAssetsAndLiabilitiesMaximumFutureEarningsToBeRecognizedPeriodIncreaseDecrease' xlink:to='loc_ClosedBlockAssetsAndLiabilitiesMaximumFutureEarningsToBeRecognizedOtherAdjustments' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ClosedBlockLiabilities' xlink:to='loc_ClosedBlockLiabilitiesOtherClosedBlockLiabilities' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ClosedBlockOperationsRevenue' xlink:to='loc_ClosedBlockOperationsOtherRevenue' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_CommonStockSharesOutstanding' xlink:to='loc_CommonStockOtherSharesOutstanding' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_CommonStockValueOutstanding' xlink:to='loc_CommonStockOtherValueOutstanding' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_CostOfRevenue' xlink:to='loc_OtherCostOfOperatingRevenue' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_DebtInstrumentIncreaseDecreaseForPeriodNet' xlink:to='loc_DebtInstrumentIncreaseDecreaseOtherNet' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_DeferredCompensationLiabilityCurrent' xlink:to='loc_OtherDeferredCompensationArrangementsLiabilityCurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_DeferredCostsCurrent' xlink:to='loc_OtherDeferredCostsNet' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_DeferredIncomeTaxesAndTaxCredits' xlink:to='loc_OtherNoncashIncomeTaxExpense' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_DeferredSalesInducementsPeriodIncreaseDecrease' xlink:to='loc_DeferredSalesInducementsAdjustments' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_DefinedBenefitPlanBenefitObligationPeriodIncreaseDecrease' xlink:to='loc_DefinedBenefitPlanOtherChanges' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_DepreciationAndAmortization' xlink:to='loc_OtherDepreciationAndAmortization' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_DisposalGroupIncludingDiscontinuedOperationAssetsNoncurrent' xlink:to='loc_DisposalGroupIncludingDiscontinuedOperationOtherNoncurrentAssets' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_EnergyRelatedInventory' xlink:to='loc_EnergyRelatedInventoryOtherFossilFuel' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_EnvironmentalExpenseAndLiabilities' xlink:to='loc_OtherIncreaseDecreaseInEnvironmentalLiabilities' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_FinancialInstrumentsOwnedAtFairValue' xlink:to='loc_FinancialInstrumentsOwnedOtherAtFairValue' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ForeclosedAssets' xlink:to='loc_OtherForeclosedAssets' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_GainLossOnDispositionOfAssets1' xlink:to='loc_GainLossOnSaleOfOtherAssets' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_GainLossOnSaleOfLoansAndLeases' xlink:to='loc_GainLossOnSaleOfOtherLoansAndLeases' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_GainsLossesOnSalesOfAssets' xlink:to='loc_GainLossOnDispositionOfOtherFinancialAssets' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_GeneralAndAdministrativeExpense' xlink:to='loc_OtherGeneralAndAdministrativeExpense' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_GoodwillPeriodIncreaseDecrease' xlink:to='loc_GoodwillOtherIncreaseDecrease' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_IncomeTaxReconciliationDeductions' xlink:to='loc_IncomeTaxReconciliationDeductionsOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_IncomeTaxReconciliationNondeductibleExpense' xlink:to='loc_IncomeTaxReconciliationNondeductibleExpenseOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_IncomeTaxReconciliationOtherReconcilingItems' xlink:to='loc_IncomeTaxReconciliationOtherAdjustments' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_IncomeTaxReconciliationTaxContingencies' xlink:to='loc_IncomeTaxReconciliationTaxContingenciesOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_IncomeTaxReconciliationTaxCredits' xlink:to='loc_IncomeTaxReconciliationTaxCreditsOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_IncreaseDecreaseInAccountsPayable' xlink:to='loc_IncreaseDecreaseInOtherAccountsPayable' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_IncreaseDecreaseInAccruedLiabilities' xlink:to='loc_IncreaseDecreaseInOtherAccruedLiabilities' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_IncreaseDecreaseInDeferredLiabilities' xlink:to='loc_IncreaseDecreaseInOtherDeferredLiability' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_IncreaseDecreaseInDeposits' xlink:to='loc_IncreaseDecreaseInOtherDeposits' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_IncreaseDecreaseInDueToRelatedPartiesCurrent' xlink:to='loc_IncreaseDecreaseInDueToOtherRelatedPartiesCurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_IncreaseDecreaseInEmployeeRelatedLiabilities' xlink:to='loc_IncreaseDecreaseInOtherEmployeeRelatedLiabilities' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_IncreaseDecreaseInOperatingAssets' xlink:to='loc_IncreaseDecreaseInOtherOperatingAssets' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_IncreaseDecreaseInOperatingLiabilities' xlink:to='loc_IncreaseDecreaseInOtherOperatingLiabilities' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_IncreaseDecreaseInReceivables' xlink:to='loc_IncreaseDecreaseInOtherReceivables' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_IncreaseDecreaseInTimeDeposits' xlink:to='loc_IncreaseDecreaseInOtherTimeDeposits' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InterestAndDividendIncomeOperating' xlink:to='loc_OtherInterestAndDividendIncome' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InterestAndDividendIncomeSecurities' xlink:to='loc_InterestAndDividendIncomeSecuritiesOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InterestAndFeeIncomeLoansAndLeasesHeldForSale' xlink:to='loc_InterestAndFeeIncomeOtherLoansHeldForSale' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InterestAndFeeIncomeLoansAndLeasesHeldInPortfolio' xlink:to='loc_InterestAndFeeIncomeOtherLoans' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InterestAndFeeIncomeLoansConsumer' xlink:to='loc_InterestAndFeeIncomeLoansOtherConsumer' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InterestExpense' xlink:to='loc_InterestExpenseOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InterestExpenseDomesticDeposits' xlink:to='loc_InterestExpenseOtherDomesticDeposits' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InterestExpenseLongTermDebt' xlink:to='loc_InterestExpenseOtherLongTermDebt' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InterestExpenseNonoperating' xlink:to='loc_InterestExpenseOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InterestExpenseShortTermBorrowingsExcludingFederalFundsAndSecuritiesSoldUnderAgreementsToRepurchase' xlink:to='loc_InterestExpenseOtherShortTermBorrowings' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InterestIncomeDomesticDeposits' xlink:to='loc_InterestIncomeOtherDomesticDeposits' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InterestIncomeInterestEarningAsset' xlink:to='loc_InterestIncomeShortTermInvestmentOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InterestIncomeSecuritiesUSTreasuryAndOtherUSGovernment' xlink:to='loc_InterestIncomeSecuritiesOtherUSGovernment' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InventoryGross' xlink:to='loc_OtherInventory' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InventoryNoncurrent' xlink:to='loc_OtherInventoryNoncurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InventoryRawMaterialsAndSupplies' xlink:to='loc_OtherInventorySupplies' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_InventoryRealEstate' xlink:to='loc_InventoryRealEstateOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_Investments' xlink:to='loc_OtherInvestments' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_Liabilities' xlink:to='loc_OtherLiabilities' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_LiabilitiesCurrent' xlink:to='loc_OtherLiabilitiesCurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_LiabilitiesNoncurrent' xlink:to='loc_OtherLiabilitiesNoncurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_LiabilityForFuturePolicyBenefitExpectedFuturePolicyBenefitPeriodIncreaseDecrease' xlink:to='loc_LiabilityForFuturePolicyBenefitExpectedFuturePolicyBenefitIncreaseDecreaseForOtherChange' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_LiabilityForFuturePolicyBenefitExpectedNetPremiumPeriodIncreaseDecrease' xlink:to='loc_LiabilityForFuturePolicyBenefitExpectedNetPremiumIncreaseDecreaseForOtherChange' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_LineOfCreditFacilityIncreaseDecreaseForPeriodNet' xlink:to='loc_LineOfCreditFacilityIncreaseDecreaseOtherNet' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_LongTermDebtCurrent' xlink:to='loc_OtherLongTermDebtCurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_LongTermDebtNoncurrent' xlink:to='loc_OtherLongTermDebtNoncurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_LongTermInvestments' xlink:to='loc_OtherLongTermInvestments' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_MortgageLoansOnRealEstatePeriodIncreaseDecrease' xlink:to='loc_MortgageLoansOnRealEstateOtherDeductions' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_NetCashProvidedByUsedInFinancingActivitiesContinuingOperations' xlink:to='loc_ProceedsFromPaymentsForOtherFinancingActivities' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_NetIncomeLossAttributableToNonredeemableNoncontrollingInterest' xlink:to='loc_NoncontrollingInterestInNetIncomeLossOtherNoncontrollingInterestsNonredeemable' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_NetIncomeLossAttributableToRedeemableNoncontrollingInterest' xlink:to='loc_NoncontrollingInterestInNetIncomeLossOtherNoncontrollingInterestsRedeemable' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_NonoperatingGainsLosses' xlink:to='loc_OtherNonoperatingGainsLosses' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_NonoperatingIncomeExpense' xlink:to='loc_OtherNonoperatingIncomeExpense' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_NonoperatingIncomeExpense' xlink:to='loc_OtherNonoperatingAssetRelatedIncome' order='20.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_NontradeReceivables' xlink:to='loc_OtherReceivables' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_NotesAndLoansReceivableGrossNoncurrent' xlink:to='loc_OtherReceivableBeforeAllowanceForCreditLossNoncurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_NotesAndLoansReceivableNetNoncurrent' xlink:to='loc_OtherReceivableAfterAllowanceForCreditLossNoncurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_OperatingExpenses' xlink:to='loc_OtherGeneralExpense' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_OperatingExpenses' xlink:to='loc_OtherExpenses' order='20.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PartnersCapital' xlink:to='loc_OtherPartnersCapital' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PartnersCapitalAccountPeriodIncreaseDecrease' xlink:to='loc_PartnersCapitalOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PayablesToBrokerDealersAndClearingOrganizations' xlink:to='loc_OtherPayablesToBrokerDealersAndClearingOrganizations' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PaymentsForProceedsFromRealEstatePartnershipInvestmentNet' xlink:to='loc_PaymentsForProceedsFromOtherRealEstatePartnerships' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PaymentsForRepurchaseOfEquity' xlink:to='loc_PaymentsForRepurchaseOfOtherEquity' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PaymentsToAcquireBusinessesNetOfCashAcquired' xlink:to='loc_OtherPaymentsToAcquireBusinesses' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PaymentsToAcquireLoansAndLeasesHeldForInvestment' xlink:to='loc_PaymentsToAcquireOtherLoansAndLeasesHeldForInvestment' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PaymentsToAcquireProductiveAssets' xlink:to='loc_PaymentsToAcquireOtherProductiveAssets' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PaymentsToAcquirePropertyPlantAndEquipment' xlink:to='loc_PaymentsToAcquireOtherPropertyPlantAndEquipment' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PaymentsToAcquireReceivables' xlink:to='loc_PaymentsToAcquireOtherReceivables' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PaymentsToPurchaseLoansHeldForSale' xlink:to='loc_PaymentsToPurchaseOtherLoansHeldForSale' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PolicyholderAccountBalancePeriodIncreaseDecrease' xlink:to='loc_PolicyholderAccountBalanceIncreaseDecreaseFromOtherChange' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PolicyholderFunds' xlink:to='loc_OtherPolicyholderFunds' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PreferredStockDividendsAndOtherAdjustments' xlink:to='loc_OtherPreferredStockDividendsAndAdjustments' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PrepaidExpenseCurrent' xlink:to='loc_OtherPrepaidExpenseCurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PrepaidExpenseNoncurrent' xlink:to='loc_PrepaidExpenseOtherNoncurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ProceedsFromCollectionOfLoansHeldForSale' xlink:to='loc_ProceedsFromCollectionOfOtherLoansHeldForSale' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ProceedsFromIssuanceOfDebt' xlink:to='loc_ProceedsFromOtherDebt' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ProceedsFromIssuanceOfLongTermDebt' xlink:to='loc_ProceedsFromIssuanceOfOtherLongTermDebt' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ProceedsFromIssuanceOrSaleOfEquity' xlink:to='loc_ProceedsFromOtherEquity' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ProceedsFromRepaymentsOfDebt' xlink:to='loc_ProceedsFromRepaymentsOfOtherDebt' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ProceedsFromRepaymentsOfLongTermDebtAndCapitalSecurities' xlink:to='loc_ProceedsFromRepaymentsOfOtherLongTermDebt' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ProceedsFromSaleAndCollectionOfReceivables' xlink:to='loc_ProceedsFromSaleAndCollectionOfOtherReceivables' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ProceedsFromSaleMaturityAndCollectionsOfInvestments' xlink:to='loc_ProceedsFromSaleAndMaturityOfOtherInvestments' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ProceedsFromSaleOfLoansHeldForSale' xlink:to='loc_ProceedsFromSaleOfOtherLoansHeldForSale' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ProceedsFromSaleOfProductiveAssets' xlink:to='loc_ProceedsFromSaleOfOtherProductiveAssets' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ProceedsFromSaleOfPropertyPlantAndEquipment' xlink:to='loc_ProceedsFromSaleOfOtherPropertyPlantAndEquipment' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ProceedsFromShortTermDebt' xlink:to='loc_ProceedsFromOtherShortTermDebt' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PropertyPlantAndEquipmentGross' xlink:to='loc_PropertyPlantAndEquipmentOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PropertyPlantAndEquipmentNet' xlink:to='loc_PropertyPlantAndEquipmentOtherNet' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ProvisionForLoanLeaseAndOtherLosses' xlink:to='loc_ProvisionForOtherCreditLosses' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ProvisionForLoanLeaseAndOtherLosses' xlink:to='loc_ProvisionForOtherLosses' order='20.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_PublicUtilitiesPropertyPlantAndEquipmentPlantInService' xlink:to='loc_PublicUtilitiesPropertyPlantAndEquipmentOtherPropertyPlantAndEquipment' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_RealEstateAccumulatedDepreciationPeriodIncreaseDecrease' xlink:to='loc_RealEstateAccumulatedDepreciationOtherDeductions' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_RealEstateInvestmentPropertyAtCost' xlink:to='loc_RealEstateInvestmentsOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_RealEstatePeriodIncreaseDecrease' xlink:to='loc_RealEstateOtherDeductions' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_RealizedInvestmentGainsLosses' xlink:to='loc_GainLossOnSaleOfOtherInvestments' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ReceivablesFromBrokersDealersAndClearingOrganizations' xlink:to='loc_OtherReceivablesFromBrokerDealersAndClearingOrganizations' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ReceivablesNetCurrent' xlink:to='loc_AccountsAndOtherReceivablesNetCurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_RedeemableNoncontrollingInterestEquityCarryingAmount' xlink:to='loc_RedeemableNoncontrollingInterestEquityOtherCarryingAmount' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_RepaymentsOfDebt' xlink:to='loc_RepaymentsOfOtherDebt' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_RepaymentsOfLongTermDebt' xlink:to='loc_RepaymentsOfOtherLongTermDebt' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_RepaymentsOfShortTermDebt' xlink:to='loc_RepaymentsOfOtherShortTermDebt' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_RestrictedCashAndInvestmentsCurrent' xlink:to='loc_OtherRestrictedAssetsCurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_RestrictedCashAndInvestmentsNoncurrent' xlink:to='loc_OtherRestrictedAssetsNoncurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_RestructuringCharges' xlink:to='loc_OtherRestructuringCosts' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ResultsOfOperationsExpenseFromOilAndGasProducingActivities' xlink:to='loc_ResultsOfOperationsExpenseOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_SecuredDebt' xlink:to='loc_SecuredDebtOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_SellingAndMarketingExpense' xlink:to='loc_OtherSellingAndMarketingExpense' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_SellingGeneralAndAdministrativeExpense' xlink:to='loc_OtherSellingGeneralAndAdministrativeExpense' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ServicingAssetAtAmortizedValuePeriodIncreaseDecrease' xlink:to='loc_ServicingAssetAtAmortizedValueOtherChangesThatAffectBalanceAmount' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ServicingAssetAtFairValuePeriodIncreaseDecrease' xlink:to='loc_ServicingAssetAtFairValueOtherChangesThatAffectBalance' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ServicingLiabilityAtAmortizedValuePeriodIncreaseDecrease' xlink:to='loc_ServicingLiabilityAtAmortizedCostOtherIncreaseDecreaseInObligation' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ServicingLiabilityAtFairValuePeriodIncreaseDecrease' xlink:to='loc_ServicingLiabilityAtFairValueOtherChangesThatAffectBalance' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ShareBasedCompensationArrangementByShareBasedPaymentAwardNonOptionEquityInstrumentsPeriodIncreaseDecrease' xlink:to='loc_ShareBasedCompensationArrangementByShareBasedPaymentAwardNonOptionEquityInstrumentsOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOutstandingPeriodIncreaseDecrease' xlink:to='loc_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOtherIncreasesDecreasesInPeriod' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ShortTermBorrowings' xlink:to='loc_OtherShortTermBorrowings' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_ShortTermInvestments' xlink:to='loc_OtherShortTermInvestments' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_StandardizedMeasureOfDiscountedFutureNetCashFlowsRelatingToProvedOilAndGasReserves' xlink:to='loc_StandardizedMeasureOfDiscountedFutureNetCashFlowOfProvedOilAndGasReservesOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_StockholdersEquityPeriodIncreaseDecrease' xlink:to='loc_StockholdersEquityOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_SupplementalUnemploymentBenefits' xlink:to='loc_SupplementalUnemploymentBenefitsOtherPostemployment' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_TaxesExcludingIncomeAndExciseTaxes' xlink:to='loc_TaxesOther' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_TaxesPayableCurrent' xlink:to='loc_AccrualForTaxesOtherThanIncomeTaxesCurrent' order='10.0'/>
+<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/aggregate-other' xlink:from='loc_TemporaryEquityIssuePeriodIncreaseOrDecrease' xlink:to='loc_TemporaryEquityOtherChanges' order='10.0'/>
+</link:definitionLink></link:linkbase></xs:appinfo></xs:annotation></xs:schema>

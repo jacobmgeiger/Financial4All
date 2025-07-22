@@ -1,62 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?><!--2010-2025 Financial Accounting Foundation; (c) 2007-2010 XBRL US, Inc.; (c) 2020-2025 XBRL US, Inc. All Rights Reserved.Notice: Authorized Uses are Set Forth at https://xbrl.fasb.org/terms/TaxonomiesTermsConditions.html--><xs:schema targetNamespace='http://fasb.org/us-gaap-traitDomain/2025' elementFormDefault='qualified' xmlns:xs='http://www.w3.org/2001/XMLSchema' xmlns:us-gaap-td='http://fasb.org/us-gaap-traitDomain/2025' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:ref='http://www.xbrl.org/2006/ref' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xbrli='http://www.xbrl.org/2003/instance' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:xbrldt='http://xbrl.org/2005/xbrldt' xmlns='http://www.xbrl.org/2003/linkbase' xsi:schemaLocation='http://www.xbrl.org/2006/ref http://www.xbrl.org/2006/ref-2006-02-27.xsd' ><xs:import namespace='http://www.xbrl.org/2003/instance' schemaLocation='http://www.xbrl.org/2003/xbrl-instance-2003-12-31.xsd'/><xs:import namespace='http://www.xbrl.org/2003/linkbase' schemaLocation='http://www.xbrl.org/2003/xbrl-linkbase-2003-12-31.xsd' /><xs:import namespace='http://www.xbrl.org/2006/ref' schemaLocation='http://www.xbrl.org/2006/ref-2006-02-27.xsd' /><xs:import namespace='http://xbrl.org/2005/xbrldt' schemaLocation='http://www.xbrl.org/2005/xbrldt-2005.xsd'/><xs:import namespace='http://fasb.org/us-gaap-metaModel/2025' schemaLocation='us-gaap-metaModel-2025.xsd'/><xs:annotation><xs:appinfo><link:linkbase id='lnk'><link:roleRef roleURI='http://xbrl.us/metaModel/role' xlink:type='simple' xlink:href='us-gaap-metaModel-2025.xsd#metaModelRole'/><link:arcroleRef arcroleURI='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:href='us-gaap-metaModel-2025.xsd#trait-domain' xlink:type='simple'/><link:definitionLink xlink:type='extended' xlink:role='http://xbrl.us/metaModel/role'>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_AccrualOrPayableDomain' xlink:label='loc_AccrualOrPayableDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_AccrualOrPayableTrait' xlink:label='loc_AccrualOrPayableTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_ActivityTypeDomain' xlink:label='loc_ActivityTypeDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_ActivityTypeTrait' xlink:label='loc_ActivityTypeTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_ConvertibilityDomain' xlink:label='loc_ConvertibilityDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_ConvertibilityTrait' xlink:label='loc_ConvertibilityTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_CreditStructureDomain' xlink:label='loc_CreditStructureDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_CreditStructureTrait' xlink:label='loc_CreditStructureTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_DebtGuaranteeDomain' xlink:label='loc_DebtGuaranteeDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_DebtGuaranteeTrait' xlink:label='loc_DebtGuaranteeTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_DerivativeContractDomain' xlink:label='loc_DerivativeContractDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_DerivativeContractTrait' xlink:label='loc_DerivativeContractTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_DerivativeInstrumentDomain' xlink:label='loc_DerivativeInstrumentDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_DerivativeInstrumentTrait' xlink:label='loc_DerivativeInstrumentTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_ElementsOfFinancialStatementsDomain' xlink:label='loc_ElementsOfFinancialStatementsDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_ElementsOfFinancialStatementsTrait' xlink:label='loc_ElementsOfFinancialStatementsTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_EstimatedFutureExpenseRevenueDomain' xlink:label='loc_EstimatedFutureExpenseRevenueDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_EstimatedFutureExpenseRevenueTrait' xlink:label='loc_EstimatedFutureExpenseRevenueTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_HedgingDomain' xlink:label='loc_HedgingDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_HedgingTrait' xlink:label='loc_HedgingTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_InterestRateTypeDomain' xlink:label='loc_InterestRateTypeDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_InterestRateTypeTrait' xlink:label='loc_InterestRateTypeTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_LiquidityDomain' xlink:label='loc_LiquidityDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_LiquidityTrait' xlink:label='loc_LiquidityTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_OperatingIntentTrait' xlink:label='loc_OperatingIntentTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_OperatingNonoperatingDomain' xlink:label='loc_OperatingNonoperatingDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_OperatingNonoperatingTrait' xlink:label='loc_OperatingNonoperatingTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_PriorityDomain' xlink:label='loc_PriorityDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_PriorityTrait' xlink:label='loc_PriorityTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_RecordedValueDomain' xlink:label='loc_RecordedValueDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_RecordedValueTrait' xlink:label='loc_RecordedValueTrait' xlink:type='locator'/>
-<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_RelatedPartyDomain' xlink:label='loc_RelatedPartyDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_RelatedPartyTrait' xlink:label='loc_RelatedPartyTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_RestrictionDomain' xlink:label='loc_RestrictionDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_RestrictionTrait' xlink:label='loc_RestrictionTrait' xlink:type='locator'/>
-<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_SegmentOperatingActivitiesDomain' xlink:label='loc_SegmentOperatingActivitiesDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_TaxComponentsDomain' xlink:label='loc_TaxComponentsDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_TaxComponentsTrait' xlink:label='loc_TaxComponentsTrait' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_UseDomain' xlink:label='loc_UseDomain' xlink:type='locator'/>
-<link:loc xlink:href='us-gaap-metaModel-2025.xsd#us-gaap-metaModel_UseTrait' xlink:label='loc_UseTrait' xlink:type='locator'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_AccrualOrPayableTrait' xlink:to='loc_AccrualOrPayableDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_ActivityTypeTrait' xlink:to='loc_ActivityTypeDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_ConvertibilityTrait' xlink:to='loc_ConvertibilityDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_CreditStructureTrait' xlink:to='loc_CreditStructureDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_DebtGuaranteeTrait' xlink:to='loc_DebtGuaranteeDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_DerivativeContractTrait' xlink:to='loc_DerivativeContractDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_DerivativeInstrumentTrait' xlink:to='loc_DerivativeInstrumentDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_ElementsOfFinancialStatementsTrait' xlink:to='loc_ElementsOfFinancialStatementsDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_EstimatedFutureExpenseRevenueTrait' xlink:to='loc_EstimatedFutureExpenseRevenueDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_HedgingTrait' xlink:to='loc_HedgingDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_InterestRateTypeTrait' xlink:to='loc_InterestRateTypeDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_LiquidityTrait' xlink:to='loc_LiquidityDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_OperatingIntentTrait' xlink:to='loc_SegmentOperatingActivitiesDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_OperatingNonoperatingTrait' xlink:to='loc_OperatingNonoperatingDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_PriorityTrait' xlink:to='loc_PriorityDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_RecordedValueTrait' xlink:to='loc_RecordedValueDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_RelatedPartyTrait' xlink:to='loc_RelatedPartyDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_RestrictionTrait' xlink:to='loc_RestrictionDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_TaxComponentsTrait' xlink:to='loc_TaxComponentsDomain' order='10.0'/>
-<link:definitionArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2021/arcrole/trait-domain' xlink:from='loc_UseTrait' xlink:to='loc_UseDomain' order='10.0'/>
-</link:definitionLink></link:linkbase></xs:appinfo></xs:annotation></xs:schema>

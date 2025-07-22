@@ -1,0 +1,215 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+2010-2025 Financial Accounting Foundation; (c) 2007-2010 XBRL US, Inc.; (c) 2020-2025 XBRL US, Inc. All Rights Reserved.
+Notice: Authorized Uses are Set Forth at https://xbrl.fasb.org/terms/TaxonomiesTermsConditions.html
+-->
+<xs:schema targetNamespace='http://fasb.org/dqcrules-0112/2025' elementFormDefault='qualified' xmlns:xs='http://www.w3.org/2001/XMLSchema' xmlns:dqcrules-0112='http://fasb.org/dqcrules-0112/2025' xmlns:dqcrules='http://fasb.org/dqcrules/2025' xmlns:us-gaap='http://fasb.org/us-gaap/2025' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:ref='http://www.xbrl.org/2006/ref' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xbrli='http://www.xbrl.org/2003/instance' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:xbrldt='http://xbrl.org/2005/xbrldt' xmlns='http://www.xbrl.org/2003/linkbase' xsi:schemaLocation='http://www.xbrl.org/2006/ref http://www.xbrl.org/2006/ref-2006-02-27.xsd http://fasb.org/dqcrules/2025 dqcrules-2025.xsd'>
+<xs:import namespace='http://www.xbrl.org/2003/instance' schemaLocation='http://www.xbrl.org/2003/xbrl-instance-2003-12-31.xsd'/>
+<xs:import namespace='http://www.xbrl.org/2003/linkbase' schemaLocation='http://www.xbrl.org/2003/xbrl-linkbase-2003-12-31.xsd'/>
+<xs:import namespace='http://www.xbrl.org/2006/ref' schemaLocation='http://www.xbrl.org/2006/ref-2006-02-27.xsd'/>
+<xs:import namespace='http://xbrl.org/2005/xbrldt' schemaLocation='http://www.xbrl.org/2005/xbrldt-2005.xsd'/>
+<xs:import namespace='http://fasb.org/dqcrules/2025' schemaLocation='dqcrules-2025.xsd'/>
+<xs:import namespace='http://fasb.org/us-roles/2025' schemaLocation='../elts/us-roles-2025.xsd'/>
+<xs:import namespace='http://fasb.org/us-gaap/2025' schemaLocation='../elts/us-gaap-2025.xsd'/>
+<xs:annotation>
+<xs:appinfo>
+<link:roleType roleURI='http://fasb.org/us-gaap/role/dqc/0112' id='dqc_0112'>
+<link:definition>DQC.US.0112</link:definition>
+<link:usedOn>link:definitionLink</link:usedOn>
+<link:usedOn>link:referenceLink</link:usedOn>
+<link:usedOn>link:labelLink</link:usedOn>
+</link:roleType>
+<link:linkbase id='lnk'>
+<link:roleRef roleURI='http://fasb.org/us-gaap/role/dqc/0112' xlink:type='simple' xlink:href='#dqc_0112'/>
+<link:roleRef roleURI='http://fasb.org/us-gaap/role/dqc/dqcNote' xlink:href='dqcrules-2025.xsd#dqcn' xlink:type='simple'/>
+<link:arcroleRef arcroleURI='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:href='dqcrules-2025.xsd#rule-concept' xlink:type='simple'/>
+<link:roleRef roleURI='http://fasb.org/us-gaap/role/dqc/ruleExclusions' xlink:href='dqcrules-2025.xsd#dqcre' xlink:type='simple'/>
+<link:roleRef roleURI='http://fasb.org/us-gaap/role/dqc/ruleID' xlink:href='dqcrules-2025.xsd#dqcrid' xlink:type='simple'/>
+<link:labelLink xlink:type='extended' xlink:role='http://fasb.org/us-gaap/role/dqc/0112'>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0112_Dqc_0112' xlink:label='loc_dqcrules_Dqc_0112'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0112_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:label='loc_dqcrules_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis'/>
+<link:label xlink:type='resource' xlink:role='http://www.xbrl.org/2003/role/label' xlink:label='lbl_dqcrules_Dqc_0112' xml:lang='en-US'>DQC.US.0112 [Abstract]</link:label>
+<link:label xlink:type='resource' xlink:role='http://www.xbrl.org/2003/role/label' xlink:label='lbl_dqcrules_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xml:lang='en-US'>DQC.US.0112.Line Items Requiring The Business Acquisition Axis [Abstract]</link:label>
+<link:labelArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-label' xlink:from='loc_dqcrules_Dqc_0112' xlink:to='lbl_dqcrules_Dqc_0112'/>
+<link:labelArc xlink:type='arc' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-label' xlink:from='loc_dqcrules_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='lbl_dqcrules_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis'/>
+</link:labelLink>
+<link:definitionLink xlink:type='extended' xlink:role='http://fasb.org/us-gaap/role/dqc/0112'>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0112_Dqc_0112' xlink:label='loc_Dqc_0112'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0112_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:label='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionDateOfAcquisitionAgreement1' xlink:label='loc_BusinessAcquisitionDateOfAcquisitionAgreement1' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionDescriptionOfAcquiredEntity' xlink:label='loc_BusinessAcquisitionDescriptionOfAcquiredEntity' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionEffectiveDateOfAcquisition1' xlink:label='loc_BusinessAcquisitionEffectiveDateOfAcquisition1' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionEquityInterestIssuedOrIssuableBasisForDeterminingValue' xlink:label='loc_BusinessAcquisitionEquityInterestIssuedOrIssuableBasisForDeterminingValue' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionEquityInterestIssuedOrIssuableDescription' xlink:label='loc_BusinessAcquisitionEquityInterestIssuedOrIssuableDescription' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionEquityInterestIssuedOrIssuableValueAssigned' xlink:label='loc_BusinessAcquisitionEquityInterestIssuedOrIssuableValueAssigned' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionEquityInterestsIssuedOrIssuableNumberOfSharesIssued' xlink:label='loc_BusinessAcquisitionEquityInterestsIssuedOrIssuableNumberOfSharesIssued' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionNameOfAcquiredEntity' xlink:label='loc_BusinessAcquisitionNameOfAcquiredEntity' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionPercentageOfVotingInterestsAcquired' xlink:label='loc_BusinessAcquisitionPercentageOfVotingInterestsAcquired' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionPeriodResultsIncludedInCombinedEntity1' xlink:label='loc_BusinessAcquisitionPeriodResultsIncludedInCombinedEntity1' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionRevenueReportedByAcquiredEntityForLastAnnualPeriod' xlink:label='loc_BusinessAcquisitionRevenueReportedByAcquiredEntityForLastAnnualPeriod' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionSharePrice' xlink:label='loc_BusinessAcquisitionSharePrice' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationBargainPurchaseGainRecognizedDescription' xlink:label='loc_BusinessCombinationBargainPurchaseGainRecognizedDescription' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationContingentConsiderationArrangementsBasisForAmount' xlink:label='loc_BusinessCombinationContingentConsiderationArrangementsBasisForAmount' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationContingentConsiderationArrangementsDescription' xlink:label='loc_BusinessCombinationContingentConsiderationArrangementsDescription' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesInestimable' xlink:label='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesInestimable' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesMaximumUnlimited' xlink:label='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesMaximumUnlimited' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesValueHigh' xlink:label='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesValueHigh' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesValueLow' xlink:label='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesValueLow' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationIndemnificationAssetsAmountAsOfAcquisitionDate' xlink:label='loc_BusinessCombinationIndemnificationAssetsAmountAsOfAcquisitionDate' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationIndemnificationAssetsBasisForAmount' xlink:label='loc_BusinessCombinationIndemnificationAssetsBasisForAmount' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationIndemnificationAssetsDescription' xlink:label='loc_BusinessCombinationIndemnificationAssetsDescription' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationIndemnificationAssetsRangeOfOutcomesInestimable' xlink:label='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesInestimable' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationIndemnificationAssetsRangeOfOutcomesMaximumUnlimited' xlink:label='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesMaximumUnlimited' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationIndemnificationAssetsRangeOfOutcomesValueHigh' xlink:label='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesValueHigh' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationIndemnificationAssetsRangeOfOutcomesValueLow' xlink:label='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesValueLow' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationReasonForBusinessCombination' xlink:label='loc_BusinessCombinationReasonForBusinessCombination' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationStepAcquisitionEquityInterestInAcquireeDescription' xlink:label='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireeDescription' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationStepAcquisitionEquityInterestInAcquireeFairValue1' xlink:label='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireeFairValue1' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationStepAcquisitionEquityInterestInAcquireeIncludingSubsequentAcquisitionPercentage' xlink:label='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireeIncludingSubsequentAcquisitionPercentage' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationStepAcquisitionEquityInterestInAcquireePercentage' xlink:label='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireePercentage' xlink:type='locator'/>
+<link:definitionArc order='1.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112' xlink:to='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:type='arc'/>
+<link:definitionArc order='1.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessAcquisitionNameOfAcquiredEntity' xlink:type='arc'/>
+<link:definitionArc order='2.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessAcquisitionPercentageOfVotingInterestsAcquired' xlink:type='arc'/>
+<link:definitionArc order='3.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessAcquisitionDescriptionOfAcquiredEntity' xlink:type='arc'/>
+<link:definitionArc order='4.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessAcquisitionSharePrice' xlink:type='arc'/>
+<link:definitionArc order='5.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationReasonForBusinessCombination' xlink:type='arc'/>
+<link:definitionArc order='6.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessAcquisitionRevenueReportedByAcquiredEntityForLastAnnualPeriod' xlink:type='arc'/>
+<link:definitionArc order='7.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessAcquisitionDateOfAcquisitionAgreement1' xlink:type='arc'/>
+<link:definitionArc order='8.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessAcquisitionEffectiveDateOfAcquisition1' xlink:type='arc'/>
+<link:definitionArc order='9.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessAcquisitionPeriodResultsIncludedInCombinedEntity1' xlink:type='arc'/>
+<link:definitionArc order='10.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationIndemnificationAssetsDescription' xlink:type='arc'/>
+<link:definitionArc order='11.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationIndemnificationAssetsBasisForAmount' xlink:type='arc'/>
+<link:definitionArc order='12.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesValueHigh' xlink:type='arc'/>
+<link:definitionArc order='13.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesValueLow' xlink:type='arc'/>
+<link:definitionArc order='14.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesInestimable' xlink:type='arc'/>
+<link:definitionArc order='15.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesMaximumUnlimited' xlink:type='arc'/>
+<link:definitionArc order='16.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationIndemnificationAssetsAmountAsOfAcquisitionDate' xlink:type='arc'/>
+<link:definitionArc order='17.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationBargainPurchaseGainRecognizedDescription' xlink:type='arc'/>
+<link:definitionArc order='18.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireeDescription' xlink:type='arc'/>
+<link:definitionArc order='19.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireeFairValue1' xlink:type='arc'/>
+<link:definitionArc order='20.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireeIncludingSubsequentAcquisitionPercentage' xlink:type='arc'/>
+<link:definitionArc order='21.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireePercentage' xlink:type='arc'/>
+<link:definitionArc order='22.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessAcquisitionEquityInterestIssuedOrIssuableDescription' xlink:type='arc'/>
+<link:definitionArc order='23.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessAcquisitionEquityInterestIssuedOrIssuableBasisForDeterminingValue' xlink:type='arc'/>
+<link:definitionArc order='24.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessAcquisitionEquityInterestsIssuedOrIssuableNumberOfSharesIssued' xlink:type='arc'/>
+<link:definitionArc order='25.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessAcquisitionEquityInterestIssuedOrIssuableValueAssigned' xlink:type='arc'/>
+<link:definitionArc order='26.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationContingentConsiderationArrangementsDescription' xlink:type='arc'/>
+<link:definitionArc order='27.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationContingentConsiderationArrangementsBasisForAmount' xlink:type='arc'/>
+<link:definitionArc order='28.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesValueHigh' xlink:type='arc'/>
+<link:definitionArc order='29.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesValueLow' xlink:type='arc'/>
+<link:definitionArc order='30.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesInestimable' xlink:type='arc'/>
+<link:definitionArc order='31.0' xlink:arcrole='http://fasb.org/dqcrules/arcrole/rule-concept' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesMaximumUnlimited' xlink:type='arc'/>
+</link:definitionLink>
+<link:referenceLink xlink:role='http://fasb.org/us-gaap/role/dqc/0112' xlink:type='extended'>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0112_Dqc_0112' xlink:label='loc_Dqc_0112'/>
+<link:loc xlink:type='locator' xlink:href='#dqcrules-0112_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:label='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionDateOfAcquisitionAgreement1' xlink:label='loc_BusinessAcquisitionDateOfAcquisitionAgreement1' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionDescriptionOfAcquiredEntity' xlink:label='loc_BusinessAcquisitionDescriptionOfAcquiredEntity' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionEffectiveDateOfAcquisition1' xlink:label='loc_BusinessAcquisitionEffectiveDateOfAcquisition1' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionEquityInterestIssuedOrIssuableBasisForDeterminingValue' xlink:label='loc_BusinessAcquisitionEquityInterestIssuedOrIssuableBasisForDeterminingValue' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionEquityInterestIssuedOrIssuableDescription' xlink:label='loc_BusinessAcquisitionEquityInterestIssuedOrIssuableDescription' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionEquityInterestIssuedOrIssuableValueAssigned' xlink:label='loc_BusinessAcquisitionEquityInterestIssuedOrIssuableValueAssigned' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionEquityInterestsIssuedOrIssuableNumberOfSharesIssued' xlink:label='loc_BusinessAcquisitionEquityInterestsIssuedOrIssuableNumberOfSharesIssued' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionNameOfAcquiredEntity' xlink:label='loc_BusinessAcquisitionNameOfAcquiredEntity' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionPercentageOfVotingInterestsAcquired' xlink:label='loc_BusinessAcquisitionPercentageOfVotingInterestsAcquired' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionPeriodResultsIncludedInCombinedEntity1' xlink:label='loc_BusinessAcquisitionPeriodResultsIncludedInCombinedEntity1' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionRevenueReportedByAcquiredEntityForLastAnnualPeriod' xlink:label='loc_BusinessAcquisitionRevenueReportedByAcquiredEntityForLastAnnualPeriod' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessAcquisitionSharePrice' xlink:label='loc_BusinessAcquisitionSharePrice' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationBargainPurchaseGainRecognizedDescription' xlink:label='loc_BusinessCombinationBargainPurchaseGainRecognizedDescription' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationContingentConsiderationArrangementsBasisForAmount' xlink:label='loc_BusinessCombinationContingentConsiderationArrangementsBasisForAmount' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationContingentConsiderationArrangementsDescription' xlink:label='loc_BusinessCombinationContingentConsiderationArrangementsDescription' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesInestimable' xlink:label='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesInestimable' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesMaximumUnlimited' xlink:label='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesMaximumUnlimited' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesValueHigh' xlink:label='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesValueHigh' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesValueLow' xlink:label='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesValueLow' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationIndemnificationAssetsAmountAsOfAcquisitionDate' xlink:label='loc_BusinessCombinationIndemnificationAssetsAmountAsOfAcquisitionDate' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationIndemnificationAssetsBasisForAmount' xlink:label='loc_BusinessCombinationIndemnificationAssetsBasisForAmount' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationIndemnificationAssetsDescription' xlink:label='loc_BusinessCombinationIndemnificationAssetsDescription' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationIndemnificationAssetsRangeOfOutcomesInestimable' xlink:label='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesInestimable' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationIndemnificationAssetsRangeOfOutcomesMaximumUnlimited' xlink:label='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesMaximumUnlimited' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationIndemnificationAssetsRangeOfOutcomesValueHigh' xlink:label='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesValueHigh' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationIndemnificationAssetsRangeOfOutcomesValueLow' xlink:label='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesValueLow' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationReasonForBusinessCombination' xlink:label='loc_BusinessCombinationReasonForBusinessCombination' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationStepAcquisitionEquityInterestInAcquireeDescription' xlink:label='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireeDescription' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationStepAcquisitionEquityInterestInAcquireeFairValue1' xlink:label='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireeFairValue1' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationStepAcquisitionEquityInterestInAcquireeIncludingSubsequentAcquisitionPercentage' xlink:label='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireeIncludingSubsequentAcquisitionPercentage' xlink:type='locator'/>
+<link:loc xlink:href='../elts/us-gaap-2025.xsd#us-gaap_BusinessCombinationStepAcquisitionEquityInterestInAcquireePercentage' xlink:label='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireePercentage' xlink:type='locator'/>
+<link:reference xlink:label='dqc_0112' xlink:role='http://fasb.org/us-gaap/role/dqc/dqcNote' xlink:type='resource'>
+<ref:Publisher>XBRL US</ref:Publisher>
+<dqcrules:ruleId>DQC.0112</dqcrules:ruleId>
+<dqcrules:ruleName>Line Items Requiring the Business Acquisition Axis</dqcrules:ruleName>
+<dqcrules:ruleDocumentation>This rule is intended to identify cases where the company uses line items that should be reported using the business acquisition axis and a member representing the actual acquisition.</dqcrules:ruleDocumentation>
+<ref:URI>https://xbrl.us/data-rule/dqc_0112/</ref:URI>
+</link:reference>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_Dqc_0112' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionNameOfAcquiredEntity' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionPercentageOfVotingInterestsAcquired' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionDescriptionOfAcquiredEntity' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionSharePrice' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationReasonForBusinessCombination' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionRevenueReportedByAcquiredEntityForLastAnnualPeriod' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionDateOfAcquisitionAgreement1' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionEffectiveDateOfAcquisition1' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionPeriodResultsIncludedInCombinedEntity1' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationIndemnificationAssetsDescription' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationIndemnificationAssetsBasisForAmount' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesValueHigh' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesValueLow' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesInestimable' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesMaximumUnlimited' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationIndemnificationAssetsAmountAsOfAcquisitionDate' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationBargainPurchaseGainRecognizedDescription' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireeDescription' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireeFairValue1' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireeIncludingSubsequentAcquisitionPercentage' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireePercentage' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionEquityInterestIssuedOrIssuableDescription' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionEquityInterestIssuedOrIssuableBasisForDeterminingValue' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionEquityInterestsIssuedOrIssuableNumberOfSharesIssued' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionEquityInterestIssuedOrIssuableValueAssigned' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationContingentConsiderationArrangementsDescription' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationContingentConsiderationArrangementsBasisForAmount' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesValueHigh' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesValueLow' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesInestimable' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesMaximumUnlimited' xlink:to='dqc_0112' xlink:type='arc'/>
+<link:reference xlink:type='resource' xlink:label='DQC_US_0112_9561' xlink:role='http://fasb.org/us-gaap/role/dqc/ruleID'><dqcrules:ruleElementId>DQC.US.0112.9561</dqcrules:ruleElementId></link:reference>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionNameOfAcquiredEntity' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionPercentageOfVotingInterestsAcquired' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionDescriptionOfAcquiredEntity' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionSharePrice' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationReasonForBusinessCombination' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionRevenueReportedByAcquiredEntityForLastAnnualPeriod' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionDateOfAcquisitionAgreement1' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionEffectiveDateOfAcquisition1' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionPeriodResultsIncludedInCombinedEntity1' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationIndemnificationAssetsDescription' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationIndemnificationAssetsBasisForAmount' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesValueHigh' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesValueLow' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesInestimable' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationIndemnificationAssetsRangeOfOutcomesMaximumUnlimited' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationIndemnificationAssetsAmountAsOfAcquisitionDate' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationBargainPurchaseGainRecognizedDescription' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireeDescription' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireeFairValue1' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireeIncludingSubsequentAcquisitionPercentage' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationStepAcquisitionEquityInterestInAcquireePercentage' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionEquityInterestIssuedOrIssuableDescription' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionEquityInterestIssuedOrIssuableBasisForDeterminingValue' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionEquityInterestsIssuedOrIssuableNumberOfSharesIssued' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessAcquisitionEquityInterestIssuedOrIssuableValueAssigned' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationContingentConsiderationArrangementsDescription' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationContingentConsiderationArrangementsBasisForAmount' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesValueHigh' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesValueLow' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesInestimable' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+<link:referenceArc order='1.0' xlink:arcrole='http://www.xbrl.org/2003/arcrole/concept-reference' xlink:from='loc_BusinessCombinationContingentConsiderationArrangementsRangeOfOutcomesMaximumUnlimited' xlink:to='DQC_US_0112_9561' xlink:type='arc'/>
+</link:referenceLink>
+</link:linkbase>
+</xs:appinfo>
+</xs:annotation>
+<xs:element name='Dqc_0112' id='dqcrules-0112_Dqc_0112' type='xbrli:stringItemType' substitutionGroup='xbrli:item' abstract='true' nillable='true' xbrli:periodType='duration'/>
+<xs:element name='Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' id='dqcrules-0112_Dqc_0112_LineItemsRequiringTheBusinessAcquisitionAxis' type='xbrli:stringItemType' substitutionGroup='xbrli:item' abstract='true' nillable='true' xbrli:periodType='duration'/>
+</xs:schema>

@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8'?>
+
+<!--
+(c) 2010-2025 Financial Accounting Foundation; (c) 2007-2010 XBRL US, Inc.  All Rights Reserved.
+Notice: Authorized Uses are Set Forth at https://xbrl.fasb.org/terms/TaxonomiesTermsConditions.html
+  -->
+<xs:schema elementFormDefault='qualified' targetNamespace='http://fasb.org/dis/ebp-schheld-cal/2025' xmlns:dis-ebp-schheld-cal='http://fasb.org/dis/ebp-schheld-cal/2025' xmlns:link='http://www.xbrl.org/2003/linkbase' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:xs='http://www.w3.org/2001/XMLSchema'>
+  <xs:annotation>
+	<xs:appinfo>
+	  <link:linkbase id='lnk'>
+        <link:arcroleRef arcroleURI='https://xbrl.org/2023/arcrole/summation-item' xlink:href='https://www.xbrl.org/2023/calculation-1.1.xsd#summation-item' xlink:type='simple'/>
+		<link:roleRef roleURI='http://fasb.org/us-gaap/role/disclosure/EBPScheduleAssetsHeldInvestment' xlink:href='../../elts/us-roles-2025.xsd#ebp-schheld' xlink:type='simple' />
+        <link:calculationLink xlink:role='http://fasb.org/us-gaap/role/disclosure/EBPScheduleAssetsHeldInvestment' xlink:type='extended'>
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_EmployeeBenefitPlanAssetHeldForInvestment' xlink:label='loc_EmployeeBenefitPlanAssetHeldForInvestment' xlink:type='locator' />
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_EmployeeBenefitPlanAssetHeldForInvestmentInvestmentExcludingPlanInterestInMasterTrustCurrentValue' xlink:label='loc_EmployeeBenefitPlanAssetHeldForInvestmentInvestmentExcludingPlanInterestInMasterTrustCurrentValue' xlink:type='locator' />
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_EmployeeBenefitPlanAssetHeldForInvestmentPlanInterestInMasterTrustCurrentValue' xlink:label='loc_EmployeeBenefitPlanAssetHeldForInvestmentPlanInterestInMasterTrustCurrentValue' xlink:type='locator' />
+          <link:loc xlink:href='../elts/us-gaap-ebp-2025.xsd#us-gaap-ebp_EmployeeBenefitPlanAssetHeldForInvestmentParticipantLoanAfterDeemedDistribution' xlink:label='loc_EmployeeBenefitPlanAssetHeldForInvestmentParticipantLoanAfterDeemedDistribution' xlink:type='locator' />
+          <link:calculationArc order='10' priority='10' weight='1.0' xlink:arcrole='https://xbrl.org/2023/arcrole/summation-item' xlink:from='loc_EmployeeBenefitPlanAssetHeldForInvestment' xlink:to='loc_EmployeeBenefitPlanAssetHeldForInvestmentInvestmentExcludingPlanInterestInMasterTrustCurrentValue' xlink:type='arc' />
+          <link:calculationArc order='20' priority='10' weight='1.0' xlink:arcrole='https://xbrl.org/2023/arcrole/summation-item' xlink:from='loc_EmployeeBenefitPlanAssetHeldForInvestment' xlink:to='loc_EmployeeBenefitPlanAssetHeldForInvestmentPlanInterestInMasterTrustCurrentValue' xlink:type='arc' />
+          <link:calculationArc order='30' priority='10' weight='1.0' xlink:arcrole='https://xbrl.org/2023/arcrole/summation-item' xlink:from='loc_EmployeeBenefitPlanAssetHeldForInvestment' xlink:to='loc_EmployeeBenefitPlanAssetHeldForInvestmentParticipantLoanAfterDeemedDistribution' xlink:type='arc' />
+        </link:calculationLink>
+      </link:linkbase>
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:import namespace='http://fasb.org/us-gaap-ebp-std/2025' schemaLocation='../elts/us-gaap-ebp-std-2025.xsd' />
+  <xs:import namespace='http://fasb.org/srt-std/2025' schemaLocation='https://xbrl.fasb.org/srt/2025/elts/srt-std-2025.xsd' />
+  <xs:import namespace='http://fasb.org/us-gaap-std/2025' schemaLocation='../../elts/us-gaap-std-2025.xsd' />
+</xs:schema>
