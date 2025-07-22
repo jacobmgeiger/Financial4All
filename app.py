@@ -15,6 +15,26 @@ import json
 # It allows users to input a ticker symbol, fetch financial data from the SEC,
 # visualize trends, view standardized statements with interactive formula switching, and export data.
 
+# --- NEW: Metric Definitions for Tooltips ---
+METRIC_DEFINITIONS = {
+    "Revenue": "The total amount of money a company generates from its primary business activities, such as selling goods or services.",
+    "Cost of Revenue": "The direct costs associated with producing the goods or services a company sells. This includes materials and direct labor.",
+    "Gross Profit": "The profit a company makes after deducting the costs associated with making and selling its products. It's calculated as Revenue minus Cost of Revenue.",
+    "R&D Expenses": "Research and Development Expenses. The costs a company incurs for activities that create or improve its products and services.",
+    "SG&A Expenses": "Selling, General, and Administrative Expenses. The operational costs of running a business that are not directly related to producing a product or service. Includes salaries, marketing, and rent.",
+    "Other Operating Expenses": "Miscellaneous expenses related to a company's main business operations that don't fit into other categories like R&D or SG&A.",
+    "Operating Income": "A company's profit after subtracting operating expenses from gross profit. It shows how much profit a company generates from its core business operations.",
+    "Interest Income": "The income a company earns from its cash holdings and investments, such as interest from savings accounts or bonds.",
+    "Interest Expense": "The cost a company pays for its borrowed funds, such as loans and bonds.",
+    "Income from Equity Method Investments": "The share of profit or loss that a company reports from its investments in other companies where it has significant influence but not full control.",
+    "Other Non-operating Income (Expense)": "Income or expenses that do not come from a company's core business operations, such as gains or losses from selling assets.",
+    "Income Before Taxes": "A company's total profit before any income taxes are deducted. It is a measure of a company's profitability.",
+    "Taxes": "The amount of money a company pays to the government as income tax.",
+    "Net Income": "The company's total profit after all expenses, including taxes, have been deducted from revenue. Also known as the 'bottom line'.",
+    "Basic EPS": "Basic Earnings Per Share. A company's net income divided by the number of its outstanding common shares. It shows how much profit is available to each shareholder.",
+    "Diluted EPS": "Diluted Earnings Per Share. A more conservative measure of earnings per share that includes the impact of all potential shares that could be created, such as from stock options and convertible bonds.",
+}
+
 # --- App Initialization ---
 # Initialize the Dash app with a dark theme from Dash Bootstrap Components for a professional look.
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
@@ -61,6 +81,8 @@ app.layout = html.Div(
             children=html.Div(
                 id="main-content",
                 children=[
+                    # --- NEW: Key Ratios Display ---
+                    html.Div(id="key-ratios-display", style={"marginBottom": "20px"}),
                     # --- Metric Filtering and Selection ---
                     html.Div(
                         [
@@ -153,16 +175,6 @@ app.layout = html.Div(
                                 },
                             ),
                             dbc.Button(
-                                "Show Standardized Income Statement",
-                                id="show-standard-is-button",
-                                className="me-2",
-                                n_clicks=0,
-                                style={
-                                    "backgroundColor": "#28A745",
-                                    "color": "white",
-                                },
-                            ),
-                            dbc.Button(
                                 "Download All 10-Ks",
                                 id="download-10k-button",
                                 className="me-2",
@@ -199,6 +211,7 @@ app.layout = html.Div(
         dcc.Store(id="all-plottable-metrics-store"),
         dcc.Store(id="standard-is-store"),
         dcc.Store(id="alternatives-store"),  # NEW: Store for alternative calculations
+        dcc.Store(id="key-ratios-store"),  # NEW: Store for calculated key ratios
         dcc.Store(
             id="is-selections-store", data={}
         ),  # NEW: Store for user's dropdown selections
@@ -261,7 +274,8 @@ def on_ticker_submit(n_submit, ticker):
         Output("standard-is-store", "data"),
         Output("alternatives-store", "data"),
         Output("is-selections-store", "data"),
-        Output("standard-metrics-store", "data"),  # NEW: Output to the new store
+        Output("standard-metrics-store", "data"),
+        Output("key-ratios-store", "data"),  # NEW: Output for key ratios
     ],
     [Input("load-trigger", "children")],  # Triggered by the first callback
     prevent_initial_call=True,
@@ -278,16 +292,17 @@ def on_ticker_change(ticker_upper):
     try:
         # process_metrics now returns the comprehensive df, the standard IS, and alternatives
         (
-            df_all_metrics,
+            df_merged,  # UPDATED: The returned df now contains the merged, clean metrics
             standard_is_df,
             alternatives,
             standard_metrics,
+            key_ratios_df,  # NEW: Receive the calculated ratios
         ) = process_metrics(ticker_upper)
-        if df_all_metrics is None or df_all_metrics.empty:
+        if df_merged is None or df_merged.empty:
             status_message = html.P(
                 f"No data retrieved for {ticker_upper}.", style={"color": "orange"}
             )
-            return status_message, [], [], None, [], None, None, {}, []
+            return status_message, [], [], None, [], None, None, {}, [], None
 
         # --- Logic to determine best default formula based on non-zero count ---
         default_selections = {}
@@ -317,10 +332,10 @@ def on_ticker_change(ticker_upper):
             {
                 "label": col,
                 "value": col,
-                "fill_rate": df_all_metrics[col].count() / len(df_all_metrics),
+                "fill_rate": df_merged[col].count() / len(df_merged),
             }
-            for col in df_all_metrics.columns
-            if col != "fy"
+            for col in df_merged.columns
+            if col != "end"
         ]
 
         # The primary display df for the table is the transposed version of the standard IS
@@ -336,31 +351,33 @@ def on_ticker_change(ticker_upper):
             ]
         )
 
+        # Correctly filter the initial view to show only standardized metrics by default
         filtered_options, current_selected_metrics = _apply_all_filters(
-            df_all_metrics,
+            df_merged,
             all_plottable_metrics,
-            "",
-            ["standardized_only"],
-            [],
-            [],
+            "", # No text filter initially
+            ["standardized_only"], # Checkbox is checked by default
+            [], # No fill rate filter initially
+            [], # No metrics are selected yet
             standard_metrics,
         )
         return (
             status_message,
             filtered_options,
             current_selected_metrics,
-            df_all_metrics.to_json(date_format="iso", orient="split"),
+            df_merged.to_json(date_format="iso", orient="split"),
             all_plottable_metrics,
             transposed_df.to_json(date_format="iso", orient="split"),
             alternatives,
             default_selections,
             standard_metrics,
+            key_ratios_df.to_json(date_format="iso", orient="split"),  # NEW: Store the ratios
         )
     except Exception as e:
         status_message = html.P(
             f"Error loading data for {ticker_upper}: {e}", style={"color": "red"}
         )
-        return status_message, [], [], None, [], None, None, {}, []
+        return status_message, [], [], None, [], None, None, {}, [], None
 
 
 def _apply_all_filters(
@@ -459,6 +476,7 @@ def update_graph(selected_metrics, regression_checked, ticker, current_df_json):
     Updates the main graph based on the selected metrics and regression option.
     """
     import statsmodels.api as sm
+    import statsmodels.formula.api as smf
 
     if not current_df_json:
         fig = go.Figure()
@@ -471,26 +489,29 @@ def update_graph(selected_metrics, regression_checked, ticker, current_df_json):
         return fig
 
     df = pd.read_json(current_df_json, orient="split")
-    # THE FIX: The dataframe from the store has 'fy' as the index.
-    # We must reset it to be a column for plotting.
-    if "fy" not in df.columns:
-        df = df.reset_index().rename(columns={"index": "fy"})
 
     fig = go.Figure()
     for metric in selected_metrics:
         if metric in df.columns:
-            fig.add_trace(
-                go.Scatter(x=df["fy"], y=df[metric], mode="lines+markers", name=metric)
-            )
-            if "show_regression" in regression_checked:
-                df_temp = df[["fy", metric]].dropna()
-                if not df_temp.empty:
-                    X = sm.add_constant(df_temp["fy"])
-                    results = sm.OLS(df_temp[metric], X).fit()
+            # Create a temporary dataframe for plotting to handle potential missing values
+            plot_df = df[["end", metric]].dropna()
+            if not plot_df.empty:
+                # Ensure 'end' is a datetime object for proper plotting
+                plot_df["end"] = pd.to_datetime(plot_df["end"])
+                fig.add_trace(
+                    go.Scatter(x=plot_df["end"], y=plot_df[metric], mode="lines+markers", name=metric)
+                )
+
+                if "show_regression" in regression_checked:
+                    # For regression on time series, it's better to use numeric values for the x-axis.
+                    # We convert dates to ordinal numbers for the regression model.
+                    plot_df["end_ordinal"] = plot_df["end"].apply(lambda date: date.toordinal())
+                    X = sm.add_constant(plot_df["end_ordinal"])
+                    model = sm.OLS(plot_df[metric], X).fit()
                     fig.add_trace(
                         go.Scatter(
-                            x=df_temp["fy"],
-                            y=results.predict(X),
+                            x=plot_df["end"], # Plot against the actual dates
+                            y=model.predict(X),
                             mode="lines",
                             name=f"{metric} (Regression)",
                             line=dict(dash="dash"),
@@ -499,7 +520,7 @@ def update_graph(selected_metrics, regression_checked, ticker, current_df_json):
 
     fig.update_layout(
         title=f"Financial Metrics for {ticker.upper()}",
-        xaxis_title="Fiscal Year",
+        xaxis_title="End Date",
         yaxis_title="Value",
         hovermode="x unified",
         template="plotly_dark",
@@ -507,6 +528,73 @@ def update_graph(selected_metrics, regression_checked, ticker, current_df_json):
         plot_bgcolor="#222222",
     )
     return fig
+
+
+# --- NEW: Callback to display key ratio cards ---
+@app.callback(
+    Output("key-ratios-display", "children"),
+    [Input("key-ratios-store", "data")],
+    [State("ticker-input", "value")],
+)
+def update_key_ratios_display(ratios_json, ticker):
+    """
+    Creates and displays a row of cards for key financial ratios.
+    """
+    if not ratios_json:
+        return []
+
+    ratios_df = pd.read_json(ratios_json, orient="split")
+
+    if ratios_df.empty:
+        return []
+
+    cards = []
+    for ratio_name in ratios_df.columns:
+        # The data is sorted from most recent to oldest.
+        series = ratios_df[ratio_name].dropna()
+        if series.empty:
+            continue
+
+        # The latest value is the first item in the series.
+        latest_value = series.iloc[0]
+
+        # For the sparkline, we want to show time moving left-to-right (oldest to newest).
+        # So, we reverse the series for plotting.
+        sparkline_series = series.iloc[::-1]
+
+        # Create a sparkline figure
+        sparkline = go.Figure(
+            go.Scatter(
+                x=list(range(len(sparkline_series))),
+                y=sparkline_series,
+                mode="lines",
+                line=dict(color="#007BFF", width=2),
+                fill="tozeroy",
+                fillcolor="rgba(0, 123, 255, 0.2)",
+            )
+        )
+        sparkline.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=0, r=0, t=0, b=0),
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            height=50,
+        )
+
+        card_content = [
+            dbc.CardHeader(f"{ratio_name}"),
+            dbc.CardBody(
+                [
+                    html.H4(f"{latest_value:.2f}%", className="card-title"),
+                    dcc.Graph(figure=sparkline, config={'displayModeBar': False})
+                ]
+            ),
+        ]
+        cards.append(dbc.Col(dbc.Card(card_content, color="dark", outline=True), width=4))
+
+    return dbc.Row(cards)
 
 
 # --- NEW: Callback to update user selections in the store ---
@@ -533,32 +621,17 @@ def update_selections(values, ids, current_selections):
     return current_selections
 
 
-# --- UPDATED: Callback to generate the interactive income statement ---
-@app.callback(
-    Output("standard-is-output", "children"),
-    [
-        Input("show-standard-is-button", "n_clicks"),
-        Input("is-selections-store", "data"),
-    ],
-    [
-        State("standard-is-store", "data"),
-        State("alternatives-store", "data"),
-        State("ticker-input", "value"),
-    ],
-    prevent_initial_call=True,
-)
-def display_standard_is(
-    n_clicks, selections, standard_is_json, alternatives_json, ticker
-):
+# --- NEW: Helper function to apply user selections to the income statement ---
+def _apply_user_selections_to_is(standard_is_json, alternatives_json, selections):
     """
-    Generates and displays an interactive standardized income statement.
-    It now includes dropdowns for metrics with alternative calculation paths.
+    Applies user's alternative formula selections to the standardized income statement DataFrame.
     """
     if not standard_is_json:
         return None
 
-    df_standard = pd.read_json(standard_is_json, orient="split")
+    df = pd.read_json(standard_is_json, orient="split")
     alternatives = alternatives_json or {}
+    selections = selections or {}
 
     # Update the dataframe with any user-selected alternative calculations
     for metric, selection in selections.items():
@@ -573,26 +646,64 @@ def display_standard_is(
                 None,
             )
             if chosen_alt:
-                # The values are stored as a dict of {year_str: value}. Convert keys to int for matching.
-                alt_series = pd.Series(
-                    {int(k): v for k, v in chosen_alt["values"].items()}
-                )
+                # The values are stored as a dict of {date_str: value}.
+                alt_series = pd.Series(chosen_alt["values"])
                 # Get the integer index of the metric row to update
-                row_idx = df_standard.index[df_standard["Metric"] == metric].tolist()
+                row_idx = df.index[df["Metric"] == metric].tolist()
                 if not row_idx:
                     continue
                 row_idx = row_idx[0]
-                # Update the numeric columns based on the alternative series
-                for year_int, value in alt_series.items():
-                    # THE FIX: The dataframe's columns are integers after pd.read_json.
-                    # We must check for the integer year_int, not the string version.
-                    if year_int in df_standard.columns:
-                        df_standard.loc[row_idx, year_int] = value
+                # Update the numeric columns based on the alternative series.
+                # The columns in df are the date strings from the JSON.
+                for date_str, value in alt_series.items():
+                    if date_str in df.columns:
+                        df.loc[row_idx, date_str] = value
+    return df
+
+
+# --- UPDATED: Callback to generate the interactive income statement ---
+@app.callback(
+    Output("standard-is-output", "children"),
+    [
+        Input("standard-is-store", "data"),
+        Input("is-selections-store", "data"),
+    ],
+    [
+        State("alternatives-store", "data"),
+        State("ticker-input", "value"),
+    ],
+    prevent_initial_call=True,
+)
+def display_standard_is(
+    standard_is_json, selections, alternatives_json, ticker
+):
+    """
+    Generates and displays an interactive standardized income statement.
+    It now includes dropdowns for metrics with alternative calculation paths.
+    """
+    # Use the new helper function to get the correct DataFrame
+    df_standard = _apply_user_selections_to_is(
+        standard_is_json, alternatives_json, selections
+    )
+
+    if df_standard is None:
+        return None
 
     # --- Build the interactive table ---
-    # Convert numeric column names to string for display, but keep original for lookup
+    # Convert numeric column names to string for display, and format dates correctly.
     df_display = df_standard.copy()
-    df_display.columns = ["Metric"] + [str(col) for col in df_standard.columns[1:]]
+    alternatives = alternatives_json or {}  # FIX: Define alternatives from the JSON data
+
+    # NEW: Format date columns to remove timestamps before displaying
+    formatted_columns = ["Metric"]
+    for col in df_standard.columns[1:]:
+        try:
+            # Attempt to convert column to datetime and format it
+            formatted_columns.append(pd.to_datetime(col).strftime('%Y-%m-%d'))
+        except (ValueError, TypeError):
+            # If it's not a date-like string, keep it as is
+            formatted_columns.append(str(col))
+    df_display.columns = formatted_columns
 
     table_header = [
         html.Tr(
@@ -621,6 +732,25 @@ def display_standard_is(
     for _, row in df_display.iterrows():
         metric_name = row["Metric"]
         cells = []
+
+        # --- NEW: Create elements for tooltips ---
+        # The element that will trigger the tooltip on hover
+        tooltip_target = html.Span(
+            metric_name,
+            id={"type": "metric-name-tooltip", "index": metric_name},
+            style={
+                "textDecoration": "underline dotted",
+                "cursor": "pointer",
+                "fontWeight": "bold",
+            },
+        )
+        # The tooltip itself, which appears on hover
+        tooltip = dbc.Tooltip(
+            METRIC_DEFINITIONS.get(metric_name, "No definition available."),
+            target={"type": "metric-name-tooltip", "index": metric_name},
+            placement="right",
+        )
+
         # First cell is the metric name, potentially with a dropdown
         if metric_name in alternatives:
             options = [{"label": "Primary Value", "value": "default"}] + [
@@ -631,8 +761,7 @@ def display_standard_is(
                 html.Td(
                     [
                         html.Div(
-                            metric_name,
-                            style={"fontWeight": "bold", "marginBottom": "6px"},
+                            [tooltip_target, tooltip], style={"marginBottom": "6px"}
                         ),
                         dcc.Dropdown(
                             id={"type": "metric-dropdown", "index": metric_name},
@@ -648,23 +777,23 @@ def display_standard_is(
         else:
             cells.append(
                 html.Td(
-                    metric_name,
-                    style={
-                        "padding": "12px 15px",
-                        "fontWeight": "bold",
-                        "verticalAlign": "middle",
-                    },
+                    [tooltip_target, tooltip],
+                    style={"padding": "12px 15px", "verticalAlign": "middle"},
                 )
             )
 
         # Other cells are the financial values
         for col_name in df_display.columns[1:]:  # Skip the 'Metric' column
             val = row[col_name]
-            formatted_val = (
-                f"{val:,.0f}"
-                if pd.notnull(val) and isinstance(val, (int, float))
-                else ""
-            )
+            # UPDATED: Apply special formatting for EPS values
+            if pd.notnull(val) and isinstance(val, (int, float)):
+                if metric_name in ["Basic EPS", "Diluted EPS"]:
+                    formatted_val = f"{val:,.2f}"  # Format EPS to 2 decimal places
+                else:
+                    formatted_val = f"{val:,.0f}"  # Format other metrics as integers
+            else:
+                formatted_val = ""
+
             cells.append(
                 html.Td(
                     formatted_val,
@@ -716,6 +845,9 @@ def update_statistics(selected_metrics, current_df_json):
 
     df = pd.read_json(current_df_json, orient="split")
 
+    # Select only the metrics to be displayed, excluding the 'end' column for stats calculation
+    stats_df = df[selected_metrics]
+
     table_header = [html.Th("Statistic")] + [
         html.Th(metric) for metric in selected_metrics
     ]
@@ -724,7 +856,7 @@ def update_statistics(selected_metrics, current_df_json):
     for stat_name, stat_func in stats.items():
         row = [html.Td(stat_name)]
         for metric in selected_metrics:
-            series = df.get(metric, pd.Series(dtype=float)).dropna()
+            series = stats_df.get(metric, pd.Series(dtype=float)).dropna()
             val = getattr(series, stat_func)() if not series.empty else "N/A"
             row.append(html.Td(f"{val:,.2f}" if isinstance(val, (int, float)) else val))
         rows.append(html.Tr(row))
@@ -742,21 +874,39 @@ def update_statistics(selected_metrics, current_df_json):
 @app.callback(
     Output("download-dataframe-excel", "data"),
     [Input("export-excel-button", "n_clicks")],
-    [State("standard-is-store", "data"), State("ticker-input", "value")],
+    [
+        State("standard-is-store", "data"),
+        State("ticker-input", "value"),
+        State("is-selections-store", "data"),
+        State("alternatives-store", "data"),
+    ],
     prevent_initial_call=True,
 )
-def export_to_excel(n_clicks, current_df_json, ticker):
+def export_to_excel(n_clicks, standard_is_json, ticker, selections, alternatives_json):
     """
     Handles the logic for exporting the current financial data to a CSV file.
-    This now exports the standardized income statement view.
+    This now exports the standardized income statement view, reflecting any
+    user-selected alternative formulas.
     """
-    if n_clicks == 0 or not current_df_json:
+    if n_clicks == 0 or not standard_is_json:
         return None
 
-    df = pd.read_json(current_df_json, orient="split")
+    # Apply user selections to get the dataframe as it is displayed
+    df = _apply_user_selections_to_is(standard_is_json, alternatives_json, selections)
 
-    # Ensure columns are correctly typed after JSON serialization
-    df.columns = [str(c) if c.isdigit() else c for c in df.columns]
+    if df is None:
+        return None
+
+    # Format date columns to remove timestamps before exporting
+    formatted_columns = ["Metric"]
+    for col in df.columns[1:]:
+        try:
+            # Attempt to convert column to datetime and format it
+            formatted_columns.append(pd.to_datetime(col).strftime("%Y-%m-%d"))
+        except (ValueError, TypeError):
+            # If it's not a date-like string, keep it as is
+            formatted_columns.append(str(col))
+    df.columns = formatted_columns
 
     buffer = io.StringIO()
     df.to_csv(buffer, index=False)

@@ -31,6 +31,56 @@ for parent, formulas in calculation_formulas.items():
             child_name = child_info["child"]
             calculation_formulas_inverted[child_name].append(parent)
 
+# --- NEW: Centralized mapping for our Standardized Income Statement ---
+# This dictionary is now the single source of truth for all metrics needed to build the income statement.
+# It's used by both the solver to find the data and the statement creator to build the table.
+INCOME_STATEMENT_MAPPING = {
+    # Revenue and its primary calculation components
+    "Revenue": ["SalesRevenueNet", "Revenues", "RevenueFromContractWithCustomer"],
+    "SalesRevenueNet": ["SalesRevenueNet"],
+    "Revenues": ["Revenues"],
+    "RevenueFromContractWithCustomer": ["RevenueFromContractWithCustomer"],
+    "RevenueFromContractWithCustomerIncludingAssessedTax": ["RevenueFromContractWithCustomerIncludingAssessedTax"],
+    "RevenueFromContractWithCustomerExcludingAssessedTax": ["RevenueFromContractWithCustomerExcludingAssessedTax"],
+    "RevenueNotFromContractWithCustomer": ["RevenueNotFromContractWithCustomer"],
+    "InterestIncomeExpenseAfterProvisionForLoanLoss": ["InterestIncomeExpenseAfterProvisionForLoanLoss"],
+    "NoninterestIncome": ["NoninterestIncome"],
+    # Cost of Revenue and its granular components
+    "Cost of Revenue": ["CostOfRevenue", "CostOfGoodsAndServicesSold"],
+    "CostOfProductAndServiceSold": ["CostOfProductAndServiceSold"],
+    "FinancingInterestExpense": ["FinancingInterestExpense"],
+    "ProvisionForLoanLeaseAndOtherLosses": ["ProvisionForLoanLeaseAndOtherLosses"],
+    "PolicyholderBenefitsAndClaimsIncurredNet": ["PolicyholderBenefitsAndClaimsIncurredNet"],
+    "LiabilityForFuturePolicyBenefitsPeriodExpenseIncome": ["LiabilityForFuturePolicyBenefitsPeriodExpenseIncome"],
+    "PolicyholderAccountBalanceInterestExpense": ["PolicyholderAccountBalanceInterestExpense"],
+    "PolicyholderDividendsExpense": ["PolicyholderDividendsExpense"],
+    "DeferredSalesInducementCostAmortizationExpense": ["DeferredSalesInducementCostAmortizationExpense"],
+    "PresentValueOfFutureInsuranceProfitsAmortizationExpense": ["PresentValueOfFutureInsuranceProfitsAmortizationExpense"],
+    "AmortizationOfMortgageServicingRightsMSRs": ["AmortizationOfMortgageServicingRightsMSRs"],
+    "DeferredPolicyAcquisitionCostsAmortizationExpense": ["DeferredPolicyAcquisitionCostsAmortizationExpense"],
+    "AmortizationOfValueOfBusinessAcquiredVOBA": ["AmortizationOfValueOfBusinessAcquiredVOBA"],
+    "OtherCostOfOperatingRevenue": ["OtherCostOfOperatingRevenue"],
+    "MerchantMarineOperatingDifferentialSubsidy": ["MerchantMarineOperatingDifferentialSubsidy"],
+    # Core statement items
+    "Gross Profit": ["GrossProfit"],
+    "R&D Expenses": ["ResearchAndDevelopmentExpense"],
+    "SG&A Expenses": ["SellingGeneralAndAdministrativeExpense"],
+    "Operating Expenses": ["OperatingExpenses"],
+    "Operating Income": ["OperatingIncomeLoss"],
+    # Non-Operating Section
+    "Interest Income": ["InterestIncome", "InterestAndDividendIncome", "InterestIncomeOperating"],
+    "Interest Expense": ["InterestExpense", "InterestExpenseOperating"],
+    "Income from Equity Method Investments": ["IncomeLossFromEquityMethodInvestments"],
+    "Other Non-operating Income (Expense)": ["NonoperatingIncomeExpense", "OtherNonoperatingIncomeExpense"],
+    # Pre-Tax and Bottom Line
+    "Income Before Taxes": ["IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest", "IncomeLossFromContinuingOperationsBeforeIncomeTax"],
+    "Taxes": ["IncomeTaxExpenseBenefit"],
+    "Net Income": ["NetIncomeLoss", "ProfitLoss", "NetIncomeLossAvailableToCommonStockholdersBasic"],
+    # NEW: Add Earnings Per Share metrics
+    "Basic EPS": ["EarningsPerShareBasic"],
+    "Diluted EPS": ["EarningsPerShareDiluted"],
+}
+
 
 def get_company_info(ticker):
     """
@@ -74,23 +124,31 @@ def get_filing_by_metrics(CIK):
     return data["facts"]["us-gaap"]
 
 
-def extract_metrics(filing_metrics):
+def extract_metrics(filing_metrics: dict):
     """
-    Extracts and filters all 10-K (annual report) data points from the raw SEC filing.
-
-    Args:
-        filing_metrics (dict): The raw dictionary of facts from the SEC API.
-
-    Returns:
-        dict: A cleaned dictionary where keys are metric names (with units, e.g., "Revenues_USD")
-              and values are lists of data points, exclusively from 10-K filings.
+    Extracts and filters all annual data points from the raw SEC filing.
+    This function is now more strict, ensuring that only full-year data from
+    10-K filings without quarterly frames is included.
     """
     metric_master = {}
     for metric, attributes in filing_metrics.items():
         for unit, entries in attributes["units"].items():
             for entry in entries:
-                # We are only interested in annual data, which is reported in 10-K forms.
-                if entry["form"] == "10-K":
+                # Strict filtering for annual 10-K data.
+                # 1. Must be a 10-K form.
+                # 2. Fiscal Period ('fp') must be 'FY'. This is the primary indicator.
+                # 3. As a safeguard, the 'frame' attribute, if it exists, must not indicate a quarter.
+                is_annual_10k = (
+                    entry.get("form") == "10-K" and
+                    entry.get("fp") == "FY"
+                )
+
+                if is_annual_10k:
+                    # Additional safeguard to explicitly ignore any data points framed as a quarter.
+                    frame = entry.get('frame', '')
+                    if 'Q' in frame:
+                        continue
+
                     metric_key = f"{metric}_{unit}"
                     if metric_key not in metric_master:
                         metric_master[metric_key] = []
@@ -98,102 +156,85 @@ def extract_metrics(filing_metrics):
     return metric_master
 
 
-def format_metrics_efficient(extracted_metrics):
+def format_metrics_efficient(extracted_metrics, target_metrics=None):
     """
     Converts extracted metrics into a clean, graphable DataFrame.
-    This version is both efficient and accurate, correctly handling duplicate years
-    by selecting the most recent filing.
+    This version processes data based on 'end' dates to accurately represent
+    financial data, handles duplicates by prioritizing the most recent filing,
+    and then applies a deep recursive solver to intelligently fill missing values.
     """
-    # Filter out entries with 'frame' attribute to avoid aggregated/inconsistent data
-    filtered_metrics = {}
-
-    for metric_name, metric_entries in extracted_metrics.items():
-        # Filter out entries that have a 'frame' attribute
-        filtered_entries = [
-            entry
-            for entry in metric_entries
-            if "frame" not in entry
-            or (
-                "frame" in entry
-                and "Q" not in entry["frame"]
-                and "q" not in entry["frame"]
-            )
-        ]
-        if filtered_entries:  # Only include metrics that have valid entries
-            filtered_metrics[metric_name] = filtered_entries
-
-    # Process each metric
     all_entries = []
+    # Iterate through each metric and its corresponding entries from the extracted data.
     for metric_name, entries in extracted_metrics.items():
         for entry in entries:
-            if "start" in entry:
-                # If 'start' exists, create a new dictionary for the entry with standardized keys.
-                # This flattens the data for easier processing or conversion into a DataFrame.
-                all_entries.append(
-                    {
-                        "fy": entry["fy"],  # Fiscal year of the entry.
-                        "metric": metric_name,  # The name of the financial metric.
-                        "val": entry["val"],  # The value of the metric.
-                        "filed": entry[
-                            "filed"
-                        ],  # The date the metric was filed, useful for finding the latest entry.
-                        "end": entry["end"],  # The end date/period of the entry.
-                        "start": entry["start"],  # The start date/period of the entry.
-                    }
-                )
-            else:
-                all_entries.append(
-                    {
-                        "fy": entry["fy"],  # Fiscal year of the entry.
-                        "metric": metric_name,  # The name of the financial metric.
-                        "val": entry["val"],  # The value of the metric.
-                        "filed": entry[
-                            "filed"
-                        ],  # The date the metric was filed, useful for finding the latest entry.
-                        "end": entry["end"],  # The end date/period of the entry.
-                    }
-                )
+            # Create a dictionary for each entry, standardizing the keys.
+            record = {
+                "metric": metric_name,
+                "end": entry["end"],
+                "val": entry["val"],
+                "filed": entry["filed"],
+            }
+            all_entries.append(record)
 
     if not all_entries:
-        return pd.DataFrame()
+        return pd.DataFrame(), {}
 
-    # Create a single DataFrame from all data points at once
+    # Create a DataFrame from the list of all entries.
     df = pd.DataFrame(all_entries)
 
-    # Convert 'filed' to datetime for correct sorting
+    # Convert date-like columns to datetime objects for proper sorting and manipulation.
     df["filed"] = pd.to_datetime(df["filed"])
     df["end"] = pd.to_datetime(df["end"])
 
-    if "start" in df.columns:
-        df["start"] = pd.to_datetime(df["start"])
+    # Sort entries by the filing date in descending order. This ensures that for any duplicates,
+    # the one from the most recent filing appears first.
+    df.sort_values(by="filed", ascending=False, inplace=True)
 
-    # Sort by filing date to ensure the latest filing comes first for each metric/year
-    df.sort_values(
-        by=["fy", "filed", "end", "start"],
-        ascending=[True, False, True, False],
-        inplace=True,
-    )
+    # Remove duplicate entries for the same metric and end date.
+    # By keeping the 'first' entry, we ensure that we use the data from the most recent filing.
+    df.drop_duplicates(subset=["metric", "end"], keep="first", inplace=True)
 
-    # Drop duplicates, keeping the last entry which is the most recent filing
-    df.drop_duplicates(subset=["metric", "fy"], keep="last", inplace=True)
+    # Pivot the DataFrame to create a time-series format with 'end' date as the index.
+    df_pivot = df.pivot_table(index="end", columns="metric", values="val")
 
-    # Pivot the DataFrame to get fiscal years as the index and metrics as columns
-    df_pivot = df.pivot(index="fy", columns="metric", values="val")
+    # Ensure the DataFrame is sorted by date, which is crucial for identifying the latest year.
+    df_pivot.sort_index(inplace=True)
+
+    # Remove rows with too many N/A values, but *always* keep the latest year's data,
+    # as it is the most recent even if sparse.
+    if not df_pivot.empty:
+        latest_year_row = df_pivot.iloc[-1:]
+        # Apply the sparsity filter to all other rows.
+        df_pivot_other_rows = df_pivot.iloc[:-1]
+        
+        # This will produce a SettingWithCopyWarning, which is expected here and can be ignored.
+        # The operation is safe in this context.
+        df_pivot_other_rows.dropna(thresh=df_pivot_other_rows.shape[1] * 0.3, inplace=True)
+        
+        # Re-combine the filtered data with the latest year's data.
+        df_pivot = pd.concat([df_pivot_other_rows, latest_year_row])
+
 
     # Apply the deep recursive solver to intelligently fill in missing values.
     # This is the core of the data enrichment process.
     df_solved, all_results = apply_formulas_deep_dfs(
         df_pivot,
         calculation_formulas,
+        target_metrics=target_metrics
     )
 
-    # If the solving process creates duplicate columns (e.g., from different XBRL roles),
-    # group by the column names and take the first non-null value for each year.
+    # If the solving process creates duplicate columns, consolidate them.
     df_solved = df_solved.groupby(by=df_solved.columns, axis=1).first()
 
-    # Reset index to make 'fy' a regular column for easier plotting.
+    # Reset index to make 'end' a regular column for easier plotting.
     df_solved.reset_index(inplace=True)
     df_solved.rename_axis(None, axis=1, inplace=True)
+
+    # Format the 'end' column to show only the date part.
+    df_solved["end"] = pd.to_datetime(df_solved["end"]).dt.date
+
+    # Sort the final dataframe by the end date.
+    df_solved.sort_values(by="end", ascending=True, inplace=True)
 
     return df_solved, all_results
 
@@ -221,7 +262,7 @@ def find_col_with_units(base_metric, df_columns):
     return None
 
 
-def apply_formulas_deep_dfs(df, all_formulas):
+def apply_formulas_deep_dfs(df, all_formulas, target_metrics=None):
     """
     Applies XBRL calculation formulas using a recursive Depth-First Search (DFS) algorithm.
     It now calculates all viable formulas for each metric and stores them for the UI.
@@ -319,7 +360,7 @@ def apply_formulas_deep_dfs(df, all_formulas):
                     child_name_part = child["child"]
                     weight_part = (
                         f"{abs(child['weight'])} * "
-                        if abs(child["weight"]) != 1
+                        if abs(child['weight']) != 1
                         else ""
                     )
                     formula_parts.append(f"{sign} {weight_part}{child_name_part}")
@@ -343,12 +384,11 @@ def apply_formulas_deep_dfs(df, all_formulas):
         if primary_result is not None:
             return primary_result
 
-        # If we get here, no formula succeeded. Assume 0 if it's a leaf node.
-        if metric_base not in all_formulas:
-            cache[(metric_base, year)] = 0.0
-            return 0.0
-
-        # If it's not a leaf node but all formulas failed, return None.
+        # If we get here, no formula succeeded to produce a primary_result.
+        # We should not assume 0 for leaf nodes, as a missing leaf is unknown, not zero.
+        # We will let the final value be None (it will be NaN in the DataFrame),
+        # which correctly represents missing data.
+        cache[(metric_base, year)] = None
         return None
 
     # --- Main Execution Loop ---
@@ -361,6 +401,11 @@ def apply_formulas_deep_dfs(df, all_formulas):
     }
     all_formula_metrics = set(list(all_formulas.keys()))
     all_metrics_to_solve = all_data_metrics.union(all_formula_metrics)
+
+    # NEW: Add the metrics we care about for our standardized statements. This forces
+    # the solver to proactively look for every component we might need.
+    if target_metrics:
+        all_metrics_to_solve.update(target_metrics)
 
     for metric in all_metrics_to_solve:
         col_name = find_col_with_units(metric, df_enriched.columns)
@@ -396,117 +441,228 @@ def process_metrics(ticker: str):
     """
     df_raw_extracted = extract_metrics(get_filing_by_metrics(get_cik(ticker)))
 
+    # UPDATED: We now pass the full list of required metrics to the processing function.
+    # This ensures the solver proactively looks for every piece of data we might need.
+    all_target_metrics = set()
+    for possibilities in INCOME_STATEMENT_MAPPING.values():
+        for metric in possibilities:
+            all_target_metrics.add(metric)
+
     # format_metrics_efficient now returns the solved df with all metrics
-    df_solved, all_results = format_metrics_efficient(df_raw_extracted)
+    df_solved, all_results = format_metrics_efficient(df_raw_extracted, list(all_target_metrics))
 
     # create_standard_income_statement takes the solved df and the cache
     standard_is_df, alternatives, standard_metrics_list = (
         create_standard_income_statement(df_solved, all_results)
     )
+    
+    # NEW: Calculate key ratios from the standardized income statement
+    key_ratios_df = calculate_key_ratios(standard_is_df)
 
-    return df_solved, standard_is_df, alternatives, standard_metrics_list
+    # NEW: Merge the standardized, clean-named metrics back into the main DataFrame.
+    # The standardized_is_df has 'end' dates as its index.
+    if not standard_is_df.empty:
+        # We need to set 'end' as the index on the main df to merge correctly.
+        df_solved.set_index('end', inplace=True)
+        # The standardized df columns will overwrite any raw data columns with the same name.
+        df_merged = standard_is_df.join(df_solved, how='outer', lsuffix='_std')
+        df_merged.reset_index(inplace=True)
+        # FIX: The reset_index() call creates a column named 'index'. We must rename it back to 'end'.
+        df_merged.rename(columns={'index': 'end'}, inplace=True)
+    else:
+        df_merged = df_solved
+
+    return df_merged, standard_is_df, alternatives, standard_metrics_list, key_ratios_df
 
 
 def create_standard_income_statement(df, all_results):
     """
     Creates a standardized income statement from the fully solved financial data.
-    This function now also calculates and returns a dictionary of all possible alternative
-    calculation results for each line item, which can be surfaced in the UI.
+    This function uses an iterative, bi-directional calculation engine to solve for
+    missing values, ensuring the most complete and accurate statement possible.
     """
     if df is None or df.empty:
-        return pd.DataFrame(), {}
+        return pd.DataFrame(), {}, []
 
     df_indexed = df.copy()
-    if "fy" in df_indexed.columns:
-        df_indexed = df_indexed.set_index("fy").sort_index()
+    if "end" in df_indexed.columns:
+        # Sort by date descending to have the latest year on the left.
+        df_indexed = df_indexed.set_index("end").sort_index(ascending=False)
 
-    # This mapping defines the structure of our standardized statement.
-    mapping = {
-        "Revenue": ["Revenues"],
-        "Cost of Revenue": ["CostOfRevenue"],
-        "Gross Profit": ["GrossProfit"],
-        "R&D Expenses": ["ResearchAndDevelopmentExpense"],
-        "SG&A Expenses": ["SellingGeneralAndAdministrativeExpense"],
-        "Operating Income": ["OperatingIncomeLoss"],
-        "Interest Income": ["InterestIncomeExpenseNet"],
-        "Interest Expense": ["InterestExpense"],
-        "Income Before Taxes": [
-            "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
-        ],
-        "Taxes": ["IncomeTaxExpenseBenefit"],
-        "Net Income": ["NetIncomeLoss"],
-    }
+    # The mapping is now defined globally, so we can just use it here.
+    mapping = INCOME_STATEMENT_MAPPING
 
-    # --- Step 1: Build the default standardized DataFrame ---
+    # Helper to find the first available series for a list of possible metric names
+    def find_series(std_name):
+        for p in mapping.get(std_name, []):
+            col = find_col_with_units(p, df_indexed.columns)
+            if col:
+                return df_indexed[col]
+        return pd.Series(np.nan, index=df_indexed.index, name=std_name)
+
+    # --- Step 1: Build initial DataFrame with all available data ---
     standard_df = pd.DataFrame(index=df_indexed.index)
-    for std_name, possibilities in mapping.items():
-        # Find the first available column from the possibilities with a _USD suffix.
-        found_col = find_col_with_units(possibilities[0], df_indexed.columns)
-        if found_col and found_col in df_indexed.columns:
-            standard_df[std_name] = df_indexed[found_col]
-        else:
-            standard_df[std_name] = 0.0
+    for std_name in mapping:
+        standard_df[std_name] = find_series(std_name)
 
-    # --- Step 2: Assemble alternatives from the solver's cache ---
+    # --- Step 2: Iterative, Bi-Directional Calculation Engine ---
+    for _ in range(5):  # Loop multiple times to fill cascading gaps
+        # --- Revenue Calculation ---
+        primary_revenue = standard_df["SalesRevenueNet"].combine_first(
+            standard_df["Revenues"]
+        ).combine_first(standard_df["RevenueFromContractWithCustomer"])
+
+        comp1_1 = standard_df["RevenueFromContractWithCustomerIncludingAssessedTax"]
+        comp1_2 = standard_df["RevenueNotFromContractWithCustomer"]
+        valid_rows_1 = comp1_1.notna() | comp1_2.notna()
+        calc_rev_1 = (comp1_1.fillna(0) + comp1_2.fillna(0)).where(valid_rows_1)
+
+        comp2_1 = standard_df["RevenueFromContractWithCustomerExcludingAssessedTax"]
+        comp2_2 = standard_df["RevenueNotFromContractWithCustomer"]
+        valid_rows_2 = comp2_1.notna() | comp2_2.notna()
+        calc_rev_2 = (comp2_1.fillna(0) + comp2_2.fillna(0)).where(valid_rows_2)
+        
+        standard_df["Revenue"] = primary_revenue.combine_first(calc_rev_1).combine_first(calc_rev_2)
+
+        # --- Cost of Revenue Calculation ---
+        primary_cor = standard_df["Cost of Revenue"]
+        
+        granular_cor_components = [
+            "CostOfProductAndServiceSold", "FinancingInterestExpense", "ProvisionForLoanLeaseAndOtherLosses",
+            "PolicyholderBenefitsAndClaimsIncurredNet", "LiabilityForFuturePolicyBenefitsPeriodExpenseIncome",
+            "PolicyholderAccountBalanceInterestExpense", "PolicyholderDividendsExpense", "DeferredSalesInducementCostAmortizationExpense",
+            "PresentValueOfFutureInsuranceProfitsAmortizationExpense", "AmortizationOfMortgageServicingRightsMSRs",
+            "DeferredPolicyAcquisitionCostsAmortizationExpense", "AmortizationOfValueOfBusinessAcquiredVOBA",
+            "OtherCostOfOperatingRevenue", "MerchantMarineOperatingDifferentialSubsidy"
+        ]
+        component_series_list = [standard_df[name] for name in granular_cor_components if name in standard_df]
+
+        calc_cor = pd.Series(np.nan, index=standard_df.index)
+        if component_series_list:
+            components_df = pd.concat(component_series_list, axis=1)
+            valid_rows = components_df.notna().any(axis=1)
+            if valid_rows.any():
+                calc_cor = components_df.fillna(0).sum(axis=1).where(valid_rows)
+        
+        standard_df["Cost of Revenue"] = primary_cor.combine_first(calc_cor).fillna(standard_df["Revenue"] - standard_df["Gross Profit"])
+
+        # --- Gross Profit Calculation ---
+        standard_df["Gross Profit"] = standard_df["Gross Profit"].fillna(standard_df["Revenue"] - standard_df["Cost of Revenue"])
+
+        # --- Operating Expenses Identities ---
+        standard_df["Operating Expenses"] = standard_df["Operating Expenses"].fillna(standard_df["R&D Expenses"].fillna(0) + standard_df["SG&A Expenses"].fillna(0))
+        standard_df["Operating Income"] = standard_df["Operating Income"].fillna(standard_df["Gross Profit"] - standard_df["Operating Expenses"])
+        standard_df["Operating Expenses"] = standard_df["Operating Expenses"].fillna(standard_df["Gross Profit"] - standard_df["Operating Income"])
+
+        # --- Non-Operating & Pre-Tax Identities ---
+        known_non_op_items = (
+            standard_df["Interest Income"].fillna(0)
+            - standard_df["Interest Expense"].fillna(0)
+            + standard_df["Income from Equity Method Investments"].fillna(0)
+            + standard_df["Other Non-operating Income (Expense)"].fillna(0)
+        )
+        standard_df["Income Before Taxes"] = standard_df["Income Before Taxes"].fillna(standard_df["Operating Income"] + known_non_op_items)
+        standard_df["Net Income"] = standard_df["Net Income"].fillna(standard_df["Income Before Taxes"] - standard_df["Taxes"].fillna(0))
+
+    # --- Step 3: Final Plug Calculations ---
+    # Calculate 'Other Operating Expenses' as the final reconciling item.
+    if "Operating Expenses" in standard_df:
+        other_op_ex = (
+            standard_df["Operating Expenses"]
+            - standard_df["R&D Expenses"].fillna(0)
+            - standard_df["SG&A Expenses"].fillna(0)
+        )
+        # Add the column only if there are non-trivial values.
+        if (other_op_ex.fillna(0).abs() > 1).any():
+            standard_df["Other Operating Expenses"] = other_op_ex
+
+    # --- Step 4: Assemble alternatives from the solver's cache for the UI ---
     alternatives = defaultdict(list)
     for std_name, possibilities in mapping.items():
+        if std_name not in ["Gross Profit", "Operating Income", "Net Income"]:
+            continue
+        if not possibilities:
+            continue
         metric_concept = possibilities[0]
-
-        # Temp dict to group results by their source formula string
-        # e.g., {'Calc: A + B': {2020: 100, 2021: 110}, ...}
         aggregator = defaultdict(dict)
-
         for year in df_indexed.index:
             results_for_year = all_results.get((metric_concept, year), [])
             for result in results_for_year:
-                aggregator[result["source"]][year] = result["value"]
+                aggregator[result["source"]][year.isoformat()] = result["value"]
 
-        # Format the aggregated results for the UI, creating a simple numbered label for each.
         formula_counter = 1
         for source, values_by_year in aggregator.items():
-            alternatives[std_name].append(
-                {
-                    "label": f"Formula {formula_counter}",  # Simple label for the UI
-                    "source": source,  # Full formula string is the unique ID
-                    "values": values_by_year,
-                }
-            )
-            formula_counter += 1
+            if values_by_year:
+                alternatives[std_name].append(
+                    {"label": f"Formula {formula_counter}", "source": source, "values": values_by_year}
+                )
+                formula_counter += 1
 
-    # --- Step 3: Final Formatting and Plug Calculation for the default view ---
+    # --- Step 5: Final Formatting and Order ---
     final_order = [
-        "Revenue",
-        "Cost of Revenue",
-        "Gross Profit",
-        "R&D Expenses",
-        "SG&A Expenses",
-        "Operating Income",
-        "Interest Income",
-        "Interest Expense",
-        "Income Before Taxes",
-        "Taxes",
-        "Net Income",
+        "Revenue", "Cost of Revenue", "Gross Profit", "R&D Expenses",
+        "SG&A Expenses", "Other Operating Expenses",
+        "Operating Income", "Interest Income",
+        "Income from Equity Method Investments", "Other Non-operating Income (Expense)",
+        "Income Before Taxes", "Taxes", "Net Income", "Basic EPS", "Diluted EPS",
     ]
 
-    # Calculate 'Other Operating Expenses' as a final plug to make the statement balance
-    if all(
-        c in standard_df.columns
-        for c in ["Gross Profit", "Operating Income", "R&D Expenses", "SG&A Expenses"]
-    ):
-        standard_df["Other Operating Expenses"] = (
-            standard_df["Gross Profit"]
-            - standard_df["Operating Income"]
-            - standard_df["R&D Expenses"]
-            - standard_df["SG&A Expenses"]
-        )
-        final_order.insert(5, "Other Operating Expenses")
-
+    # Clean up the final dataframe
     final_df = standard_df[[col for col in final_order if col in standard_df.columns]]
+    final_df = final_df.loc[:, (final_df.fillna(0) != 0).any(axis=0)]
+    final_df.loc[(final_df.isnull()).all(axis=1)] = np.nan
+    
+    final_df = final_df.dropna(how="all", axis=0)
 
-    # Replace any rows that are all zeros with NaN so they can be dropped
-    final_df.loc[(final_df.T == 0).all()] = np.nan
+    # NEW: Create a list of the *raw* underlying metric names used in the final statement
+    standard_metrics_raw = []
+    for std_name in final_df.columns:
+        # This logic mirrors the find_series helper to find the first available raw metric
+        for p in mapping.get(std_name, []):
+            col = find_col_with_units(p, df_indexed.columns)
+            if col and col in df.columns:
+                standard_metrics_raw.append(col)
+                break # Found the primary metric for this standard name
 
-    return final_df.dropna(how="all", axis=0), alternatives, final_order
+    # Format the index to remove the timestamp, showing only the date.
+    if not final_df.empty:
+        final_df.index = pd.to_datetime(final_df.index).date
+
+    return final_df, alternatives, list(final_df.columns)
+
+
+def calculate_key_ratios(standard_is_df):
+    """
+    Calculates key profitability ratios from the standardized income statement.
+    """
+    if standard_is_df is None or standard_is_df.empty:
+        return pd.DataFrame()
+
+    ratios = pd.DataFrame(index=standard_is_df.index)
+
+    # Use .get() to avoid KeyErrors if a column is missing
+    revenue = standard_is_df.get("Revenue")
+    gross_profit = standard_is_df.get("Gross Profit")
+    operating_income = standard_is_df.get("Operating Income")
+    net_income = standard_is_df.get("Net Income")
+
+    # Gross Profit Margin
+    if revenue is not None and gross_profit is not None:
+        # Use .divide and handle potential division by zero
+        ratios["Gross Profit Margin"] = gross_profit.divide(revenue).replace([np.inf, -np.inf], np.nan) * 100
+
+    # Operating Profit Margin
+    if revenue is not None and operating_income is not None:
+        ratios["Operating Profit Margin"] = operating_income.divide(revenue).replace([np.inf, -np.inf], np.nan) * 100
+
+    # Net Profit Margin
+    if revenue is not None and net_income is not None:
+        ratios["Net Profit Margin"] = net_income.divide(revenue).replace([np.inf, -np.inf], np.nan) * 100
+
+    # Drop any rows where all ratios are NaN
+    ratios.dropna(how='all', inplace=True)
+
+    return ratios
 
 
 def get_financial_reports(ticker):
