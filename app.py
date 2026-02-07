@@ -3,12 +3,15 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 import pandas as pd
+import json
 from data_loader import process_metrics, get_company_info, get_financial_reports
 import dash_bootstrap_components as dbc
-import plotly.express as px
-from dash.dcc.express import send_string
 import io
-import json
+import warnings
+from financial4all.analysis import ProfitabilityAnalyzer
+
+# Suppress deprecation warnings from data_loader for cleaner output
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # app.py
 # This script creates a comprehensive Dash web application for financial analysis.
@@ -26,6 +29,8 @@ METRIC_DEFINITIONS = {
     "Operating Income": "A company's profit after subtracting operating expenses from gross profit. It shows how much profit a company generates from its core business operations.",
     "Interest Income": "The income a company earns from its cash holdings and investments, such as interest from savings accounts or bonds.",
     "Interest Expense": "The cost a company pays for its borrowed funds, such as loans and bonds.",
+    "Other, net": "Other income and expense items, net of each other. Includes miscellaneous non-operating items.",
+    "Other income (expense), net": "Calculated as: Interest Income - Interest Expense + Other, net. Represents net non-operating income/expense.",
     "Income from Equity Method Investments": "The share of profit or loss that a company reports from its investments in other companies where it has significant influence but not full control.",
     "Other Non-operating Income (Expense)": "Income or expenses that do not come from a company's core business operations, such as gains or losses from selling assets.",
     "Income Before Taxes": "A company's total profit before any income taxes are deducted. It is a measure of a company's profitability.",
@@ -123,32 +128,18 @@ app.layout = html.Div(
                                 ],  # Default to showing only standard metrics
                                 style={"marginTop": "5px", "color": "#B0B0B0"},
                             ),
-                            html.Hr(style={"borderColor": "#555555"}),
-                            dcc.Checklist(
-                                id="linear-regression-checkbox",
-                                options=[
-                                    {
-                                        "label": "Show Linear Regression",
-                                        "value": "show_regression",
-                                    }
-                                ],
-                                value=[],
-                                style={"marginTop": "10px", "color": "#B0B0B0"},
-                            ),
-                            html.Label(
-                                "Select Metrics:",
-                                style={
-                                    "marginTop": "10px",
-                                    "display": "block",
-                                    "color": "#B0B0B0",
-                                },
-                            ),
+                        ],
+                        style={"width": "80%", "margin": "auto", "padding": "10px"},
+                    ),
+                    # --- Metric Selection Dropdown ---
+                    html.Div(
+                        [
+                            html.Label("Select Metrics to Plot:", style={"color": "#B0B0B0"}),
                             dcc.Dropdown(
                                 id="available-metrics-selector",
                                 options=[],
-                                multi=True,
                                 value=[],
-                                placeholder="Select metrics to plot...",
+                                multi=True,
                                 style={
                                     "backgroundColor": "#333333",
                                     "color": "#E0E0E0",
@@ -157,8 +148,21 @@ app.layout = html.Div(
                         ],
                         style={"width": "80%", "margin": "auto", "padding": "10px"},
                     ),
-                    html.Hr(style={"borderColor": "#555555"}),
-                    # --- Plot Output ---
+                    # --- Regression Option ---
+                    html.Div(
+                        [
+                            dcc.Checklist(
+                                id="linear-regression-checkbox",
+                                options=[
+                                    {"label": "Show Linear Regression", "value": "show_regression"}
+                                ],
+                                value=[],
+                                style={"color": "#B0B0B0"},
+                            ),
+                        ],
+                        style={"width": "80%", "margin": "auto", "padding": "10px"},
+                    ),
+                    # --- Main Graph ---
                     dcc.Graph(id="live-update-graph"),
                     html.Hr(style={"borderColor": "#555555"}),
                     # --- Action Buttons ---
@@ -184,6 +188,16 @@ app.layout = html.Div(
                                     "color": "white",
                                 },
                             ),
+                            dbc.Button(
+                                "Generate Comprehensive Analysis",
+                                id="generate-analysis-btn",
+                                className="me-2",
+                                n_clicks=0,
+                                style={
+                                    "backgroundColor": "#28A745",
+                                    "color": "white",
+                                },
+                            ),
                         ],
                         style={"textAlign": "center", "padding": "10px"},
                     ),
@@ -204,6 +218,7 @@ app.layout = html.Div(
         # --- Download and Store components are placed outside the main visible layout ---
         dcc.Download(id="download-dataframe-excel"),
         dcc.Download(id="download-10k-zip"),
+        dcc.Download(id="download-analysis-excel"),
         # --- Data Stores ---
         # dcc.Store components are used to store data in the user's browser,
         # avoiding the need for global variables and ensuring data persists between callbacks.
@@ -239,28 +254,17 @@ app.layout = html.Div(
 )
 def on_ticker_submit(n_submit, ticker):
     """
-    This callback provides immediate feedback to the user when they submit a ticker.
-    It displays company info and a "Loading..." message, then triggers the main data load.
+    This callback provides immediate feedback when the user submits a ticker.
+    It validates the ticker and triggers the main data loading callback.
     """
-    if not ticker:
-        return html.P("Please enter a valid ticker symbol."), ""
+    if not ticker or not ticker.strip():
+        return html.P("Please enter a ticker symbol.", style={"color": "orange"}), None
 
     ticker_upper = ticker.strip().upper()
-    info = get_company_info(ticker_upper)
-
-    if not info:
-        return html.P(
-            f"Ticker '{ticker_upper}' not found.", style={"color": "orange"}
-        ), ""
-
-    status_message = html.Div(
-        [
-            html.P(f"Company: {info['title']} (CIK: {info['cik_str']})"),
-            html.P(f"Loading data for {ticker_upper}..."),
-        ]
+    return (
+        html.P(f"Loading data for {ticker_upper}...", style={"color": "#007BFF"}),
+        ticker_upper,
     )
-    # Pass the ticker to the hidden div to trigger the next callback
-    return status_message, ticker_upper
 
 
 # --- UPDATED: Step 2 - Main Data Loading Callback ---
@@ -361,22 +365,41 @@ def on_ticker_change(ticker_upper):
             [], # No metrics are selected yet
             standard_metrics,
         )
+        # Safely convert DataFrames to JSON
+        # Empty DataFrames can still be converted to JSON (they'll just have empty data arrays)
+        try:
+            df_merged_json = df_merged.to_json(date_format="iso", orient="split") if not df_merged.empty else None
+        except Exception:
+            df_merged_json = None
+        
+        try:
+            transposed_df_json = transposed_df.to_json(date_format="iso", orient="split") if not transposed_df.empty else None
+        except Exception:
+            transposed_df_json = None
+        
+        try:
+            key_ratios_json = key_ratios_df.to_json(date_format="iso", orient="split") if not key_ratios_df.empty else None
+        except Exception:
+            key_ratios_json = None
+        
         return (
             status_message,
             filtered_options,
             current_selected_metrics,
-            df_merged.to_json(date_format="iso", orient="split"),
+            df_merged_json,
             all_plottable_metrics,
-            transposed_df.to_json(date_format="iso", orient="split"),
+            transposed_df_json,
             alternatives,
             default_selections,
             standard_metrics,
-            key_ratios_df.to_json(date_format="iso", orient="split"),  # NEW: Store the ratios
+            key_ratios_json,  # NEW: Store the ratios
         )
     except Exception as e:
         status_message = html.P(
             f"Error loading data for {ticker_upper}: {e}", style={"color": "red"}
         )
+        import traceback
+        traceback.print_exc()  # Print full traceback for debugging
         return status_message, [], [], None, [], None, None, {}, [], None
 
 
@@ -398,27 +421,34 @@ def _apply_all_filters(
         metric_name = metric_info["value"]
         fill_rate = metric_info["fill_rate"]
 
-        # Standardized metrics filter
-        if (
-            "standardized_only" in financial_checked
-            and metric_name not in standard_metrics
-        ):
-            continue
+        # Text filter
         if text_filter and text_filter.lower() not in metric_name.lower():
             continue
-        if "80_percent" in fill_rate_checked and fill_rate < 0.8:
-            continue
 
-        filtered_metrics.append({"label": metric_name, "value": metric_name})
+        # Standardized metrics filter
+        if "standardized_only" in financial_checked:
+            if metric_name not in standard_metrics:
+                continue
 
-    new_selection = [
-        item
-        for item in current_selection
-        if item in {opt["value"] for opt in filtered_metrics}
-    ]
-    return filtered_metrics, new_selection
+        # Fill rate filter
+        if "80_percent" in fill_rate_checked:
+            if fill_rate < 0.8:
+                continue
+
+        filtered_metrics.append(metric_info)
+
+    # Determine current selection based on filters
+    current_selected = []
+    if current_selection:
+        # Only include selected metrics that pass the filters
+        for metric in current_selection:
+            if any(m["value"] == metric for m in filtered_metrics):
+                current_selected.append(metric)
+
+    return filtered_metrics, current_selected
 
 
+# --- Callback to update metric options based on filters ---
 @app.callback(
     [
         Output("available-metrics-selector", "options", allow_duplicate=True),
@@ -430,39 +460,33 @@ def _apply_all_filters(
         Input("only-financial-checkbox", "value"),
     ],
     [
-        State("available-metrics-selector", "value"),
         State("all-plottable-metrics-store", "data"),
+        State("available-metrics-selector", "value"),
         State("standard-metrics-store", "data"),
     ],
     prevent_initial_call=True,
 )
-def update_metric_options(
-    text_filter,
-    fill_rate_checked,
-    financial_checked,
-    current_selected_metrics,
-    all_plottable_metrics,
-    standard_metrics,
-):
+def update_metric_filters(text_filter, fill_rate_checked, financial_checked, all_metrics, current_selection, standard_metrics):
     """
-    Updates the dropdown of available metrics based on the user's filter criteria.
+    Updates the available metrics dropdown based on user filters.
     """
-    if not all_plottable_metrics:
+    if not all_metrics:
         return [], []
 
-    # We pass a dummy DataFrame to _apply_all_filters as it's not needed for this filtering logic.
-    filtered_options, new_selection = _apply_all_filters(
-        None,
-        all_plottable_metrics,
-        text_filter,
-        financial_checked,
-        fill_rate_checked,  # Corrected order
-        current_selected_metrics,
-        standard_metrics,
+    filtered_options, current_selected = _apply_all_filters(
+        None,  # df not needed for filtering
+        all_metrics,
+        text_filter or "",
+        financial_checked or [],
+        fill_rate_checked or [],
+        current_selection or [],
+        standard_metrics or [],
     )
-    return filtered_options, new_selection
+
+    return filtered_options, current_selected
 
 
+# --- Callback to update graph based on selected metrics ---
 @app.callback(
     Output("live-update-graph", "figure"),
     [
@@ -476,7 +500,6 @@ def update_graph(selected_metrics, regression_checked, ticker, current_df_json):
     Updates the main graph based on the selected metrics and regression option.
     """
     import statsmodels.api as sm
-    import statsmodels.formula.api as smf
 
     if not current_df_json:
         fig = go.Figure()
@@ -488,11 +511,53 @@ def update_graph(selected_metrics, regression_checked, ticker, current_df_json):
         )
         return fig
 
-    df = pd.read_json(current_df_json, orient="split")
+    try:
+        # Handle both string and dict formats from Dash Store
+        if isinstance(current_df_json, str):
+            df = pd.read_json(io.StringIO(current_df_json), orient="split")
+        elif isinstance(current_df_json, dict):
+            df = pd.DataFrame(
+                data=current_df_json.get("data", []),
+                columns=current_df_json.get("columns", []),
+                index=current_df_json.get("index", [])
+            )
+        else:
+            df = pd.DataFrame()
+    except (ValueError, TypeError, KeyError, json.JSONDecodeError):
+        # Invalid JSON or empty data
+        fig = go.Figure()
+        fig.update_layout(
+            title="Error loading data. Please try again.",
+            template="plotly_dark",
+            paper_bgcolor="#222222",
+            plot_bgcolor="#222222",
+        )
+        return fig
+    
+    if df.empty or "end" not in df.columns:
+        fig = go.Figure()
+        fig.update_layout(
+            title="No data available to plot.",
+            template="plotly_dark",
+            paper_bgcolor="#222222",
+            plot_bgcolor="#222222",
+        )
+        return fig
 
     fig = go.Figure()
+    
+    # Handle case where selected_metrics might be None or empty
+    if not selected_metrics:
+        fig.update_layout(
+            title="Please select metrics to plot.",
+            template="plotly_dark",
+            paper_bgcolor="#222222",
+            plot_bgcolor="#222222",
+        )
+        return fig
+    
     for metric in selected_metrics:
-        if metric in df.columns:
+        if metric and metric in df.columns:
             # Create a temporary dataframe for plotting to handle potential missing values
             plot_df = df[["end", metric]].dropna()
             if not plot_df.empty:
@@ -518,15 +583,25 @@ def update_graph(selected_metrics, regression_checked, ticker, current_df_json):
                         )
                     )
 
-    fig.update_layout(
-        title=f"Financial Metrics for {ticker.upper()}",
-        xaxis_title="End Date",
-        yaxis_title="Value",
-        hovermode="x unified",
-        template="plotly_dark",
-        paper_bgcolor="#222222",
-        plot_bgcolor="#222222",
-    )
+    # Only update layout if we have traces
+    if len(fig.data) == 0:
+        fig.update_layout(
+            title="No metrics selected or no data available.",
+            template="plotly_dark",
+            paper_bgcolor="#222222",
+            plot_bgcolor="#222222",
+        )
+    else:
+        ticker_display = ticker.upper() if ticker else "Company"
+        fig.update_layout(
+            title=f"Financial Metrics for {ticker_display}",
+            xaxis_title="End Date",
+            yaxis_title="Value",
+            hovermode="x unified",
+            template="plotly_dark",
+            paper_bgcolor="#222222",
+            plot_bgcolor="#222222",
+        )
     return fig
 
 
@@ -540,61 +615,105 @@ def update_key_ratios_display(ratios_json, ticker):
     """
     Creates and displays a row of cards for key financial ratios.
     """
-    if not ratios_json:
-        return []
+    try:
+        if not ratios_json:
+            return []
 
-    ratios_df = pd.read_json(ratios_json, orient="split")
+        try:
+            # Parse JSON - Dash Store components return the data as-is (dict or string)
+            if isinstance(ratios_json, str):
+                # If it's a string, parse it first, then use StringIO to avoid file path interpretation
+                ratios_data = json.loads(ratios_json)
+                # Use StringIO to make pandas treat it as a string, not a file path
+                ratios_df = pd.read_json(io.StringIO(json.dumps(ratios_data)), orient="split")
+            elif isinstance(ratios_json, dict):
+                # Already parsed - construct DataFrame directly
+                ratios_df = pd.DataFrame(
+                    data=ratios_json.get("data", []),
+                    columns=ratios_json.get("columns", []),
+                    index=ratios_json.get("index", [])
+                )
+            else:
+                return []
+        except (ValueError, TypeError, KeyError, AttributeError, json.JSONDecodeError):
+            # Invalid JSON or empty data
+            return []
 
-    if ratios_df.empty:
-        return []
+        if ratios_df is None or ratios_df.empty or len(ratios_df.columns) == 0:
+            return []
 
-    cards = []
-    for ratio_name in ratios_df.columns:
-        # The data is sorted from most recent to oldest.
-        series = ratios_df[ratio_name].dropna()
-        if series.empty:
-            continue
+        cards = []
+        for ratio_name in ratios_df.columns:
+            # The data is sorted from most recent to oldest.
+            series = ratios_df[ratio_name].dropna()
+            if series.empty:
+                continue
 
-        # The latest value is the first item in the series.
-        latest_value = series.iloc[0]
+            # The latest value is the first item in the series.
+            try:
+                latest_value = float(series.iloc[0])
+            except (ValueError, IndexError, TypeError):
+                continue
 
-        # For the sparkline, we want to show time moving left-to-right (oldest to newest).
-        # So, we reverse the series for plotting.
-        sparkline_series = series.iloc[::-1]
+            # For the sparkline, we want to show time moving left-to-right (oldest to newest).
+            # So, we reverse the series for plotting.
+            try:
+                sparkline_series = series.iloc[::-1].values.tolist()
+                
+                if len(sparkline_series) == 0:
+                    continue
 
-        # Create a sparkline figure
-        sparkline = go.Figure(
-            go.Scatter(
-                x=list(range(len(sparkline_series))),
-                y=sparkline_series,
-                mode="lines",
-                line=dict(color="#007BFF", width=2),
-                fill="tozeroy",
-                fillcolor="rgba(0, 123, 255, 0.2)",
-            )
-        )
-        sparkline.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            margin=dict(l=0, r=0, t=0, b=0),
-            xaxis=dict(visible=False),
-            yaxis=dict(visible=False),
-            height=50,
-        )
+                # Create a sparkline figure
+                sparkline = go.Figure(
+                    go.Scatter(
+                        x=list(range(len(sparkline_series))),
+                        y=sparkline_series,
+                        mode="lines",
+                        line=dict(color="#007BFF", width=2),
+                        fill="tozeroy",
+                        fillcolor="rgba(0, 123, 255, 0.2)",
+                    )
+                )
+                sparkline.update_layout(
+                    template="plotly_dark",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    margin=dict(l=0, r=0, t=0, b=0),
+                    xaxis=dict(visible=False),
+                    yaxis=dict(visible=False),
+                    height=50,
+                )
 
-        card_content = [
-            dbc.CardHeader(f"{ratio_name}"),
-            dbc.CardBody(
-                [
-                    html.H4(f"{latest_value:.2f}%", className="card-title"),
-                    dcc.Graph(figure=sparkline, config={'displayModeBar': False})
+                # Format the value display - check if it's a percentage ratio
+                if "%" in ratio_name or "Margin" in ratio_name or "RO" in ratio_name:
+                    value_display = f"{latest_value:.2f}%"
+                else:
+                    value_display = f"{latest_value:.2f}"
+
+                card_content = [
+                    dbc.CardHeader(f"{ratio_name}"),
+                    dbc.CardBody(
+                        [
+                            html.H4(value_display, className="card-title"),
+                            dcc.Graph(figure=sparkline, config={'displayModeBar': False})
+                        ]
+                    ),
                 ]
-            ),
-        ]
-        cards.append(dbc.Col(dbc.Card(card_content, color="dark", outline=True), width=4))
+                cards.append(dbc.Col(dbc.Card(card_content, color="dark", outline=True), width=4))
+            except Exception:
+                # Skip this ratio if there's an error creating the card
+                continue
 
-    return dbc.Row(cards)
+        if not cards:
+            return html.Div("No ratio data available.", style={"color": "#B0B0B0", "textAlign": "center"})
+        
+        return dbc.Row(cards)
+    except Exception as e:
+        # Catch any unexpected errors and return empty list
+        return html.Div(
+            f"Error displaying ratios: {str(e)}",
+            style={"color": "#FF6B6B", "textAlign": "center"}
+        )
 
 
 # --- NEW: Callback to update user selections in the store ---
@@ -629,7 +748,25 @@ def _apply_user_selections_to_is(standard_is_json, alternatives_json, selections
     if not standard_is_json:
         return None
 
-    df = pd.read_json(standard_is_json, orient="split")
+    try:
+        # Handle both string and dict formats from Dash Store
+        if isinstance(standard_is_json, str):
+            df = pd.read_json(io.StringIO(standard_is_json), orient="split")
+        elif isinstance(standard_is_json, dict):
+            df = pd.DataFrame(
+                data=standard_is_json.get("data", []),
+                columns=standard_is_json.get("columns", []),
+                index=standard_is_json.get("index", [])
+            )
+        else:
+            df = pd.DataFrame()
+    except (ValueError, TypeError, KeyError, json.JSONDecodeError):
+        # Invalid JSON
+        return None
+    
+    if df.empty:
+        return None
+    
     alternatives = alternatives_json or {}
     selections = selections or {}
 
@@ -661,6 +798,43 @@ def _apply_user_selections_to_is(standard_is_json, alternatives_json, selections
     return df
 
 
+# --- Helper function to detect unit scale ---
+def _detect_unit_scale(df: pd.DataFrame):
+    """
+    Detect appropriate unit scale for financial data.
+    
+    Analyzes numeric values to determine if they should be displayed
+    in billions, millions, thousands, hundreds, or raw values.
+    
+    Args:
+        df: DataFrame with financial data (first column is "Metric", rest are numeric)
+        
+    Returns:
+        Tuple of (scale_factor, unit_label)
+        e.g., (1e6, "millions") means divide by 1e6 and show "(millions)"
+    """
+    # Get all numeric values (skip "Metric" column)
+    numeric_values = []
+    for col in df.columns[1:]:
+        numeric_values.extend(df[col].dropna().abs().tolist())
+    
+    if not numeric_values:
+        return (1.0, "")
+    
+    median_value = pd.Series(numeric_values).median()
+    
+    if median_value >= 1e9:
+        return (1e9, "billions")
+    elif median_value >= 1e6:
+        return (1e6, "millions")
+    elif median_value >= 1e3:
+        return (1e3, "thousands")
+    elif median_value >= 100:
+        return (100, "hundreds")
+    else:
+        return (1.0, "")
+
+
 # --- UPDATED: Callback to generate the interactive income statement ---
 @app.callback(
     Output("standard-is-output", "children"),
@@ -681,20 +855,51 @@ def display_standard_is(
     Generates and displays an interactive standardized income statement.
     It now includes dropdowns for metrics with alternative calculation paths.
     """
+    if not standard_is_json:
+        return html.Div("No income statement data available.", style={"color": "#B0B0B0"})
+    
     # Use the new helper function to get the correct DataFrame
-    df_standard = _apply_user_selections_to_is(
-        standard_is_json, alternatives_json, selections
-    )
+    try:
+        df_standard = _apply_user_selections_to_is(
+            standard_is_json, alternatives_json, selections
+        )
+    except Exception:
+        return html.Div("Error processing income statement.", style={"color": "#FF6B6B"})
 
-    if df_standard is None:
-        return None
+    if df_standard is None or df_standard.empty:
+        return html.Div("No income statement data available.", style={"color": "#B0B0B0"})
 
+    # --- Calculate profitability ratios using library ---
+    # Convert transposed format back to periods-as-index for analyzer
+    try:
+        # Use original df_standard before date formatting for analysis
+        df_for_analysis = df_standard.set_index("Metric").T
+        analyzer = ProfitabilityAnalyzer()
+        profitability_df = analyzer.calculate_ratios(df_for_analysis)
+        
+        # Format date columns in profitability_df to match df_display format
+        if not profitability_df.empty:
+            formatted_profitability_cols = ["Metric"]
+            for col in profitability_df.columns[1:]:
+                try:
+                    formatted_col = pd.to_datetime(col).strftime('%Y-%m-%d')
+                    formatted_profitability_cols.append(formatted_col)
+                except (ValueError, TypeError):
+                    formatted_profitability_cols.append(str(col))
+            profitability_df.columns = formatted_profitability_cols
+    except Exception:
+        # If profitability calculation fails, continue without it
+        profitability_df = pd.DataFrame()
+    
     # --- Build the interactive table ---
     # Convert numeric column names to string for display, and format dates correctly.
     df_display = df_standard.copy()
     alternatives = alternatives_json or {}  # FIX: Define alternatives from the JSON data
 
-    # NEW: Format date columns to remove timestamps before displaying
+    # Detect unit scale for the data
+    scale_factor, unit_label = _detect_unit_scale(df_display)
+    
+    # Format date columns (unit indicator will go in top-left cell)
     formatted_columns = ["Metric"]
     for col in df_standard.columns[1:]:
         try:
@@ -705,219 +910,410 @@ def display_standard_is(
             formatted_columns.append(str(col))
     df_display.columns = formatted_columns
 
-    table_header = [
-        html.Tr(
-            [
+    # Build header with unit indicator in top-left cell
+    header_cells = []
+    for i, col in enumerate(df_display.columns):
+        if i == 0:
+            # Top-left cell: "Metric" with unit below if available
+            header_content = [
+                html.Div("Metric", style={"fontWeight": "bold"}),
+            ]
+            if unit_label:
+                header_content.append(
+                    html.Div(
+                        f"({unit_label})",
+                        style={"fontSize": "0.75em", "color": "#B0B0B0", "marginTop": "2px"},
+                    )
+                )
+            header_cells.append(
                 html.Th(
-                    col,
+                    header_content,
                     style={
-                        "minWidth": "250px",
-                        "padding": "12px 15px",
+                        "minWidth": "200px",
+                        "padding": "6px 8px",
                         "verticalAlign": "middle",
                         "textAlign": "left",
-                    }
-                    if i == 0
-                    else {
-                        "padding": "12px 15px",
-                        "textAlign": "right",
-                        "verticalAlign": "middle",
+                        "border": "1px solid #444",
+                        "backgroundColor": "#1a1a1a",
+                        "fontSize": "0.85em",
                     },
-                )
-                for i, col in enumerate(df_display.columns)
-            ]
-        )
-    ]
-
-    table_body = []
-    for _, row in df_display.iterrows():
-        metric_name = row["Metric"]
-        cells = []
-
-        # --- NEW: Create elements for tooltips ---
-        # The element that will trigger the tooltip on hover
-        tooltip_target = html.Span(
-            metric_name,
-            id={"type": "metric-name-tooltip", "index": metric_name},
-            style={
-                "textDecoration": "underline dotted",
-                "cursor": "pointer",
-                "fontWeight": "bold",
-            },
-        )
-        # The tooltip itself, which appears on hover
-        tooltip = dbc.Tooltip(
-            METRIC_DEFINITIONS.get(metric_name, "No definition available."),
-            target={"type": "metric-name-tooltip", "index": metric_name},
-            placement="right",
-        )
-
-        # First cell is the metric name, potentially with a dropdown
-        if metric_name in alternatives:
-            options = [{"label": "Primary Value", "value": "default"}] + [
-                {"label": alt["label"], "value": alt["source"]}
-                for alt in alternatives[metric_name]
-            ]
-            cells.append(
-                html.Td(
-                    [
-                        html.Div(
-                            [tooltip_target, tooltip], style={"marginBottom": "6px"}
-                        ),
-                        dcc.Dropdown(
-                            id={"type": "metric-dropdown", "index": metric_name},
-                            options=options,
-                            value=selections.get(metric_name, "default"),
-                            clearable=False,
-                            style={"backgroundColor": "#333", "color": "#EEE"},
-                        ),
-                    ],
-                    style={"padding": "10px 15px", "verticalAlign": "top"},
                 )
             )
         else:
-            cells.append(
-                html.Td(
-                    [tooltip_target, tooltip],
-                    style={"padding": "12px 15px", "verticalAlign": "middle"},
-                )
-            )
-
-        # Other cells are the financial values
-        for col_name in df_display.columns[1:]:  # Skip the 'Metric' column
-            val = row[col_name]
-            # UPDATED: Apply special formatting for EPS values
-            if pd.notnull(val) and isinstance(val, (int, float)):
-                if metric_name in ["Basic EPS", "Diluted EPS"]:
-                    formatted_val = f"{val:,.2f}"  # Format EPS to 2 decimal places
-                else:
-                    formatted_val = f"{val:,.0f}"  # Format other metrics as integers
-            else:
-                formatted_val = ""
-
-            cells.append(
-                html.Td(
-                    formatted_val,
+            # Date columns
+            header_cells.append(
+                html.Th(
+                    col,
                     style={
+                        "padding": "6px 8px",
                         "textAlign": "right",
-                        "padding": "12px 15px",
                         "verticalAlign": "middle",
-                        "fontFamily": "monospace",
+                        "border": "1px solid #444",
+                        "backgroundColor": "#1a1a1a",
+                        "fontSize": "0.85em",
                     },
                 )
             )
-        table_body.append(html.Tr(cells))
+    
+    table_header = [html.Tr(header_cells)]
 
-    table = dbc.Table(
-        table_header + table_body,
-        bordered=True,
-        hover=True,
-        responsive=True,
-        striped=True,
-        style={"color": "#E0E0E0", "backgroundColor": "#2E2E2E"},
+    table_rows = []
+    for idx, row in df_display.iterrows():
+        metric_name = row["Metric"]
+        metric_def = METRIC_DEFINITIONS.get(metric_name, "")
+
+        # Check if this metric has alternatives
+        has_alternatives = metric_name in alternatives and len(alternatives[metric_name]) > 0
+
+        # Determine if this is a final calculated value (bold) or component (non-bold)
+        final_calculations = [
+            "Gross Profit",
+            "Operating Income",
+            "Other income (expense), net",
+            "Income Before Taxes",
+            "Net Income",
+        ]
+        is_final_calculation = metric_name in final_calculations
+        
+        # Metric name cell with tooltip
+        metric_cell_content = [
+            html.Div(
+                metric_name,
+                style={
+                    "fontWeight": "bold" if is_final_calculation else "normal",
+                    "fontSize": "0.9em",
+                },
+                title=metric_def if metric_def else None,  # Tooltip on hover
+            ),
+        ]
+        
+        # Add dropdown if alternatives exist
+        if has_alternatives:
+            metric_cell_content.append(
+                html.Div(
+                    [
+                        dcc.Dropdown(
+                            id={"type": "metric-dropdown", "index": metric_name},
+                            options=[
+                                {"label": "Default", "value": "default"},
+                            ]
+                            + [
+                                {"label": alt["label"], "value": alt["source"]}
+                                for alt in alternatives.get(metric_name, [])
+                            ],
+                            value=selections.get(metric_name, "default"),
+                            style={
+                                "width": "100%",
+                                "fontSize": "0.8em",
+                                "backgroundColor": "#333333",
+                                "color": "#E0E0E0",
+                            },
+                        )
+                    ],
+                    style={"marginTop": "4px"},
+                )
+            )
+        
+        cells = [
+            html.Td(
+                metric_cell_content,
+                style={
+                    "padding": "6px 8px",
+                    "verticalAlign": "middle",
+                    "minWidth": "200px",
+                    "border": "1px solid #444",
+                    "fontSize": "0.9em",
+                },
+            )
+        ]
+
+        # Add data cells with scaled values
+        # EPS values should not be scaled (they're already per-share)
+        is_eps_metric = "EPS" in metric_name
+        
+        for col in df_display.columns[1:]:
+            value = row[col]
+            if pd.isna(value):
+                display_value = "—"
+            else:
+                try:
+                    if is_eps_metric:
+                        # EPS values are not scaled - display with 2 decimal places
+                        eps_value = float(value)
+                        if eps_value < 0:
+                            display_value = f"({abs(eps_value):.2f})"
+                        else:
+                            display_value = f"{eps_value:.2f}"
+                    else:
+                        # Scale the value by the detected scale factor
+                        scaled_value = float(value) / scale_factor
+                        
+                        # Round to whole numbers (no decimals) for all non-EPS values
+                        rounded_value = round(scaled_value)
+                        
+                        # Format: negative values in parentheses, no $ sign (standard financial format)
+                        if rounded_value < 0:
+                            display_value = f"({abs(rounded_value):,})"
+                        else:
+                            display_value = f"{rounded_value:,}"
+                except (ValueError, TypeError):
+                    display_value = str(value)
+
+            cells.append(
+                html.Td(
+                    display_value,
+                    style={
+                        "padding": "6px 8px",
+                        "textAlign": "right",
+                        "verticalAlign": "middle",
+                        "border": "1px solid #444",
+                        "fontSize": "0.9em",
+                        "fontFamily": "monospace",  # Spreadsheet-like monospace font
+                        "fontWeight": "bold" if is_final_calculation else "normal",
+                    },
+                )
+            )
+
+        table_rows.append(html.Tr(cells))
+        
+        # Add blank spacer rows after key section dividers
+        spacer_metrics = [
+            "Gross Profit",
+            "Operating Income",
+            "Other income (expense), net",
+            "Income Before Taxes",
+            "Net Income",
+        ]
+        
+        if metric_name in spacer_metrics:
+            # Create a blank row with increased height for visual separation
+            spacer_cells = [
+                html.Td("", style={"padding": "8px 8px", "border": "1px solid #444", "height": "16px", "backgroundColor": "#2C2C2C"})
+                for _ in range(len(df_display.columns))
+            ]
+            table_rows.append(html.Tr(spacer_cells))
+    
+    # --- Add calculated metrics section using library ---
+    if not profitability_df.empty:
+        # Add a blank spacer row before calculated metrics
+        spacer_cells = [
+            html.Td("", style={"padding": "8px 8px", "border": "1px solid #444", "height": "16px", "backgroundColor": "#2C2C2C"})
+            for _ in range(len(df_display.columns))
+        ]
+        table_rows.append(html.Tr(spacer_cells))
+        
+        # Helper function to format percentage for display
+        def format_percentage_display(value):
+            """Format a decimal value (0.50) as a percentage string (50.00%)."""
+            if pd.isna(value) or value is None:
+                return "—"
+            try:
+                pct_value = float(value) * 100
+                if pct_value < 0:
+                    return f"-{abs(pct_value):.2f}%"
+                else:
+                    return f"{pct_value:.2f}%"
+            except (ValueError, TypeError):
+                return "—"
+        
+        # Metrics that should be bold
+        bold_metrics = ["Operating Margin"]
+        
+        # Metrics that should have a spacer row after them
+        # Note: "Revenue" removed - no spacer between Revenue growth and Expenses section
+        spacer_after_metrics = ["Operating Margin"]
+        
+        # Iterate through profitability DataFrame and add rows
+        for idx, row in profitability_df.iterrows():
+            metric_name = row["Metric"]
+            is_bold = metric_name in bold_metrics
+            is_header = metric_name == "Expenses as % of Revenue"
+            
+            # Build metric name cell
+            metric_cell = html.Td(
+                metric_name,
+                style={
+                    "padding": "6px 8px",
+                    "verticalAlign": "middle",
+                    "minWidth": "200px",
+                    "border": "1px solid #444",
+                    "fontSize": "0.9em",
+                    "fontWeight": "bold" if (is_bold or is_header) else "normal",
+                },
+            )
+            
+            cells = [metric_cell]
+            
+            # Add data cells for each date column
+            for col in df_display.columns[1:]:
+                value = row.get(col)
+                
+                # Header rows (like "Expenses as % of Revenue") should have blank cells, not dashes
+                if is_header:
+                    display_value = ""
+                else:
+                    display_value = format_percentage_display(value)
+                
+                cells.append(
+                    html.Td(
+                        display_value,
+                        style={
+                            "padding": "6px 8px",
+                            "textAlign": "right",
+                            "verticalAlign": "middle",
+                            "border": "1px solid #444",
+                            "fontSize": "0.9em",
+                            "fontFamily": "monospace",
+                            "fontWeight": "bold" if is_bold else "normal",
+                        },
+                    )
+                )
+            
+            table_rows.append(html.Tr(cells))
+            
+            # Add spacer row after specific metrics
+            if metric_name in spacer_after_metrics:
+                spacer_cells = [
+                    html.Td("", style={"padding": "8px 8px", "border": "1px solid #444", "height": "16px", "backgroundColor": "#2C2C2C"})
+                    for _ in range(len(df_display.columns))
+                ]
+                table_rows.append(html.Tr(spacer_cells))
+
+    table = html.Table(
+        [
+            html.Thead(table_header),
+            html.Tbody(table_rows),
+        ],
+        style={
+            "width": "100%",
+            "borderCollapse": "collapse",
+            "backgroundColor": "#2C2C2C",
+            "color": "#E0E0E0",
+            "border": "1px solid #444",
+            "fontSize": "0.9em",
+        },
     )
 
     return html.Div(
         [
             html.H2(
-                f"Standardized Income Statement for {ticker.upper()}",
-                style={"color": "#E0E0E0"},
+                "Standardized Income Statement",
+                style={
+                    "color": "#E0E0E0",
+                    "textAlign": "center",
+                    "marginBottom": "10px",
+                    "fontSize": "1.2em",
+                }
             ),
             table,
-        ]
+        ],
+        style={"marginTop": "20px"},
     )
 
 
+# --- Callback to update statistics display ---
 @app.callback(
     Output("statistics-output", "children"),
-    [Input("available-metrics-selector", "value")],
-    [State("current-df-store", "data")],
+    [
+        Input("available-metrics-selector", "value"),
+        Input("current-df-store", "data"),
+    ],
 )
 def update_statistics(selected_metrics, current_df_json):
     """
-    Displays a table of summary statistics for the currently selected metrics.
+    Updates the statistics display based on selected metrics.
     """
-    if not current_df_json or not selected_metrics:
-        return html.P(
-            "Select metrics to view statistics."
-            if selected_metrics
-            else "No data loaded for statistics."
-        )
+    if not selected_metrics or not current_df_json:
+        return html.Div("Select metrics to view statistics.", style={"color": "#B0B0B0"})
 
-    df = pd.read_json(current_df_json, orient="split")
+    try:
+        # Handle both string and dict formats from Dash Store
+        if isinstance(current_df_json, str):
+            df = pd.read_json(io.StringIO(current_df_json), orient="split")
+        elif isinstance(current_df_json, dict):
+            df = pd.DataFrame(
+                data=current_df_json.get("data", []),
+                columns=current_df_json.get("columns", []),
+                index=current_df_json.get("index", [])
+            )
+        else:
+            df = pd.DataFrame()
+    except (ValueError, TypeError, KeyError, json.JSONDecodeError):
+        return html.Div("Error loading data.", style={"color": "#FF6B6B"})
 
-    # Select only the metrics to be displayed, excluding the 'end' column for stats calculation
-    stats_df = df[selected_metrics]
+    if df.empty:
+        return html.Div("No data available.", style={"color": "#B0B0B0"})
 
-    table_header = [html.Th("Statistic")] + [
-        html.Th(metric) for metric in selected_metrics
-    ]
-    rows = []
-    stats = {"Minimum": "min", "Maximum": "max", "Average": "mean", "Median": "median"}
-    for stat_name, stat_func in stats.items():
-        row = [html.Td(stat_name)]
-        for metric in selected_metrics:
-            series = stats_df.get(metric, pd.Series(dtype=float)).dropna()
-            val = getattr(series, stat_func)() if not series.empty else "N/A"
-            row.append(html.Td(f"{val:,.2f}" if isinstance(val, (int, float)) else val))
-        rows.append(html.Tr(row))
+    stats_list = []
+    for metric in selected_metrics:
+        if metric in df.columns:
+            series = df[metric].dropna()
+            if not series.empty:
+                stats_list.append(
+                    html.Div(
+                        [
+                            html.H4(metric, style={"color": "#E0E0E0"}),
+                            html.P(f"Mean: ${series.mean():,.2f}", style={"color": "#B0B0B0"}),
+                            html.P(f"Std Dev: ${series.std():,.2f}", style={"color": "#B0B0B0"}),
+                            html.P(f"Min: ${series.min():,.2f}", style={"color": "#B0B0B0"}),
+                            html.P(f"Max: ${series.max():,.2f}", style={"color": "#B0B0B0"}),
+                        ],
+                        style={"margin": "10px", "padding": "10px", "border": "1px solid #555555"},
+                    )
+                )
 
-    return dbc.Table(
-        [html.Thead(html.Tr(table_header)), html.Tbody(rows)],
-        bordered=True,
-        hover=True,
-        responsive=True,
-        striped=True,
-        style={"color": "#E0E0E0", "backgroundColor": "#2E2E2E"},
-    )
+    if not stats_list:
+        return html.Div("No statistics available for selected metrics.", style={"color": "#B0B0B0"})
+
+    return html.Div(stats_list)
 
 
+# --- Callback to handle Excel export ---
 @app.callback(
     Output("download-dataframe-excel", "data"),
     [Input("export-excel-button", "n_clicks")],
-    [
-        State("standard-is-store", "data"),
-        State("ticker-input", "value"),
-        State("is-selections-store", "data"),
-        State("alternatives-store", "data"),
-    ],
+    [State("current-df-store", "data"), State("ticker-input", "value")],
     prevent_initial_call=True,
 )
-def export_to_excel(n_clicks, standard_is_json, ticker, selections, alternatives_json):
+def export_to_excel(n_clicks, current_df_json, ticker):
     """
-    Handles the logic for exporting the current financial data to a CSV file.
-    This now exports the standardized income statement view, reflecting any
-    user-selected alternative formulas.
+    Exports the current dataframe to Excel format.
     """
-    if n_clicks == 0 or not standard_is_json:
+    if n_clicks == 0 or not current_df_json:
         return None
 
-    # Apply user selections to get the dataframe as it is displayed
-    df = _apply_user_selections_to_is(standard_is_json, alternatives_json, selections)
+    try:
+        # Handle both string and dict formats from Dash Store
+        if isinstance(current_df_json, str):
+            df = pd.read_json(io.StringIO(current_df_json), orient="split")
+        elif isinstance(current_df_json, dict):
+            df = pd.DataFrame(
+                data=current_df_json.get("data", []),
+                columns=current_df_json.get("columns", []),
+                index=current_df_json.get("index", [])
+            )
+        else:
+            df = pd.DataFrame()
+        
+        if df.empty:
+            return None
 
-    if df is None:
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False)
+        buffer.seek(0)
+
+        ticker_upper = ticker.upper() if ticker else "data"
+        return dcc.send_bytes(
+            buffer.getvalue(),
+            f"{ticker_upper}_financial_data.xlsx",
+        )
+    except Exception as e:
+        print(f"Error exporting to Excel: {e}")
         return None
 
-    # Format date columns to remove timestamps before exporting
-    formatted_columns = ["Metric"]
-    for col in df.columns[1:]:
-        try:
-            # Attempt to convert column to datetime and format it
-            formatted_columns.append(pd.to_datetime(col).strftime("%Y-%m-%d"))
-        except (ValueError, TypeError):
-            # If it's not a date-like string, keep it as is
-            formatted_columns.append(str(col))
-    df.columns = formatted_columns
 
-    buffer = io.StringIO()
-    df.to_csv(buffer, index=False)
-    buffer.seek(0)
-
-    file_name = (
-        f"{ticker.upper()}_income_statement.csv" if ticker else "income_statement.csv"
-    )
-    return send_string(buffer.getvalue(), file_name, type="text/csv")
-
-
+# --- Callback to handle 10-K download ---
 @app.callback(
     Output("download-10k-zip", "data"),
     [Input("download-10k-button", "n_clicks")],
@@ -964,6 +1360,65 @@ def download_all_10ks(n_clicks, ticker):
     except Exception as e:
         # Log the error and prevent the app from crashing.
         print(f"Error generating 10-K zip for {ticker_upper}: {e}")
+        return None
+
+
+# --- NEW: Comprehensive Analysis Generation Callback ---
+@app.callback(
+    Output("download-analysis-excel", "data"),
+    [Input("generate-analysis-btn", "n_clicks")],
+    [State("ticker-input", "value")],
+    prevent_initial_call=True,
+)
+def generate_analysis_report(n_clicks, ticker):
+    """
+    Generate and download comprehensive financial analysis report.
+    
+    This callback creates a comprehensive Excel analysis report including:
+    - Multi-year financial statements
+    - Financial ratios
+    - Trend analysis
+    - Common-size statements
+    - Summary metrics
+    
+    Args:
+        n_clicks: Number of times the button was clicked
+        ticker: Ticker symbol from input field
+        
+    Returns:
+        Dash send_bytes object for Excel file download, or None
+    """
+    if n_clicks == 0 or not ticker:
+        return None
+    
+    ticker_upper = ticker.strip().upper()
+    
+    try:
+        from financial4all import Company
+        from financial4all.analysis import FinancialAnalysisReport
+        import io
+        
+        # Create company instance
+        company = Company(ticker_upper)
+        
+        # Generate report
+        report = FinancialAnalysisReport(company)
+        
+        # Create Excel in memory
+        buffer = io.BytesIO()
+        report.export_to_excel(buffer)
+        buffer.seek(0)
+        
+        # Send to browser for download
+        return dcc.send_bytes(
+            buffer.getvalue(),
+            f"{ticker_upper}_Financial_Analysis.xlsx"
+        )
+    except Exception as e:
+        # Log error but don't crash the app
+        print(f"Error generating analysis report for {ticker_upper}: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 

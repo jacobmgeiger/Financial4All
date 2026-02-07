@@ -12,22 +12,31 @@ tqdm>=4.62.0
 jupyter>=1.0.0
 ipython>=7.0.0
 
-# Visualization
-seaborn>=0.11.0
-
 # Additional utilities
 typing-extensions>=4.0.0
 
+# GUI
 customtkinter
 
+# Web Framework
 dash
 dash-core-components
 dash-html-components
 dash-table
 dash-bootstrap-components
 
+# Financial Data
 yfinance
 plotly
 statsmodels
 openpyxl
+
+# XBRL Processing
 py-xbrl
+lxml>=4.6.0  # Better XML parsing for XBRL
+
+# Packaging
+pyinstaller
+
+# HTTP Client (for retry logic)
+urllib3>=1.26.0
