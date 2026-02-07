@@ -1,9 +1,28 @@
 # data_loader.py
 """
-Backward compatibility layer for data_loader.py.
+DEPRECATED: Backward compatibility layer for data_loader.py.
+
+⚠️  WARNING: This module is deprecated and will be removed in version 2.0.0.
 
 This module maintains backward compatibility with the original data_loader.py API
-while using the new modular structure under the hood.
+while using the new modular structure under the hood. All functions in this module
+are deprecated wrappers around the new `financial4all` package API.
+
+**Migration Guide:**
+- `get_company_info(ticker)` → `Company(ticker).company_info`
+- `get_cik(ticker)` → `Company(ticker).cik`
+- `process_metrics(ticker)` → `Company(ticker).get_financials()`
+- `get_financial_reports(ticker)` → Use `Company(ticker).get_filings(form="10-K")` and create zip manually
+- `extract_metrics(filing_metrics)` → Use `FactSet.from_company_facts()` directly
+- `create_standard_income_statement()` → Use `IncomeStatement.from_company_facts()`
+- `calculate_key_ratios()` → Use `FinancialRatios` class
+
+**Removal Timeline:**
+- Version 1.x: Deprecated (current) - functions emit DeprecationWarning
+- Version 2.0.0: Planned removal (target: Q2 2026)
+
+For new code, please use the `financial4all` package directly. See README.md for
+examples and documentation.
 """
 
 import warnings

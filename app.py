@@ -4,14 +4,13 @@ from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 import pandas as pd
 import json
-from data_loader import process_metrics, get_company_info, get_financial_reports
 import dash_bootstrap_components as dbc
 import io
-import warnings
+import zipfile
+from financial4all import Company
 from financial4all.analysis import ProfitabilityAnalyzer
-
-# Suppress deprecation warnings from data_loader for cleaner output
-warnings.filterwarnings("ignore", category=DeprecationWarning)
+from financial4all.financials import FinancialRatios
+from financial4all.sec.client import SECClient
 
 # app.py
 # This script creates a comprehensive Dash web application for financial analysis.
@@ -294,19 +293,45 @@ def on_ticker_change(ticker_upper):
         raise dash.exceptions.PreventUpdate
 
     try:
-        # process_metrics now returns the comprehensive df, the standard IS, and alternatives
-        (
-            df_merged,  # UPDATED: The returned df now contains the merged, clean metrics
-            standard_is_df,
-            alternatives,
-            standard_metrics,
-            key_ratios_df,  # NEW: Receive the calculated ratios
-        ) = process_metrics(ticker_upper)
-        if df_merged is None or df_merged.empty:
+        # Use the new Company API directly
+        company = Company(ticker_upper)
+        financials = company.get_financials()
+        
+        income_statement = financials["income_statement"]
+        balance_sheet = financials["balance_sheet"]
+        cash_flow = financials["cash_flow"]
+        
+        # Get income statement DataFrame
+        standard_is_df = income_statement.to_dataframe()
+        
+        if standard_is_df is None or standard_is_df.empty:
             status_message = html.P(
                 f"No data retrieved for {ticker_upper}.", style={"color": "orange"}
             )
             return status_message, [], [], None, [], None, None, {}, [], None
+        
+        # For backward compatibility, create df_merged (all metrics)
+        # This combines income statement with other available metrics
+        df_merged = standard_is_df.copy()
+        
+        # Add balance sheet and cash flow metrics if available
+        if balance_sheet:
+            bs_df = balance_sheet.to_dataframe()
+            if not bs_df.empty:
+                df_merged = df_merged.join(bs_df, how='outer', rsuffix='_bs')
+        
+        if cash_flow:
+            cf_df = cash_flow.to_dataframe()
+            if not cf_df.empty:
+                df_merged = df_merged.join(cf_df, how='outer', rsuffix='_cf')
+        
+        # Calculate ratios
+        ratios = FinancialRatios(income_statement, balance_sheet, cash_flow)
+        key_ratios_df = ratios.calculate_all_ratios()
+        
+        # Create alternatives dict (empty for now - could be enhanced)
+        alternatives = {}
+        standard_metrics = list(standard_is_df.columns) if not standard_is_df.empty else []
 
         # --- Logic to determine best default formula based on non-zero count ---
         default_selections = {}
@@ -347,10 +372,11 @@ def on_ticker_change(ticker_upper):
             columns={"index": "Metric"}
         )
 
-        info = get_company_info(ticker_upper)
+        # Get company info directly from Company instance
+        info = company.company_info
         status_message = html.Div(
             [
-                html.P(f"Company: {info['title']} (CIK: {info['cik_str']})"),
+                html.P(f"Company: {info['title']} (CIK: {info['cik']})"),
                 html.P(f"Data loaded for {ticker_upper}. Select metrics to plot."),
             ]
         )
@@ -1328,8 +1354,7 @@ def download_all_10ks(n_clicks, ticker):
 
     It performs the following steps:
     1. Checks if the button was clicked and if a ticker is provided.
-    2. Calls the `get_financial_reports` function from `data_loader.py` to
-       fetch and zip the 10-K reports in memory.
+    2. Fetches 10-K filings using the Company API and creates a zip archive in memory.
     3. If the zip file is successfully created, it sends the data to the user's
        browser for download using `dcc.send_bytes`.
     4. If no files are found or an error occurs, it does nothing.
@@ -1346,12 +1371,37 @@ def download_all_10ks(n_clicks, ticker):
 
     ticker_upper = ticker.strip().upper()
     try:
-        # Fetch the zipped 10-K data.
-        zip_data = get_financial_reports(ticker_upper)
-        if zip_data:
+        # Fetch filings using Company API
+        company = Company(ticker_upper)
+        filings = company.get_filings(form="10-K")
+        
+        if not filings:
+            return None
+        
+        # Create zip file in memory
+        client = SECClient()
+        zip_buffer = io.BytesIO()
+        files_added = []
+        
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_f:
+            for filing in filings:
+                accession_number = filing.accession_number.replace("-", "")
+                report_url = f"https://www.sec.gov/Archives/edgar/data/{filing.cik}/{accession_number}/Financial_Report.xlsx"
+                
+                try:
+                    response = client.get(report_url)
+                    if response.status_code == 200:
+                        file_name = f"{ticker_upper}_{filing.form}_{filing.filing_date}_Financial_Report.xlsx"
+                        zip_f.writestr(file_name, response.content)
+                        files_added.append(file_name)
+                except Exception:
+                    continue
+        
+        if files_added:
+            zip_buffer.seek(0)
             # Send the zip file to the browser for download.
             return dcc.send_bytes(
-                zip_data,
+                zip_buffer.getvalue(),
                 f"{ticker_upper}_10K_filings.zip",
             )
         else:
