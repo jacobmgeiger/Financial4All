@@ -1258,35 +1258,8 @@ def display_standard_is(
                         "fontWeight": "bold" if is_bold else "normal",
                     }
                 else:
-                    # Format display value - handle Revenue differently in Y/Y section
-                    if in_yoy_section and not is_yoy_header and metric_name == "Revenue":
-                        # Revenue absolute difference is in dollars, convert to percentage of previous year
-                        if value is not None and not pd.isna(value):
-                            try:
-                                # Get previous year's revenue to calculate percentage
-                                col_idx = list(df_display.columns[1:]).index(col)
-                                if col_idx + 1 < len(df_display.columns[1:]):
-                                    prev_col = df_display.columns[1:][col_idx + 1]
-                                    # Get original revenue from profitability_df attributes
-                                    if hasattr(profitability_df, 'attrs') and 'original_revenue' in profitability_df.attrs:
-                                        prev_revenue = profitability_df.attrs['original_revenue'].get(prev_col)
-                                        if prev_revenue and prev_revenue != 0:
-                                            # Convert dollar difference to percentage: (difference / previous) * 100
-                                            pct_change = (float(value) / prev_revenue) * 100
-                                            display_value = f"{pct_change:.2f}%"
-                                        else:
-                                            display_value = "—"
-                                    else:
-                                        # Fallback: just show the value as percentage (assuming it's already a decimal)
-                                        display_value = format_percentage_display(value)
-                                else:
-                                    display_value = "—"
-                            except (ValueError, TypeError, IndexError, AttributeError, KeyError):
-                                display_value = format_percentage_display(value)
-                        else:
-                            display_value = "—"
-                    else:
-                        display_value = format_percentage_display(value)
+                    # Format display value - Revenue in Y/Y section is already a percentage difference
+                    display_value = format_percentage_display(value)
                     
                     # Conditional formatting for Y/Y change section
                     cell_style = {

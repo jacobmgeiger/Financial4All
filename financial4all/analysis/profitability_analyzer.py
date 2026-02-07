@@ -48,16 +48,14 @@ class ProfitabilityAnalyzer:
         
         # 1. Y/Y Revenue Growth (percentage change for initial display)
         revenue_yoy_data = None
+        revenue_growth_rates = None
         if "Revenue" in is_df.columns:
             revenue_growth = ProfitabilityAnalyzer._calculate_yoy_growth(
                 is_df["Revenue"], date_columns
             )
             ordered_metrics.append(("Revenue", revenue_growth))
-            # For Y/Y change section, calculate absolute difference instead
-            revenue_absolute_diff = ProfitabilityAnalyzer._calculate_yoy_absolute_difference(
-                is_df["Revenue"], date_columns
-            )
-            revenue_yoy_data = revenue_absolute_diff
+            # Store growth rates for Trends section calculation
+            revenue_growth_rates = revenue_growth
         
         # 2. Expenses as % of Revenue section
         # Add section header row (empty values)
@@ -107,9 +105,33 @@ class ProfitabilityAnalyzer:
         # Add section header row (empty values)
         ordered_metrics.append(("**%Change y/y Change (Trends)**", {col: np.nan for col in date_columns}))
         
-        # Revenue Y/Y change (reuse the value calculated above)
-        if revenue_yoy_data is not None:
-            ordered_metrics.append(("Revenue", revenue_yoy_data))
+        # Revenue Y/Y change: difference between this period's growth rate and last period's growth rate
+        if revenue_growth_rates is not None:
+            # revenue_growth_rates is a dictionary mapping date columns to growth rates (as decimals)
+            # Calculate the difference between consecutive growth rates
+            revenue_trend_diff = {}
+            for i, date_col in enumerate(date_columns):
+                current_growth = revenue_growth_rates.get(date_col)
+                # Check if there's a next (older) period to compare to
+                if i + 1 < len(date_columns):
+                    next_date_col = date_columns[i + 1]
+                    next_growth = revenue_growth_rates.get(next_date_col)
+                    
+                    if current_growth is not None and next_growth is not None and not pd.isna(current_growth) and not pd.isna(next_growth):
+                        try:
+                            # Difference = current growth rate - previous growth rate
+                            # Both are already decimals (e.g., 0.10 for 10%)
+                            diff = float(current_growth) - float(next_growth)
+                            revenue_trend_diff[date_col] = diff
+                        except (ValueError, TypeError):
+                            revenue_trend_diff[date_col] = np.nan
+                    else:
+                        revenue_trend_diff[date_col] = np.nan
+                else:
+                    # No older period to compare to (oldest period)
+                    revenue_trend_diff[date_col] = np.nan
+            
+            ordered_metrics.append(("Revenue", revenue_trend_diff))
         
         # Calculate Y/Y change for percentage metrics (absolute difference: this year's % - last year's %)
         # These are calculated from the percentage values stored above
