@@ -1,0 +1,103 @@
+{
+  "Revenue": [
+    "RevenueFromContractWithCustomerExcludingAssessedTax",
+    "RevenueFromContractWithCustomerIncludingAssessedTax",
+    "Revenues",
+    "Revenue",
+    "SalesRevenueNet",
+    "SalesRevenueGoodsNet",
+    "SalesRevenueNetOfReturnsAndAllowances",
+    "TotalRevenues",
+    "NetSales",
+    "OperatingRevenue"
+  ],
+  "Net Income": [
+    "NetIncomeLoss",
+    "ProfitLoss",
+    "NetIncome",
+    "NetEarnings",
+    "NetIncomeLossAttributableToParent",
+    "NetIncomeLossAvailableToCommonStockholdersBasic",
+    "IncomeLossFromContinuingOperations"
+  ],
+  "Cash and Cash Equivalents": [
+    "CashAndCashEquivalentsAtCarryingValue",
+    "CashCashEquivalentsAndShortTermInvestments",
+    "CashEquivalentsAtCarryingValue",
+    "Cash"
+  ],
+  "Total Assets": [
+    "Assets",
+    "AssetsTotal"
+  ],
+  "Accounts Receivable": [
+    "AccountsReceivableNetCurrent",
+    "AccountsReceivableNet",
+    "ReceivablesNetCurrent",
+    "AccountsReceivableGross"
+  ],
+  "Inventory": [
+    "InventoryNet",
+    "InventoryGross",
+    "InventoryFinishedGoods"
+  ],
+  "Property, Plant and Equipment": [
+    "PropertyPlantAndEquipmentNet",
+    "PropertyPlantAndEquipmentGross",
+    "FixedAssets"
+  ],
+  "Goodwill": [
+    "Goodwill"
+  ],
+  "Intangible Assets": [
+    "IntangibleAssetsNetExcludingGoodwill",
+    "IntangibleAssetsNetIncludingGoodwill",
+    "FiniteLivedIntangibleAssetsNet"
+  ],
+  "Accounts Payable": [
+    "AccountsPayableCurrent",
+    "AccountsPayableTradeCurrent",
+    "AccountsPayable"
+  ],
+  "Long Term Debt": [
+    "LongTermDebtNoncurrent",
+    "LongTermDebt",
+    "LongTermDebtAndCapitalLeaseObligations",
+    "LongTermBorrowings"
+  ],
+  "Total Stockholders' Equity": [
+    "StockholdersEquity",
+    "Equity",
+    "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"
+  ],
+  "Cost of Revenue": [
+    "CostOfRevenue",
+    "CostOfGoodsAndServicesSold",
+    "CostOfGoodsSold",
+    "CostOfSales"
+  ],
+  "Gross Profit": [
+    "GrossProfit"
+  ],
+  "Operating Expenses": [
+    "OperatingExpenses",
+    "OperatingCostsAndExpenses",
+    "NoninterestExpense",
+    "CostsAndExpenses"
+  ],
+  "Operating Income": [
+    "OperatingIncomeLoss",
+    "OperatingIncome",
+    "IncomeFromOperations"
+  ],
+  "Net Cash from Operating Activities": [
+    "NetCashProvidedByUsedInOperatingActivities",
+    "CashAndCashEquivalentsPeriodIncreaseDecreaseOperating"
+  ],
+  "Net Cash from Investing Activities": [
+    "NetCashProvidedByUsedInInvestingActivities"
+  ],
+  "Net Cash from Financing Activities": [
+    "NetCashProvidedByUsedInFinancingActivities"
+  ]
+}

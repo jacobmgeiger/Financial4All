@@ -71,7 +71,8 @@ class CashFlowStatement:
         Args:
             fact_set: FactSet containing cash flow facts
         """
-        self.fact_set = fact_set.filter_annual_10k()
+        # Use filter_annual() to capture more historical data from all form types
+        self.fact_set = fact_set.filter_annual()
         self.standardizer = get_default_store()
         self._dataframe: Optional[pd.DataFrame] = None
     
@@ -134,7 +135,8 @@ class CashFlowStatement:
         for metric_data in metrics_data.values():
             all_periods.update(metric_data.keys())
         
-        all_periods = sorted(all_periods)
+        # Sort periods with most recent first (for leftmost column display)
+        all_periods = sorted(all_periods, reverse=True)
         
         # Build DataFrame - only include reported metrics
         df_data = {}

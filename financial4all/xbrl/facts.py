@@ -7,8 +7,16 @@ including dimensional facts, units, and period filtering.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any, Set, Union, Tuple
+from typing import Dict, List, Optional, Any, Set, Union, Tuple, Callable
 from datetime import datetime, date
+import re
+from functools import lru_cache
+
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
 
 from financial4all.xbrl.periods import Period, PeriodType
 from financial4all.xbrl.entity_info import extract_dei_facts, build_entity_info, EntityInfo
@@ -152,6 +160,21 @@ class FactSet:
     def filter_annual_10k(self) -> "FactSet":
         """Filter to only annual 10-K facts."""
         filtered = [f for f in self.facts if f.is_annual_10k()]
+        return FactSet(filtered, entity_info=self._entity_info)
+    
+    def filter_annual(self) -> "FactSet":
+        """
+        Filter to annual facts from any form type (10-K, 10-K/A, etc.).
+        
+        This is more inclusive than filter_annual_10k() and captures more historical data
+        by including annual data from amended filings and other form types.
+        """
+        filtered = [
+            f for f in self.facts
+            if f.period.period_type == PeriodType.DURATION
+            and f.period.is_annual()
+            and (not f.frame or "Q" not in str(f.frame))  # Exclude quarterly frames
+        ]
         return FactSet(filtered, entity_info=self._entity_info)
     
     def get_unique_concepts(self) -> Set[str]:
@@ -749,3 +772,541 @@ class FactSet:
     def __repr__(self) -> str:
         """String representation of FactSet."""
         return f"FactSet({len(self.facts)} facts)"
+
+
+class FactQuery:
+    """
+    A query builder for XBRL facts that enables filtering by various attributes.
+
+    This class provides a fluent interface for building queries against XBRL facts,
+    allowing filtering by concept, value, period, dimensions, and other attributes.
+    """
+
+    def __init__(self, facts_view: 'FactsView'):
+        """
+        Initialize a new fact query.
+
+        Args:
+            facts_view: The FactsView instance to query against
+        """
+        self._facts_view = facts_view
+        self._filters = []
+        self._transformations = []
+        self._aggregations = []
+        self._include_dimensions = False
+        self._include_contexts = True
+        self._include_element_info = True
+        self._sort_by = None
+        self._sort_ascending = True
+        self._limit = None
+        self._statement_type = None
+        self._requested_dimension = None
+
+    def by_concept(self, pattern: str, exact: bool = False) -> 'FactQuery':
+        """
+        Filter facts by concept name.
+
+        Args:
+            pattern: Pattern to match against concept names
+            exact: If True, require exact match; otherwise, use regex pattern matching
+
+        Returns:
+            Self for method chaining
+        """
+        pattern = pattern.replace('_', ':')  # Normalize underscores to colons for concept names
+        if exact:
+            self._filters.append(lambda f: f.get('concept') == pattern)
+        else:
+            regex = re.compile(pattern, re.IGNORECASE)
+            self._filters.append(lambda f: bool(regex.search(f.get('concept', ''))))
+        return self
+
+    def by_label(self, pattern: str, exact: bool = False) -> 'FactQuery':
+        """
+        Filter facts by element label.
+
+        Args:
+            pattern: Pattern to match against element labels
+            exact: If True, require exact match; otherwise, use regex pattern matching
+
+        Returns:
+            Self for method chaining
+        """
+        if exact:
+            self._filters.append(lambda f:
+                ('label' in f and f['label'] == pattern) or
+                ('element_label' in f and f['element_label'] == pattern) or
+                ('original_label' in f and f['original_label'] == pattern)
+            )
+        else:
+            regex = re.compile(pattern, re.IGNORECASE)
+            self._filters.append(lambda f:
+                ('label' in f and f['label'] is not None and bool(regex.search(str(f['label'])))) or
+                ('element_label' in f and f['element_label'] is not None and
+                 bool(regex.search(str(f['element_label'])))) or
+                ('original_label' in f and f['original_label'] is not None and
+                 bool(regex.search(str(f['original_label']))))
+            )
+        return self
+
+    def by_value(self, value_filter: Union[Callable, str, int, float, list, tuple]) -> 'FactQuery':
+        """
+        Filter facts by value.
+
+        Args:
+            value_filter: Can be:
+                - A callable predicate that takes a value and returns bool
+                - A specific value to match exactly
+                - A tuple or list of (min, max) for range filtering
+
+        Returns:
+            Self for method chaining
+        """
+        if callable(value_filter):
+            def numeric_value_filter(f):
+                return ('numeric_value' in f and
+                        f['numeric_value'] is not None and
+                        value_filter(f['numeric_value']))
+            self._filters.append(numeric_value_filter)
+        elif isinstance(value_filter, (list, tuple)) and len(value_filter) == 2:
+            min_val, max_val = value_filter
+            def numeric_range_filter(f):
+                return ('numeric_value' in f and
+                        f['numeric_value'] is not None and
+                        min_val <= f['numeric_value'] <= max_val)
+            self._filters.append(numeric_range_filter)
+        else:
+            def numeric_equality_filter(f):
+                return ('numeric_value' in f and
+                        f['numeric_value'] is not None and
+                        f['numeric_value'] == value_filter)
+            self._filters.append(numeric_equality_filter)
+        return self
+
+    def by_period_type(self, period_type: str) -> 'FactQuery':
+        """
+        Filter facts by period type ('instant' or 'duration').
+
+        Args:
+            period_type: Period type to filter by
+
+        Returns:
+            Self for method chaining
+        """
+        def period_type_filter(f):
+            return 'period_type' in f and f['period_type'] == period_type
+        self._filters.append(period_type_filter)
+        return self
+
+    def by_period_key(self, period_key: str) -> 'FactQuery':
+        """
+        Filter facts by a specific period key.
+
+        Args:
+            period_key: Period key to filter by (e.g., "instant_2023-12-31")
+
+        Returns:
+            Self for method chaining
+        """
+        self._filters.append(lambda f: 'period_key' in f and f['period_key'] == period_key)
+        return self
+
+    def by_period_keys(self, period_keys: List[str]) -> 'FactQuery':
+        """
+        Filter facts by a list of period keys.
+
+        Args:
+            period_keys: List of period keys to filter by
+
+        Returns:
+            Self for method chaining
+        """
+        self._filters.append(lambda f: 'period_key' in f and f['period_key'] in period_keys)
+        return self
+
+    def by_dimension(self, dimension: Optional[str], value: Optional[str] = None) -> 'FactQuery':
+        """
+        Filter facts by dimension with flexible matching.
+
+        Args:
+            dimension: Dimension name (supports multiple formats), or None to filter for facts with no dimensions
+            value: Optional dimension value to filter by (supports multiple formats)
+
+        Returns:
+            Self for method chaining
+        """
+        if dimension is None:
+            # Filter for facts with no dimensions
+            self._filters.append(lambda f: not any(key.startswith('dim_') for key in f.keys()))
+            return self
+
+        self._include_dimensions = True
+        self._requested_dimension = dimension
+
+        # Normalize the input dimension to match stored format
+        normalized_dim = dimension.replace(':', '_')
+
+        if value is not None:
+            normalized_value = value.replace('_', ':')
+            def dimension_filter_with_value(f):
+                if f'dim_{normalized_dim}' in f and f[f'dim_{normalized_dim}'] == normalized_value:
+                    return True
+                for dim_key, dim_value in f.items():
+                    if not dim_key.startswith('dim_'):
+                        continue
+                    if self._dimension_key_matches(dim_key, dimension):
+                        if self._dimension_value_matches(dim_value, value):
+                            return True
+                return False
+            self._filters.append(dimension_filter_with_value)
+        else:
+            def dimension_filter_exists(f):
+                if f'dim_{normalized_dim}' in f:
+                    return True
+                for dim_key in f.keys():
+                    if dim_key.startswith('dim_') and self._dimension_key_matches(dim_key, dimension):
+                        return True
+                return False
+            self._filters.append(dimension_filter_exists)
+
+        return self
+
+    def _dimension_key_matches(self, stored_key: str, query_key: str) -> bool:
+        """Check if a stored dimension key matches a query key with flexible matching."""
+        stored_clean = stored_key[4:] if stored_key.startswith('dim_') else stored_key
+        stored_normalized = stored_clean.replace(':', '_').replace('-', '_')
+        query_normalized = query_key.replace(':', '_').replace('-', '_')
+        if stored_normalized == query_normalized:
+            return True
+        if '_' in stored_normalized:
+            stored_local = stored_normalized.split('_')[-1]
+            query_local = query_normalized.split('_')[-1]
+            if stored_local == query_local:
+                return True
+        return False
+
+    def _dimension_value_matches(self, stored_value: str, query_value: str) -> bool:
+        """Check if a stored dimension value matches a query value with flexible matching."""
+        if not stored_value or not query_value:
+            return stored_value == query_value
+        stored_normalized = stored_value.replace('_', ':').replace('-', '_')
+        query_normalized = query_value.replace('_', ':').replace('-', '_')
+        if stored_normalized == query_normalized:
+            return True
+        if ':' in stored_normalized:
+            stored_local = stored_normalized.split(':')[-1]
+            query_local = query_normalized.split(':')[-1] if ':' in query_normalized else query_normalized
+            if stored_local == query_local:
+                return True
+        return False
+
+    def by_statement_type(self, statement_type: str) -> 'FactQuery':
+        """
+        Filter facts by statement type.
+
+        Args:
+            statement_type: Statement type ('BalanceSheet', 'IncomeStatement', etc.)
+
+        Returns:
+            Self for method chaining
+        """
+        self._filters.append(lambda f: 'statement_type' in f and f['statement_type'] == statement_type)
+        return self
+
+    def by_text(self, pattern: str) -> 'FactQuery':
+        """
+        Search across concept names, labels, and element names for a pattern.
+
+        Args:
+            pattern: Pattern to search for in various text fields
+
+        Returns:
+            Self for method chaining
+        """
+        regex = re.compile(pattern, re.IGNORECASE)
+        def text_filter(f):
+            if 'concept' in f and f['concept'] is not None and regex.search(str(f['concept'])):
+                return True
+            if 'label' in f and f['label'] is not None and regex.search(str(f['label'])):
+                return True
+            if 'element_label' in f and f['element_label'] is not None and regex.search(str(f['element_label'])):
+                return True
+            if 'element_name' in f and f['element_name'] is not None and regex.search(str(f['element_name'])):
+                return True
+            if 'original_label' in f and f['original_label'] is not None and regex.search(str(f['original_label'])):
+                return True
+            return False
+        self._filters.append(text_filter)
+        return self
+
+    def with_dimensions(self) -> 'FactQuery':
+        """Include dimension axis and member columns in results."""
+        self._include_dimensions = True
+        return self
+
+    def exclude_dimensions(self) -> 'FactQuery':
+        """Exclude dimension columns from results."""
+        self._include_dimensions = False
+        return self
+
+    def exclude_contexts(self) -> 'FactQuery':
+        """Exclude context information from results."""
+        self._include_contexts = False
+        return self
+
+    def exclude_element_info(self) -> 'FactQuery':
+        """Exclude element catalog information from results."""
+        self._include_element_info = False
+        return self
+
+    def sort_by(self, column: str, ascending: bool = True) -> 'FactQuery':
+        """
+        Set sorting for results.
+
+        Args:
+            column: Column name to sort by
+            ascending: Sort order (True for ascending, False for descending)
+
+        Returns:
+            Self for method chaining
+        """
+        self._sort_by = column
+        self._sort_ascending = ascending
+        return self
+
+    def limit(self, n: int) -> 'FactQuery':
+        """
+        Limit the number of results.
+
+        Args:
+            n: Maximum number of results to return
+
+        Returns:
+            Self for method chaining
+        """
+        self._limit = n
+        return self
+
+    def execute(self) -> List[Dict[str, Any]]:
+        """
+        Execute the query and return matching facts.
+
+        Returns:
+            List of fact dictionaries
+        """
+        results = self._facts_view.get_facts()
+
+        # Apply filters
+        for filter_func in self._filters:
+            results = [f for f in results if filter_func(f)]
+
+        # Apply transformations
+        for transform_fn in self._transformations:
+            for fact in results:
+                if 'value' in fact and fact['value'] is not None:
+                    fact['value'] = transform_fn(fact['value'])
+
+        # Apply sorting if specified
+        if results and self._sort_by and self._sort_by in results[0]:
+            results.sort(key=lambda f: f.get(self._sort_by, ''),
+                        reverse=not self._sort_ascending)
+
+        # Apply limit if specified
+        if self._limit is not None:
+            results = results[:self._limit]
+
+        return results
+
+    @lru_cache(maxsize=8)
+    def to_dataframe(self, *columns) -> 'pd.DataFrame':
+        """
+        Execute the query and return results as a DataFrame.
+
+        Args:
+            *columns: List of columns to include in the DataFrame
+
+        Returns:
+            pandas DataFrame with query results
+        """
+        if not PANDAS_AVAILABLE:
+            raise ImportError("pandas is required for to_dataframe() method")
+
+        results = self.execute()
+
+        if not results:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(results)
+
+        # Filter columns based on inclusion flags
+        if not self._include_dimensions:
+            dimension_cols = {'dimension', 'member', 'dimension_label', 'member_label',
+                            'full_dimension_label', 'dimension_axis', 'dimension_member',
+                            'dimension_member_label'}
+            df = df.loc[:, [col for col in df.columns
+                           if (not col.startswith('dim_') and col not in dimension_cols)
+                           or col == 'is_dimensioned']]
+
+        if not self._include_contexts:
+            context_cols = ['context_ref', 'entity_identifier', 'entity_scheme', 'period_type']
+            df = df.loc[:, [col for col in df.columns if col not in context_cols]]
+
+        if not self._include_element_info:
+            element_cols = ['element_id', 'element_name', 'element_type',
+                           'element_period_type', 'element_balance', 'element_label']
+            df = df.loc[:, [col for col in df.columns if col not in element_cols]]
+
+        # Drop empty columns
+        df = df.dropna(axis=1, how='all')
+
+        # Filter columns if specified
+        if columns:
+            columns = [col for col in columns if col in df.columns]
+            df = df[list(columns)]
+
+        # Order columns
+        first_columns = [col for col in
+                        ['concept', 'label', 'balance', 'preferred_sign', 'weight', 'value',
+                         'numeric_value', 'period_key', 'period_start', 'period_end',
+                         'period_instant', 'is_dimensioned', 'decimals', 'statement_type']
+                        if col in df.columns]
+        columns = first_columns + [col for col in df.columns
+                                   if col not in first_columns
+                                   and col not in ['fact_key', 'original_label']]
+
+        return df[columns] if columns else df
+
+
+class FactsView:
+    """
+    A view over all facts in an XBRL instance, providing methods to query and analyze facts.
+    """
+
+    def __init__(self, xbrl):
+        """
+        Initialize the FactsView with an XBRL instance.
+
+        Args:
+            xbrl: XBRL instance containing facts, contexts, and elements
+        """
+        self.xbrl = xbrl
+        self._facts_cache = None
+        self._facts_df_cache = None
+
+    def __len__(self):
+        return len(self.get_facts())
+
+    @property
+    def entity_name(self):
+        """Get entity name from XBRL instance."""
+        return getattr(self.xbrl, 'entity_name', 'Unknown')
+
+    @property
+    def document_type(self):
+        """Get document type from XBRL instance."""
+        return getattr(self.xbrl, 'document_type', 'Unknown')
+
+    def get_facts(self) -> List[Dict[str, Any]]:
+        """
+        Get all facts with enriched context and element information.
+
+        Returns:
+            List of enriched fact dictionaries
+        """
+        # Return cached facts if available
+        if self._facts_cache is not None:
+            return self._facts_cache
+
+        # Build enriched facts from raw facts, contexts, and elements
+        enriched_facts = []
+
+        # Check if XBRL instance has fact_set (from company facts API)
+        if hasattr(self.xbrl, 'fact_set') and self.xbrl.fact_set:
+            fact_set = self.xbrl.fact_set
+            if isinstance(fact_set, FactSet):
+                # Convert FactSet facts to enriched dictionaries
+                for fact in fact_set.facts:
+                    fact_dict = {
+                        'concept': fact.concept,
+                        'value': fact.value,
+                        'numeric_value': fact.value if isinstance(fact.value, (int, float)) else None,
+                        'unit_ref': fact.unit,
+                        'period_type': fact.period.period_type.value if hasattr(fact.period, 'period_type') else None,
+                        'period_start': str(fact.period.start) if fact.period.start else None,
+                        'period_end': str(fact.period.end) if fact.period.end else None,
+                        'period_instant': str(fact.period.end) if not fact.period.start else None,
+                        'dimensions': fact.dimensions,
+                        'form': fact.form,
+                        'frame': fact.frame,
+                        'filed': fact.filed.isoformat() if fact.filed else None,
+                    }
+                    enriched_facts.append(fact_dict)
+        
+        # Check if XBRL instance has _facts (from XML parsing)
+        elif hasattr(self.xbrl, '_facts') and self.xbrl._facts:
+            # Convert ModelFact objects to enriched dictionaries
+            for fact_key, fact in self.xbrl._facts.items():
+                # Get context information
+                context = self.xbrl.contexts.get(fact.context_ref)
+                period_info = {}
+                dimensions = {}
+                
+                if context:
+                    period = context.period
+                    period_type = period.get('type', '')
+                    
+                    if period_type == 'instant':
+                        period_info = {
+                            'period_type': 'instant',
+                            'period_instant': period.get('instant', ''),
+                            'period_start': None,
+                            'period_end': None,
+                        }
+                    elif period_type == 'duration':
+                        period_info = {
+                            'period_type': 'duration',
+                            'period_start': period.get('startDate', ''),
+                            'period_end': period.get('endDate', ''),
+                            'period_instant': None,
+                        }
+                    
+                    dimensions = context.dimensions or {}
+                
+                # Get unit information
+                unit_info = self.xbrl.units.get(fact.unit_ref, {}) if fact.unit_ref else {}
+                unit_ref = unit_info.get('measure', fact.unit_ref) if fact.unit_ref else None
+                
+                # Get element catalog information
+                element_info = self.xbrl.element_catalog.get(fact.element_id)
+                element_name = element_info.name if element_info else fact.element_id
+                is_abstract = element_info.abstract if element_info else False
+                
+                fact_dict = {
+                    'concept': fact.element_id,
+                    'element_id': fact.element_id,
+                    'element_name': element_name,
+                    'is_abstract': is_abstract,
+                    'value': fact.value,
+                    'numeric_value': fact.numeric_value,
+                    'unit_ref': unit_ref,
+                    'decimals': fact.decimals,
+                    'context_ref': fact.context_ref,
+                    'fact_id': fact.fact_id,
+                    'instance_id': fact.instance_id,
+                    **period_info,
+                    'dimensions': dimensions,
+                }
+                enriched_facts.append(fact_dict)
+
+        self._facts_cache = enriched_facts
+        return enriched_facts
+
+    def query(self) -> FactQuery:
+        """
+        Start a new query for facts.
+
+        Returns:
+            FactQuery instance for building queries
+        """
+        return FactQuery(self)
+

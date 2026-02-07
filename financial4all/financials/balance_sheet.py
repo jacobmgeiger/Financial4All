@@ -136,7 +136,8 @@ class BalanceSheet:
         for metric_data in metrics_data.values():
             all_periods.update(metric_data.keys())
         
-        all_periods = sorted(all_periods)
+        # Sort periods with most recent first (for leftmost column display)
+        all_periods = sorted(all_periods, reverse=True)
         
         # Build DataFrame - only include reported metrics
         df_data = {}

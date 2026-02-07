@@ -31,10 +31,9 @@ Example:
 from __future__ import annotations
 
 import json
-import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Set, Union
 
 from financial4all.core import log
 
@@ -953,7 +952,7 @@ class SynonymGroups:
         group = self.get_group(name)
         return group.synonyms if group else []
     
-    def identify_concept(self, tag: str) -> Optional[ConceptInfo]:
+    def identify_concept(self, tag: str, context: Optional[Dict[str, Any]] = None) -> Optional[ConceptInfo]:
         """
         Identify which concept a tag belongs to (returns first match).
         
@@ -966,6 +965,7 @@ class SynonymGroups:
         
         Args:
             tag: XBRL tag to identify (with or without namespace prefix)
+            context: Optional context for disambiguation (section, statement_type, etc.)
             
         Returns:
             ConceptInfo if tag is recognized, None otherwise
@@ -978,6 +978,26 @@ class SynonymGroups:
         >>> print(info.description)
         'Net income/loss'
         """
+        # Try reverse index first (if available)
+        try:
+            from financial4all.xbrl.standardization.reverse_index import get_reverse_index
+            reverse_index = get_reverse_index()
+            standard_concept = reverse_index.get_standard_concept(tag, context)
+            if standard_concept:
+                # Find matching group
+                normalized_concept = standard_concept.lower().replace(' ', '_').replace('-', '_')
+                group = self._groups.get(normalized_concept)
+                if group:
+                    return ConceptInfo(
+                        name=normalized_concept,
+                        tag=tag,
+                        group=group,
+                        match_type='exact'
+                    )
+        except (ImportError, AttributeError):
+            pass
+        
+        # Fallback to existing logic
         # Normalize tag
         normalized = SynonymGroup._strip_namespace(tag).lower()
         
@@ -1153,6 +1173,76 @@ class SynonymGroups:
             groups_imported += 1
         
         log.info(f"Imported {groups_imported} groups from {file_path}")
+    
+    def get_standard_concept(self, tag: str, context: Optional[Dict[str, Any]] = None) -> Optional[str]:
+        """
+        Get standard concept name for a tag using reverse index (if available).
+        
+        Args:
+            tag: XBRL tag to look up
+            context: Optional context for disambiguation
+            
+        Returns:
+            Standard concept name or None
+        """
+        try:
+            from financial4all.xbrl.standardization.reverse_index import get_reverse_index
+            reverse_index = get_reverse_index()
+            return reverse_index.get_standard_concept(tag, context)
+        except (ImportError, AttributeError):
+            # Fallback to identify_concept
+            info = self.identify_concept(tag, context)
+            return info.name if info else None
+    
+    def get_display_name(self, tag: str, context: Optional[Dict[str, Any]] = None) -> Optional[str]:
+        """
+        Get user-friendly display name for a tag.
+        
+        Args:
+            tag: XBRL tag to look up
+            context: Optional context for disambiguation
+            
+        Returns:
+            Display name or None
+        """
+        try:
+            from financial4all.xbrl.standardization.reverse_index import get_reverse_index
+            reverse_index = get_reverse_index()
+            return reverse_index.get_display_name(tag, context)
+        except (ImportError, AttributeError):
+            # Fallback to concept name
+            info = self.identify_concept(tag, context)
+            if info:
+                # Try to get display name from StandardConcept enum
+                try:
+                    from financial4all.xbrl.standardization.standard_concepts import StandardConcept
+                    for concept in StandardConcept:
+                        if concept.value.lower().replace(' ', '_').replace('-', '_') == info.name:
+                            return concept.value
+                except ImportError:
+                    pass
+                return info.name.replace('_', ' ').title()
+            return None
+    
+    def is_ambiguous(self, tag: str) -> bool:
+        """
+        Check if a tag is ambiguous (maps to multiple concepts).
+        
+        Args:
+            tag: XBRL tag to check
+            
+        Returns:
+            True if ambiguous, False otherwise
+        """
+        try:
+            from financial4all.xbrl.standardization.reverse_index import get_reverse_index
+            reverse_index = get_reverse_index()
+            return reverse_index.is_ambiguous(tag)
+        except (ImportError, AttributeError):
+            # Fallback: check if tag appears in multiple groups
+            normalized = SynonymGroup._strip_namespace(tag).lower()
+            group_names = self._tag_index.get(normalized, [])
+            return len(group_names) > 1
 
 
 def get_synonym_groups() -> SynonymGroups:

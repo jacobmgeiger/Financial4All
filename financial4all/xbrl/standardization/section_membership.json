@@ -1,0 +1,70 @@
+{
+  "BalanceSheet": {
+    "Current Assets": [
+      "Cash and Cash Equivalents",
+      "Accounts Receivable",
+      "Inventory",
+      "Prepaid Expenses"
+    ],
+    "Non-Current Assets": [
+      "Property, Plant and Equipment",
+      "Goodwill",
+      "Intangible Assets"
+    ],
+    "Total Assets": [
+      "Total Assets"
+    ],
+    "Current Liabilities": [
+      "Accounts Payable",
+      "Accrued Liabilities",
+      "Short Term Debt"
+    ],
+    "Non-Current Liabilities": [
+      "Long Term Debt",
+      "Deferred Revenue"
+    ],
+    "Total Liabilities": [
+      "Total Liabilities"
+    ],
+    "Equity": [
+      "Common Stock",
+      "Retained Earnings",
+      "Total Stockholders' Equity"
+    ]
+  },
+  "IncomeStatement": {
+    "Revenue": [
+      "Revenue"
+    ],
+    "Costs": [
+      "Cost of Revenue",
+      "Cost of Goods Sold",
+      "Cost of Goods and Services Sold",
+      "Cost of Sales"
+    ],
+    "Operating Expenses": [
+      "Operating Expenses",
+      "Research and Development Expense",
+      "Selling, General and Administrative Expense"
+    ],
+    "Income": [
+      "Gross Profit",
+      "Operating Income",
+      "Net Income"
+    ]
+  },
+  "CashFlowStatement": {
+    "Operating Activities": [
+      "Net Cash from Operating Activities"
+    ],
+    "Investing Activities": [
+      "Net Cash from Investing Activities"
+    ],
+    "Financing Activities": [
+      "Net Cash from Financing Activities"
+    ],
+    "Net Change": [
+      "Net Change in Cash"
+    ]
+  }
+}

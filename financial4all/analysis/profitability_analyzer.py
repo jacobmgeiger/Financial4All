@@ -149,36 +149,49 @@ class ProfitabilityAnalyzer:
         """
         Calculate year-over-year growth for a metric.
         
+        With periods ordered newest-first, compares each period to the next (older) period.
+        For example, with [2024, 2023, 2022]:
+        - 2024 growth compares 2024 to 2023
+        - 2023 growth compares 2023 to 2022
+        - 2022 growth is NaN (no older period)
+        
         Args:
             series: Series with values indexed by period
-            date_columns: List of date column names (periods)
+            date_columns: List of date column names (periods), ordered newest-first
         
         Returns:
             Dictionary mapping date columns to growth rates (as decimals)
         """
         growth_data = {}
-        prev_value = None
         
-        for date_col in date_columns:
+        # Iterate through periods (newest to oldest)
+        # Compare each period to the next period (which is older)
+        for i, date_col in enumerate(date_columns):
             current_value = series.get(date_col)
-            
-            # Parse values, handling parentheses notation for negatives
-            prev_float = ProfitabilityAnalyzer._parse_numeric_value(prev_value)
             current_float = ProfitabilityAnalyzer._parse_numeric_value(current_value)
             
-            if prev_float is not None and current_float is not None:
-                try:
-                    if prev_float != 0:
-                        growth = (current_float - prev_float) / prev_float
-                        growth_data[date_col] = growth
-                    else:
+            # Check if there's a next (older) period to compare to
+            if i + 1 < len(date_columns):
+                next_date_col = date_columns[i + 1]
+                next_value = series.get(next_date_col)
+                next_float = ProfitabilityAnalyzer._parse_numeric_value(next_value)
+                
+                if current_float is not None and next_float is not None:
+                    try:
+                        if next_float != 0:
+                            # Growth = (current - previous) / previous
+                            # where "previous" is the next (older) period
+                            growth = (current_float - next_float) / next_float
+                            growth_data[date_col] = growth
+                        else:
+                            growth_data[date_col] = np.nan
+                    except (ValueError, TypeError, ZeroDivisionError):
                         growth_data[date_col] = np.nan
-                except (ValueError, TypeError, ZeroDivisionError):
+                else:
                     growth_data[date_col] = np.nan
             else:
+                # No older period to compare to (oldest period)
                 growth_data[date_col] = np.nan
-            
-            prev_value = current_value
         
         return growth_data
     
