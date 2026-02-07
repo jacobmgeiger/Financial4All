@@ -7,6 +7,7 @@ import json
 import dash_bootstrap_components as dbc
 import io
 import zipfile
+from typing import Optional
 from financial4all import Company
 from financial4all.analysis import ProfitabilityAnalyzer
 from financial4all.financials import FinancialRatios
@@ -200,6 +201,36 @@ app.layout = html.Div(
                         ],
                         style={"textAlign": "center", "padding": "10px"},
                     ),
+                    # --- Unit Scale Selection ---
+                    html.Div(
+                        [
+                            html.Label("Display Units:", style={"color": "#B0B0B0", "marginRight": "10px"}),
+                            dcc.Dropdown(
+                                id="unit-scale-dropdown",
+                                options=[
+                                    {"label": "Auto-detect", "value": "auto"},
+                                    {"label": "Millions", "value": "millions"},
+                                    {"label": "Billions", "value": "billions"},
+                                    {"label": "Thousands", "value": "thousands"},
+                                    {"label": "Raw Values", "value": "raw"},
+                                ],
+                                value="millions",  # Default to millions
+                                clearable=False,
+                                style={
+                                    "width": "200px",
+                                    "backgroundColor": "#333333",
+                                    "color": "#E0E0E0",
+                                    "display": "inline-block",
+                                },
+                            ),
+                        ],
+                        style={
+                            "width": "80%",
+                            "margin": "auto",
+                            "padding": "10px",
+                            "textAlign": "left",
+                        },
+                    ),
                     # --- Output Sections ---
                     html.Div(id="standard-is-output", style={"marginTop": "20px"}),
                     html.H2(
@@ -232,6 +263,9 @@ app.layout = html.Div(
         dcc.Store(
             id="standard-metrics-store"
         ),  # NEW: Store for the list of standard metrics
+        dcc.Store(
+            id="unit-scale-store", data="millions"
+        ),  # NEW: Store for user's unit scale preference
     ],
     style={
         "backgroundColor": "#1E1E1E",
@@ -825,27 +859,40 @@ def _apply_user_selections_to_is(standard_is_json, alternatives_json, selections
 
 
 # --- Helper function to detect unit scale ---
-def _detect_unit_scale(df: pd.DataFrame):
+def _detect_unit_scale(df: pd.DataFrame, user_preference: Optional[str] = None):
     """
     Detect appropriate unit scale for financial data.
     
     Analyzes numeric values to determine if they should be displayed
     in billions, millions, thousands, hundreds, or raw values.
+    If user_preference is provided and not "auto", uses that instead.
     
     Args:
         df: DataFrame with financial data (first column is "Metric", rest are numeric)
+        user_preference: Optional user preference ("auto", "millions", "billions", "thousands", "raw")
         
     Returns:
         Tuple of (scale_factor, unit_label)
         e.g., (1e6, "millions") means divide by 1e6 and show "(millions)"
     """
+    # If user has a preference and it's not "auto", use it
+    if user_preference and user_preference != "auto":
+        scale_map = {
+            "millions": (1e6, "millions"),
+            "billions": (1e9, "billions"),
+            "thousands": (1e3, "thousands"),
+            "raw": (1.0, ""),
+        }
+        return scale_map.get(user_preference, (1e6, "millions"))  # Default to millions
+    
+    # Auto-detect based on median value
     # Get all numeric values (skip "Metric" column)
     numeric_values = []
     for col in df.columns[1:]:
         numeric_values.extend(df[col].dropna().abs().tolist())
     
     if not numeric_values:
-        return (1.0, "")
+        return (1e6, "millions")  # Default to millions if no data
     
     median_value = pd.Series(numeric_values).median()
     
@@ -858,15 +905,26 @@ def _detect_unit_scale(df: pd.DataFrame):
     elif median_value >= 100:
         return (100, "hundreds")
     else:
-        return (1.0, "")
+        return (1e6, "millions")  # Default to millions for small values
 
 
 # --- UPDATED: Callback to generate the interactive income statement ---
+@app.callback(
+    Output("unit-scale-store", "data"),
+    Input("unit-scale-dropdown", "value"),
+    prevent_initial_call=False,
+)
+def update_unit_scale(selected_unit):
+    """Update unit scale preference."""
+    return selected_unit or "millions"
+
+
 @app.callback(
     Output("standard-is-output", "children"),
     [
         Input("standard-is-store", "data"),
         Input("is-selections-store", "data"),
+        Input("unit-scale-store", "data"),
     ],
     [
         State("alternatives-store", "data"),
@@ -875,7 +933,7 @@ def _detect_unit_scale(df: pd.DataFrame):
     prevent_initial_call=True,
 )
 def display_standard_is(
-    standard_is_json, selections, alternatives_json, ticker
+    standard_is_json, selections, unit_scale_preference, alternatives_json, ticker
 ):
     """
     Generates and displays an interactive standardized income statement.
@@ -922,8 +980,8 @@ def display_standard_is(
     df_display = df_standard.copy()
     alternatives = alternatives_json or {}  # FIX: Define alternatives from the JSON data
 
-    # Detect unit scale for the data
-    scale_factor, unit_label = _detect_unit_scale(df_display)
+    # Detect unit scale for the data (use user preference if provided)
+    scale_factor, unit_label = _detect_unit_scale(df_display, user_preference=unit_scale_preference)
     
     # Format date columns (unit indicator will go in top-left cell)
     formatted_columns = ["Metric"]

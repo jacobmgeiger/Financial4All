@@ -12,6 +12,7 @@ F4A aims to level the playing field by providing a transparent and accessible to
 
 - **Direct SEC Data Fetching**: F4A directly retrieves public financial data from the SEC's API when provided with a company ticker symbol
 - **Robust XBRL Parsing**: Advanced parsing of XBRL (eXtensible Business Reporting Language) filings with period-aware concept resolution and synonym detection
+- **Comprehensive Standardization**: Unified synonym management system with 40+ pre-built financial concept groups, enabling consistent cross-company analysis
 - **Standardized Financial Statements**: Automatically constructs standardized income statements, balance sheets, and cash flow statements
 - **Profitability Analysis**: Calculates Y/Y growth, margins, expense ratios, and tax rates
 - **Interactive Dashboard**: Web-based dashboard built with Dash for visualizing financial data and trends
@@ -32,7 +33,11 @@ financial4all/
 │   ├── facts.py      # FactSet for XBRL fact collection
 │   ├── periods.py    # Period handling and normalization
 │   ├── parser.py     # XBRL document parser
-│   └── calculations.py  # Calculation formula engine
+│   ├── standardization.py  # Unified synonym management system
+│   ├── entity_info.py     # Entity information extraction
+│   ├── presentation.py    # Presentation linkbase parsing
+│   ├── dimensions.py      # Dimensional structure parsing
+│   └── calculations.py    # Calculation formula engine
 ├── financials/       # Financial statement classes
 │   ├── income_statement.py  # Income statement extraction and standardization
 │   ├── balance_sheet.py     # Balance sheet extraction
@@ -69,9 +74,35 @@ F4A utilizes the SEC's extensive public database, specifically the XBRL (eXtensi
 
 1. **Fact Discovery**: Collects all relevant XBRL facts from SEC filings
 2. **Period-Aware Resolution**: Resolves the best fact for each reporting period using multi-tier filtering
-3. **Concept Matching**: Matches XBRL concepts to standardized financial metrics
-4. **Synonym Detection**: Discovers alternative concept names when primary concepts don't yield data
+3. **Concept Matching**: Matches XBRL concepts to standardized financial metrics using the comprehensive SynonymGroups system
+4. **Synonym Detection**: Discovers alternative concept names when primary concepts don't yield data, leveraging pre-built synonym groups
 5. **Calculation**: Applies financial formulas to derive missing values
+
+### Standardization System
+
+F4A includes a comprehensive standardization infrastructure inspired by EdgarTools, featuring:
+
+- **SynonymGroups**: Unified synonym management with 40+ pre-built groups for common financial concepts
+- **Concept Identification**: Reverse lookup to identify which standardized concept an XBRL tag represents
+- **Category Organization**: Concepts organized by financial statement type (income_statement, balance_sheet, cash_flow, metrics)
+- **User Extensibility**: Register custom synonym groups, export/import configurations
+- **Multi-group Membership**: Support for tags that belong to multiple concepts in different contexts
+
+Example:
+```python
+from financial4all.xbrl.standardization import get_synonym_groups
+
+synonyms = get_synonym_groups()
+
+# Get all synonyms for revenue
+revenue_tags = synonyms.get_synonyms('revenue')
+# ['RevenueFromContractWithCustomerExcludingAssessedTax', 'Revenues', ...]
+
+# Identify what concept a tag represents
+info = synonyms.identify_concept('NetIncomeLoss')
+print(info.name)  # 'net_income'
+print(info.description)  # 'Net income/loss'
+```
 
 The `app.py` script powers the interactive web dashboard built with Dash, providing a user-friendly interface for exploring financial data.
 

@@ -85,8 +85,11 @@ class SECClient:
             Response object
             
         Raises:
-            requests.HTTPError: For HTTP error responses
+            SECAPIError: For HTTP error responses or network errors
         """
+        if not endpoint:
+            raise ValueError("Endpoint cannot be empty")
+        
         self._rate_limit()
         
         url = f"{self.BASE_URL}/{endpoint.lstrip('/')}"
@@ -95,6 +98,13 @@ class SECClient:
             response = self.session.get(url, params=params, timeout=30)
             response.raise_for_status()
             return response
+        except requests.exceptions.Timeout as e:
+            logger.error(f"SEC API request timed out: {url}")
+            raise SECAPIError(f"SEC API request timed out: {url}") from e
+        except requests.exceptions.HTTPError as e:
+            status_code = e.response.status_code if e.response else None
+            logger.error(f"SEC API HTTP error {status_code}: {url} - {e}")
+            raise SECAPIError(f"SEC API HTTP error {status_code}: {url}") from e
         except requests.exceptions.RequestException as e:
             logger.error(f"SEC API request failed: {url} - {e}")
             raise SECAPIError(f"SEC API request failed: {url}") from e
@@ -122,11 +132,35 @@ class SECClient:
             
         Returns:
             Company facts dictionary
+            
+        Raises:
+            SECAPIError: If request fails
+            ValueError: If CIK is invalid
         """
-        # Ensure CIK is properly formatted
-        cik_normalized = str(cik).strip().zfill(10)
-        endpoint = f"api/xbrl/companyfacts/CIK{cik_normalized}.json"
-        return self.get_json(endpoint)
+        if not cik:
+            raise ValueError("CIK cannot be empty")
+        
+        try:
+            # Ensure CIK is properly formatted
+            cik_normalized = str(cik).strip().zfill(10)
+            if not cik_normalized.isdigit() or len(cik_normalized) != 10:
+                raise ValueError(f"Invalid CIK format: {cik}")
+            
+            endpoint = f"api/xbrl/companyfacts/CIK{cik_normalized}.json"
+            result = self.get_json(endpoint)
+            
+            # Validate response structure
+            if not isinstance(result, dict):
+                raise SECAPIError(f"Invalid response format from SEC API for CIK {cik_normalized}")
+            
+            return result
+        except ValueError:
+            raise
+        except SECAPIError:
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error fetching company facts for CIK {cik}: {e}")
+            raise SECAPIError(f"Error fetching company facts: {str(e)}") from e
     
     def get_submissions(self, cik: str) -> Dict[str, Any]:
         """

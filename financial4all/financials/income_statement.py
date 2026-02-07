@@ -12,8 +12,8 @@ from typing import Dict, Optional, Any, List, Set
 from collections import defaultdict
 
 from financial4all.xbrl.facts import FactSet, Fact
-from financial4all.xbrl.periods import PeriodType
-from financial4all.xbrl.standardization import get_default_store
+from financial4all.xbrl.periods import PeriodType, classify_fiscal_period
+from financial4all.xbrl.standardization import get_synonym_groups, get_default_store
 from financial4all.xbrl.calculations import CalculationEngine
 from financial4all.core import log
 
@@ -26,96 +26,63 @@ class IncomeStatement:
     of income statement metrics.
     """
     
-    # Standardized income statement mapping
-    # Concepts are ordered by priority - first match wins
-    # Note: Only "Revenue" is kept as primary - redundant entries removed to prevent duplicates
-    STANDARD_MAPPING = {
-        "Revenue": [
-            "SalesRevenueNet",
-            "Revenues",
-            "RevenueFromContractWithCustomer",
-            "RevenueFromContractWithCustomerExcludingAssessedTax",  # Common variation
-            "RevenuesNetOfInterestExpense",  # Combined field alternative
-            "SalesRevenueNetOfReturnsAndAllowances",  # Alternative naming
-            "RevenueFromContractWithCustomerIncludingAssessedTax",  # Another variation
-        ],
-        "Cost of Revenue": [
-            "CostOfRevenue",
-            "CostOfGoodsAndServicesSold",
-            "CostOfSales",
-        ],
-        "Gross Profit": ["GrossProfit"],
-        "R&D Expenses": [
-            "ResearchAndDevelopmentExpense",
-            "ResearchAndDevelopment",
-        ],
-        "SG&A Expenses": [
-            "SellingGeneralAndAdministrativeExpense",
-            "SellingAndMarketingExpense",
-            "GeneralAndAdministrativeExpense",
-        ],
-        "Operating Expenses": [
-            "OperatingExpenses",
-            "CostsAndExpenses",
-        ],
-        "Operating Income": [
-            "OperatingIncomeLoss",
-            "IncomeFromOperations",
-        ],
-        "Interest Income": [
-            "InterestIncome",
-            "InterestIncomeOperating",
-            "InterestIncomeNonoperating",
-            "InterestAndDividendIncome",
-            "InterestAndDividendIncomeSecurities",
-            "InterestAndFeeIncomeLoansAndLeases",
-            "InterestIncomeDebtSecuritiesOperating",
-            "InterestIncomeDepositsWithFinancialInstitutions",
-            "InterestIncomeFederalFundsSoldAndSecuritiesPurchasedUnderAgreementsToResell",
-            "InterestIncomePurchasedReceivables",
-            "InvestmentIncomeInterest",
-            "OtherInterestAndDividendIncome",
-        ],
-        "Interest Expense": [
-            "InterestExpense",
-            "InterestExpenseOperating",
-            "InterestExpenseNonoperating",
-            "InterestAndFeeExpense",
-        ],
-        "Other, net": [
-            "OtherIncomeExpenseNet",
-            "OtherNonoperatingIncomeExpense",
-            "OtherOperatingIncomeExpenseNet",
-        ],
-        # Combined interest fields (net)
-        "Interest Income (Net)": [
-            "InterestIncomeExpenseNet",
-            "InterestIncomeExpenseAfterProvisionForLoanLoss",
-            "NetInvestmentIncome",
-        ],
+    # Mapping from display names to normalized concept names in SynonymGroups
+    # This allows us to use user-friendly display names while leveraging
+    # the comprehensive synonym groups from the standardization system
+    DISPLAY_NAME_TO_CONCEPT = {
+        "Revenue": "revenue",
+        "Cost of Revenue": "cost_of_revenue",
+        "Gross Profit": "gross_profit",
+        "R&D Expenses": "research_and_development",
+        "SG&A Expenses": "sga_expense",
+        "Operating Expenses": "operating_expenses",
+        "Operating Income": "operating_income",
+        "Interest Income": "interest_income",
+        "Interest Expense": "interest_expense",
+        "Other, net": "other_net",
+        "Interest Income (Net)": "interest_income_net",
         # Note: "Other income (expense), net" is calculated, not extracted
         # It is calculated as: Interest Income + Interest Expense + Other, net
         # Note: "Income Before Taxes" is calculated, not extracted
         # It is calculated as: Operating Income + Other income (expense), net
-        "Taxes": [
-            "IncomeTaxExpenseBenefit",
-            "ProvisionForIncomeTaxes",
-        ],
-        "Net Income": [
-            "NetIncomeLoss",
-            "ProfitLoss",
-            "NetIncomeLossAvailableToCommonStockholdersBasic",
-            "NetIncomeLossAvailableToCommonStockholdersDiluted",
-        ],
-        "Basic EPS": [
-            "EarningsPerShareBasic",
-            "EarningsPerShare",
-        ],
-        "Diluted EPS": [
-            "EarningsPerShareDiluted",
-            "EarningsPerShareDilutedOne",
-        ],
+        "Taxes": "income_tax_expense",
+        "Net Income": "net_income",
+        "Basic EPS": "earnings_per_share_basic",
+        "Diluted EPS": "earnings_per_share_diluted",
     }
+    
+    # Cached standard mapping
+    _STANDARD_MAPPING_CACHE: Optional[Dict[str, List[str]]] = None
+    
+    @classmethod
+    def _get_standard_mapping(cls) -> Dict[str, List[str]]:
+        """
+        Get standard mapping using SynonymGroups system.
+        
+        Returns:
+            Dictionary mapping display names to lists of XBRL concept synonyms
+        """
+        if cls._STANDARD_MAPPING_CACHE is not None:
+            return cls._STANDARD_MAPPING_CACHE
+        
+        synonyms = get_synonym_groups()
+        mapping = {}
+        
+        for display_name, concept_name in cls.DISPLAY_NAME_TO_CONCEPT.items():
+            group = synonyms.get_group(concept_name)
+            if group:
+                mapping[display_name] = group.synonyms
+            else:
+                log.warning(f"Concept '{concept_name}' not found in SynonymGroups for '{display_name}'")
+                mapping[display_name] = []
+        
+        cls._STANDARD_MAPPING_CACHE = mapping
+        return mapping
+    
+    @property
+    def STANDARD_MAPPING(self) -> Dict[str, List[str]]:
+        """Get standard mapping (backward compatibility)."""
+        return self._get_standard_mapping()
     
     # Standard order for income statement metrics (matching user's reference)
     METRIC_ORDER = [
@@ -171,17 +138,18 @@ class IncomeStatement:
         self._dataframe: Optional[pd.DataFrame] = None
     
     @classmethod
-    def from_company_facts(cls, company_facts: Dict[str, Any]) -> "IncomeStatement":
+    def from_company_facts(cls, company_facts: Dict[str, Any], cik: Optional[str] = None) -> "IncomeStatement":
         """
         Create income statement from SEC company facts API response.
         
         Args:
             company_facts: Dictionary from SEC company facts API
+            cik: Optional CIK for entity info extraction
             
         Returns:
             IncomeStatement object
         """
-        fact_set = FactSet.from_company_facts(company_facts)
+        fact_set = FactSet.from_company_facts(company_facts, cik=cik)
         return cls(fact_set)
     
     def to_dataframe(self) -> pd.DataFrame:
@@ -208,9 +176,22 @@ class IncomeStatement:
         # (e.g., AAPL using "Revenues" 2007-2017, then "RevenueFromContractWithCustomer" 2018+)
         
         # First pass: resolve all metrics with primary concepts
+        # Resolve Operating Income first so we can use it for validation
+        operating_income_concepts = self.STANDARD_MAPPING.get("Operating Income", [])
+        if operating_income_concepts:
+            resolved_data = self._resolve_concepts_by_period("Operating Income", operating_income_concepts)
+            if resolved_data:
+                metrics_data["Operating Income"].update(resolved_data)
+                reported_metrics.add("Operating Income")
+        
+        # Now resolve other metrics, passing Operating Income data for Interest Income validation
         for std_name, xbrl_concepts in self.STANDARD_MAPPING.items():
+            if std_name == "Operating Income":
+                continue  # Already resolved
+            
             # Get all facts for this metric using period-aware resolution
-            resolved_data = self._resolve_concepts_by_period(std_name, xbrl_concepts)
+            # Pass other metrics data for cross-validation (especially for Interest Income)
+            resolved_data = self._resolve_concepts_by_period(std_name, xbrl_concepts, other_metrics_data=metrics_data)
             if resolved_data:
                 metrics_data[std_name].update(resolved_data)
                 reported_metrics.add(std_name)
@@ -263,23 +244,117 @@ class IncomeStatement:
         all_periods = sorted(all_periods)
         
         # Build DataFrame - only include reported metrics
+        # Use local function references for performance
         df_data = {}
+        df_data_setitem = df_data.__setitem__
+        
         for std_name in reported_metrics:
-            df_data[std_name] = [
-                metrics_data[std_name].get(period, np.nan)
+            metric_data = metrics_data.get(std_name, {})
+            metric_get = metric_data.get
+            df_data_setitem(std_name, [
+                metric_get(period, np.nan)
                 for period in all_periods
-            ]
+            ])
         
         df = pd.DataFrame(df_data, index=all_periods)
         df.index.name = "end"
         
+        # Add fiscal period classification if entity info is available
+        if self._original_fact_set.entity_info:
+            entity_info = self._original_fact_set.entity_info
+            fy_end_month = entity_info.fiscal_year_end_month
+            fy_end_day = entity_info.fiscal_year_end_day
+            
+            # Classify each period and add as metadata
+            fiscal_years = []
+            fiscal_periods = []
+            
+            for period_str in all_periods:
+                # Find the corresponding fact to get Period object
+                # We'll need to reconstruct the period from the string
+                try:
+                    from datetime import datetime
+                    from financial4all.xbrl.periods import Period, PeriodType
+                    
+                    # Parse period end date
+                    end_date = datetime.strptime(period_str, "%Y-%m-%d").date()
+                    
+                    # Try to find a fact with this end date to get the full period
+                    # For now, we'll create a period assuming it's annual if we can't find it
+                    period_obj = None
+                    for fact in self._original_fact_set.facts:
+                        if str(fact.period.end) == period_str:
+                            period_obj = fact.period
+                            break
+                    
+                    # If we couldn't find the period, create a synthetic one
+                    # Assume annual period (start = end - 365 days)
+                    if period_obj is None:
+                        from datetime import timedelta
+                        start_date = end_date - timedelta(days=365)
+                        period_obj = Period(start=start_date, end=end_date, period_type=PeriodType.DURATION)
+                    
+                    # Classify the period
+                    fiscal_year, fiscal_period = classify_fiscal_period(
+                        period_obj,
+                        fiscal_year_end_month=fy_end_month,
+                        fiscal_year_end_day=fy_end_day
+                    )
+                    
+                    fiscal_years.append(fiscal_year)
+                    fiscal_periods.append(fiscal_period)
+                except Exception as e:
+                    log.debug(f"Error classifying fiscal period for {period_str}: {e}")
+                    fiscal_years.append(None)
+                    fiscal_periods.append(None)
+            
+            # Add fiscal period information as DataFrame attributes
+            df.attrs['fiscal_years'] = fiscal_years
+            df.attrs['fiscal_periods'] = fiscal_periods
+            df.attrs['fiscal_year_end'] = f"{fy_end_month:02d}-{fy_end_day:02d}" if fy_end_month and fy_end_day else None
+        
         # Step 3: Filter out completely empty columns
         df = df.loc[:, ~df.isna().all()]
         
-        # Step 3.5: Normalize Interest Expense to be negative if Interest Income exists
+        # Step 3.5: Validate and normalize Interest Income/Expense
         # Some companies report Interest Expense as positive, but if they also report
         # Interest Income, we should ensure Interest Expense is always negative (it's an expense)
         # This ensures consistent accounting treatment: expenses reduce income
+        
+        # First, validate Interest Income - it should not match Operating Income values
+        if "Interest Income" in df.columns and "Operating Income" in df.columns:
+            interest_income_col = df["Interest Income"].copy()
+            operating_income_col = df["Operating Income"]
+            
+            # Check each period where both values exist
+            for idx in df.index:
+                interest_val = interest_income_col.loc[idx]
+                operating_val = operating_income_col.loc[idx]
+                
+                if pd.notna(interest_val) and pd.notna(operating_val) and operating_val != 0:
+                    # Calculate how similar the values are
+                    ratio = abs(interest_val) / abs(operating_val) if operating_val != 0 else 0
+                    diff_ratio = abs(interest_val - operating_val) / abs(operating_val) if operating_val != 0 else 1
+                    
+                    # If Interest Income is suspiciously close to Operating Income (> 50% similar), it's likely misclassified
+                    # Also check if they're within 10% of each other (very suspicious)
+                    if ratio > 0.5 or diff_ratio < 0.1:
+                        log.warning(
+                            f"Interest Income ({interest_val}) is suspiciously similar to Operating Income "
+                            f"({operating_val}) for period {idx} (ratio: {ratio:.1%}, diff: {diff_ratio:.1%}). "
+                            f"Setting Interest Income to NaN as this is likely misclassified."
+                        )
+                        interest_income_col.loc[idx] = np.nan
+                    # Also check if Interest Income is negative (shouldn't happen)
+                    elif interest_val < 0:
+                        log.warning(
+                            f"Interest Income is negative for period {idx}: {interest_val}. "
+                            f"Setting to NaN as this is likely misclassified."
+                        )
+                        interest_income_col.loc[idx] = np.nan
+            
+            df["Interest Income"] = interest_income_col
+        
         if "Interest Expense" in df.columns and "Interest Income" in df.columns:
             # Check if Interest Expense has any non-null values
             if df["Interest Expense"].notna().any():
@@ -290,6 +365,7 @@ class IncomeStatement:
                 if positive_mask.any():
                     interest_expense_col[positive_mask] = -interest_expense_col[positive_mask]
                     df["Interest Expense"] = interest_expense_col
+        
         
         # Step 4: Add calculated fields that should always be present
         # Add "Other income (expense), net" if components exist (will be calculated)
@@ -321,11 +397,11 @@ class IncomeStatement:
         
         Uses comprehensive fact discovery to find facts from all concepts,
         trying multiple namespace variations and filtering strategies.
-        Also searches for synonym concepts if primary concepts don't yield enough data.
+        Also searches for synonym concepts using SynonymGroups if primary concepts don't yield enough data.
         
         Args:
             xbrl_concepts: List of XBRL concept names in priority order
-            
+        
         Returns:
             Dictionary mapping concept_name -> list of facts
         """
@@ -338,25 +414,65 @@ class IncomeStatement:
             if facts:
                 all_facts_by_concept[concept] = facts
         
-        # If we didn't find enough facts, try synonym discovery for the first concept
+        # If we didn't find enough facts, try synonym discovery using SynonymGroups
         # This helps find alternative concepts that might be used
+        # BUT: We need to be careful not to match concepts from other metric groups
         if not all_facts_by_concept and xbrl_concepts:
             primary_concept = xbrl_concepts[0]
-            synonyms = self._original_fact_set.find_synonym_concepts(primary_concept)
             
-            for synonym in synonyms:
-                if synonym not in xbrl_concepts:  # Don't duplicate
-                    synonym_facts = self._original_fact_set.get_all_facts_for_concept(synonym, include_variants=True)
-                    if synonym_facts:
-                        all_facts_by_concept[synonym] = synonym_facts
-                        log.debug(f"Found synonym concept '{synonym}' for '{primary_concept}' with {len(synonym_facts)} facts")
+            # First, try SynonymGroups for comprehensive synonym discovery
+            synonym_groups = get_synonym_groups()
+            concept_info = synonym_groups.identify_concept(primary_concept)
+            
+            if concept_info:
+                # Found in SynonymGroups - get all synonyms from the SAME group only
+                synonym_tags = concept_info.synonyms
+                log.debug(f"Found concept '{primary_concept}' in SynonymGroups as '{concept_info.name}' with {len(synonym_tags)} synonyms")
+                
+                # Check which synonyms exist in the fact set
+                all_concepts_in_factset = {f.concept for f in self._original_fact_set.facts}
+                
+                # Get concepts from other groups to avoid cross-contamination
+                # For Interest Income, we should NOT match Operating Income concepts
+                excluded_concepts = set()
+                if concept_info.name == "interest_income":
+                    # Get Operating Income concepts to exclude
+                    operating_income_group = synonym_groups.get_group("operating_income")
+                    if operating_income_group:
+                        for op_concept in operating_income_group.synonyms:
+                            excluded_concepts.add(op_concept)
+                            excluded_concepts.add(f"us-gaap_{op_concept}")
+                            excluded_concepts.add(f"us-gaap:{op_concept}")
+                
+                for tag in synonym_tags:
+                    # Try with and without namespace prefix
+                    for variant in [tag, f"us-gaap_{tag}", f"us-gaap:{tag}"]:
+                        if variant in excluded_concepts:
+                            continue  # Skip concepts from other groups
+                        if variant in all_concepts_in_factset and variant not in xbrl_concepts:
+                            synonym_facts = self._original_fact_set.get_all_facts_for_concept(variant, include_variants=True)
+                            if synonym_facts:
+                                all_facts_by_concept[variant] = synonym_facts
+                                log.debug(f"Found SynonymGroups synonym '{variant}' for '{primary_concept}' with {len(synonym_facts)} facts")
+            
+            # Fallback: Use pattern-based synonym discovery if SynonymGroups didn't help
+            if not all_facts_by_concept:
+                synonyms = self._original_fact_set.find_synonym_concepts(primary_concept)
+                
+                for synonym in synonyms:
+                    if synonym not in xbrl_concepts:  # Don't duplicate
+                        synonym_facts = self._original_fact_set.get_all_facts_for_concept(synonym, include_variants=True)
+                        if synonym_facts:
+                            all_facts_by_concept[synonym] = synonym_facts
+                            log.debug(f"Found pattern-based synonym concept '{synonym}' for '{primary_concept}' with {len(synonym_facts)} facts")
         
         return all_facts_by_concept
     
     def _resolve_concepts_by_period(
         self,
         std_name: str,
-        xbrl_concepts: List[str]
+        xbrl_concepts: List[str],
+        other_metrics_data: Optional[Dict[str, Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """
         Resolve which concept to use for each period using period-aware resolution.
@@ -370,10 +486,12 @@ class IncomeStatement:
            - Form type (10-K preferred over 10-Q)
            - Unit (USD preferred)
            - Filing date (more recent preferred)
+        5. Cross-validate with other metrics to prevent misclassification
         
         Args:
             std_name: Standardized metric name
             xbrl_concepts: List of XBRL concept names in priority order
+            other_metrics_data: Dictionary of other already-resolved metrics (for validation)
             
         Returns:
             Dictionary mapping period_key -> fact.value
@@ -456,11 +574,14 @@ class IncomeStatement:
         
         # Resolve best fact for each period
         resolved_data = {}
+        resolved_data_setitem = resolved_data.__setitem__  # Local function reference
+        
         for period_key, fact_candidates in period_facts_map.items():
             if not fact_candidates:
                 continue
             
             # Sort by priority: concept priority > has_dimensions (prefer non-dimensional) > form > unit > filing date
+            # Use tuple unpacking optimization
             fact_candidates.sort(key=lambda x: (
                 x[0],  # Concept priority (lower = higher priority)
                 0 if not x[1].dimensions else 1,  # Prefer non-dimensional facts
@@ -469,9 +590,42 @@ class IncomeStatement:
                 -(x[1].filed.timestamp() if x[1].filed else float('-inf')),  # Prefer more recent (negated for descending)
             ))
             
-            # Select best fact
-            best_fact = fact_candidates[0][1]
-            fact_value = best_fact.value
+            # Select best fact - try candidates in order until we find a valid one
+            fact_value = None
+            best_fact = None
+            
+            for candidate_idx, (concept_idx, fact) in enumerate(fact_candidates):
+                candidate_value = fact.value
+                is_valid = True
+                
+                # Cross-validate with other metrics to prevent misclassification
+                # For Interest Income, check against Operating Income
+                if std_name == "Interest Income" and other_metrics_data:
+                    operating_income_data = other_metrics_data.get("Operating Income", {})
+                    operating_val = operating_income_data.get(period_key)
+                    
+                    if operating_val is not None and isinstance(candidate_value, (int, float)) and isinstance(operating_val, (int, float)):
+                        ratio = abs(candidate_value) / abs(operating_val) if operating_val != 0 else 0
+                        diff_ratio = abs(candidate_value - operating_val) / abs(operating_val) if operating_val != 0 else 1
+                        
+                        # If Interest Income is suspiciously similar to Operating Income, skip this candidate
+                        if ratio > 0.5 or diff_ratio < 0.1:
+                            log.debug(
+                                f"Skipping Interest Income fact candidate {candidate_idx} for period {period_key}: "
+                                f"value {candidate_value} is suspiciously similar to Operating Income {operating_val} "
+                                f"(ratio: {ratio:.1%}, diff: {diff_ratio:.1%})"
+                            )
+                            is_valid = False
+                
+                if is_valid:
+                    fact_value = candidate_value
+                    best_fact = fact
+                    break
+            
+            # If no valid fact found after validation, skip this period
+            if fact_value is None or best_fact is None:
+                log.debug(f"No valid fact found for {std_name} period {period_key} after cross-validation")
+                continue
             
             # Validate fact value - check for obviously wrong values
             # For revenue and other income statement metrics, values should generally be reasonable
@@ -523,7 +677,7 @@ class IncomeStatement:
                             )
                             fact_value = alt_fact.value
             
-            resolved_data[period_key] = fact_value
+            resolved_data_setitem(period_key, fact_value)
         
         return resolved_data
     
@@ -554,7 +708,7 @@ class IncomeStatement:
         """
         Discover alternative concepts to fill gaps in period coverage.
         
-        Uses pattern matching and synonym detection to find concepts that might
+        Uses SynonymGroups and pattern matching to find concepts that might
         represent the same metric but weren't in the original mapping.
         
         Args:
@@ -566,27 +720,68 @@ class IncomeStatement:
             List of discovered alternative concept names
         """
         fallback_concepts = []
+        synonym_groups = get_synonym_groups()
         
-        # Use synonym detection to find related concepts
-        for concept in existing_concepts:
-            synonyms = self._original_fact_set.find_synonym_concepts(concept)
-            
-            # Check if synonyms have data for missing periods
-            for synonym in synonyms:
-                if synonym in existing_concepts:
-                    continue  # Already tried
+        # First, try to get all synonyms from SynonymGroups using the standardized name
+        concept_name = self.DISPLAY_NAME_TO_CONCEPT.get(std_name)
+        if concept_name:
+            group = synonym_groups.get_group(concept_name)
+            if group:
+                # Get all synonyms from the group
+                all_synonyms = group.synonyms
+                log.debug(f"Using SynonymGroups for '{std_name}' (concept: '{concept_name}') with {len(all_synonyms)} synonyms")
                 
-                synonym_facts = self._original_fact_set.get_all_facts_for_concept(synonym)
-                if not synonym_facts:
-                    continue
+                # Check which synonyms exist in fact set and cover missing periods
+                all_concepts_in_factset = {f.concept for f in self._original_fact_set.facts}
                 
-                # Check if this synonym covers any missing periods
-                synonym_periods = {str(f.period.end) for f in synonym_facts if f.period.period_type == PeriodType.DURATION and f.period.is_annual()}
-                missing_periods_covered = synonym_periods.intersection(target_periods)
+                for tag in all_synonyms:
+                    # Try with and without namespace prefix
+                    for variant in [tag, f"us-gaap_{tag}", f"us-gaap:{tag}"]:
+                        if variant in existing_concepts:
+                            continue  # Already tried
+                        
+                        if variant not in all_concepts_in_factset:
+                            continue
+                        
+                        synonym_facts = self._original_fact_set.get_all_facts_for_concept(variant)
+                        if not synonym_facts:
+                            continue
+                        
+                        # Check if this synonym covers any missing periods
+                        synonym_periods = {
+                            str(f.period.end) for f in synonym_facts 
+                            if f.period.period_type == PeriodType.DURATION and f.period.is_annual()
+                        }
+                        missing_periods_covered = synonym_periods.intersection(target_periods)
+                        
+                        if missing_periods_covered:
+                            fallback_concepts.append(variant)
+                            log.debug(f"Found SynonymGroups fallback concept '{variant}' for '{std_name}' covering periods: {missing_periods_covered}")
+        
+        # Fallback: Use pattern-based synonym detection for concepts not in SynonymGroups
+        if not fallback_concepts:
+            for concept in existing_concepts:
+                synonyms = self._original_fact_set.find_synonym_concepts(concept)
                 
-                if missing_periods_covered:
-                    fallback_concepts.append(synonym)
-                    log.debug(f"Found fallback concept '{synonym}' for '{std_name}' covering periods: {missing_periods_covered}")
+                # Check if synonyms have data for missing periods
+                for synonym in synonyms:
+                    if synonym in existing_concepts:
+                        continue  # Already tried
+                    
+                    synonym_facts = self._original_fact_set.get_all_facts_for_concept(synonym)
+                    if not synonym_facts:
+                        continue
+                    
+                    # Check if this synonym covers any missing periods
+                    synonym_periods = {
+                        str(f.period.end) for f in synonym_facts 
+                        if f.period.period_type == PeriodType.DURATION and f.period.is_annual()
+                    }
+                    missing_periods_covered = synonym_periods.intersection(target_periods)
+                    
+                    if missing_periods_covered:
+                        fallback_concepts.append(synonym)
+                        log.debug(f"Found pattern-based fallback concept '{synonym}' for '{std_name}' covering periods: {missing_periods_covered}")
         
         return fallback_concepts
     

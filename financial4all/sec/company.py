@@ -143,10 +143,11 @@ class Company:
         facts_data = self.client.get_company_facts(self.cik)
         
         # This will be enhanced in Phase 3 to use proper XBRL parsing
+        # Pass CIK to enable entity info extraction for fiscal period classification
         return {
-            "income_statement": IncomeStatement.from_company_facts(facts_data),
-            "balance_sheet": BalanceSheet.from_company_facts(facts_data),
-            "cash_flow": CashFlowStatement.from_company_facts(facts_data),
+            "income_statement": IncomeStatement.from_company_facts(facts_data, cik=self.cik),
+            "balance_sheet": BalanceSheet.from_company_facts(facts_data, cik=self.cik),
+            "cash_flow": CashFlowStatement.from_company_facts(facts_data, cik=self.cik),
         }
     
     def __repr__(self) -> str:

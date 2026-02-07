@@ -8,8 +8,9 @@ instant periods, duration periods, and comparative periods.
 
 from enum import Enum
 from datetime import datetime, date
-from typing import Optional, Union
+from typing import Optional, Union, Tuple
 from dataclasses import dataclass
+import calendar
 
 
 class PeriodType(Enum):
@@ -110,3 +111,124 @@ class Period:
             return f"Period(start={self.start}, end={self.end}, type={self.period_type.value})"
         else:
             return f"Period(end={self.end}, type={self.period_type.value})"
+
+
+def classify_fiscal_period(
+    period: Period,
+    fiscal_year_end_month: Optional[int] = None,
+    fiscal_year_end_day: Optional[int] = None
+) -> Tuple[Optional[int], Optional[str]]:
+    """
+    Classify a period as a fiscal year or fiscal quarter.
+    
+    Args:
+        period: Period to classify
+        fiscal_year_end_month: Fiscal year end month (1-12), defaults to 12 (December)
+        fiscal_year_end_day: Fiscal year end day (1-31), defaults to 31
+        
+    Returns:
+        Tuple of (fiscal_year, fiscal_period) where:
+        - fiscal_year: Fiscal year (e.g., 2024)
+        - fiscal_period: "FY" for fiscal year, "Q1"-"Q4" for quarters, or None if cannot classify
+    """
+    if period.period_type != PeriodType.DURATION or period.start is None:
+        return None, None
+    
+    # Default to calendar year end (December 31) if not specified
+    if fiscal_year_end_month is None:
+        fiscal_year_end_month = 12
+    if fiscal_year_end_day is None:
+        fiscal_year_end_day = 31
+    
+    # Normalize dates
+    start_date = period.start if isinstance(period.start, date) else datetime.strptime(str(period.start), "%Y-%m-%d").date()
+    end_date = period.end if isinstance(period.end, date) else datetime.strptime(str(period.end), "%Y-%m-%d").date()
+    
+    days = (end_date - start_date).days
+    
+    # Determine fiscal year from end date
+    fiscal_year = _fiscal_year_for_date(end_date, fiscal_year_end_month, fiscal_year_end_day)
+    
+    # Classify period type based on duration
+    if 350 <= days <= 380:
+        # Annual period (fiscal year)
+        return fiscal_year, "FY"
+    elif 85 <= days <= 95:
+        # Quarterly period
+        quarter = _quarter_for_date(end_date, fiscal_year_end_month)
+        return fiscal_year, quarter
+    else:
+        # Cannot classify (might be partial period or other)
+        return fiscal_year, None
+
+
+def _fiscal_year_for_date(d: date, fy_end_month: int, fy_end_day: int) -> int:
+    """
+    Determine the fiscal year a date belongs to.
+    
+    The fiscal year is named by the calendar year in which it ends.
+    For example, AAPL's fiscal year ending Sep 2024 is FY2024.
+    A date in Dec 2024 (after Sep end) belongs to FY2025.
+    
+    Args:
+        d: Date to classify
+        fy_end_month: Fiscal year end month (1-12)
+        fy_end_day: Fiscal year end day (1-31)
+        
+    Returns:
+        Fiscal year (integer)
+    """
+    # Clamp the day to the max valid day for that month
+    max_day = calendar.monthrange(d.year, fy_end_month)[1]
+    fy_end_day_clamped = min(fy_end_day, max_day)
+    
+    # Build the fiscal year end date for the same calendar year as d
+    fy_end_date = d.replace(month=fy_end_month, day=fy_end_day_clamped)
+    
+    # If d is after the fiscal year end date, it belongs to the next fiscal year
+    if d > fy_end_date:
+        return d.year + 1
+    return d.year
+
+
+def _quarter_for_date(end_date: date, fy_end_month: int) -> str:
+    """
+    Determine the fiscal quarter (Q1-Q4) for a quarterly period end date.
+    
+    Quarters are counted from the start of the fiscal year.
+    For AAPL (FY end Sep): Q1=Oct-Dec, Q2=Jan-Mar, Q3=Apr-Jun, Q4=Jul-Sep.
+    
+    Args:
+        end_date: Period end date
+        fy_end_month: Fiscal year end month (1-12)
+        
+    Returns:
+        Quarter string ("Q1", "Q2", "Q3", or "Q4")
+    """
+    # Calculate months after fiscal year end determines the quarter
+    # Month offset: how many months past the FY end month
+    month_offset = (end_date.month - fy_end_month - 1) % 12
+    quarter = (month_offset // 3) + 1
+    return f"Q{quarter}"
+
+
+def classify_duration(days: int) -> str:
+    """
+    Classify a duration in days as a period type.
+    
+    Args:
+        days: Number of days in the period
+        
+    Returns:
+        Period type description ("Annual", "Quarterly", "Partial", etc.)
+    """
+    if 350 <= days <= 380:
+        return "Annual"
+    elif 85 <= days <= 95:
+        return "Quarterly"
+    elif days < 85:
+        return "Partial"
+    elif days > 380:
+        return "Multi-year"
+    else:
+        return "Other"

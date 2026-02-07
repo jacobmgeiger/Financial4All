@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Any
 from collections import defaultdict
 
 from financial4all.xbrl.facts import FactSet, Fact
-from financial4all.xbrl.standardization import get_default_store
+from financial4all.xbrl.standardization import get_synonym_groups, get_default_store
 from financial4all.core import log
 
 
@@ -23,25 +23,46 @@ class CashFlowStatement:
     This class handles extraction and standardization of cash flow metrics.
     """
     
-    # Standardized cash flow mapping
-    STANDARD_MAPPING = {
-        "Operating Cash Flow": [
-            "NetCashProvidedByUsedInOperatingActivities",
-            "CashFlowFromOperatingActivities",
-        ],
-        "Investing Cash Flow": [
-            "NetCashProvidedByUsedInInvestingActivities",
-            "CashFlowFromInvestingActivities",
-        ],
-        "Financing Cash Flow": [
-            "NetCashProvidedByUsedInFinancingActivities",
-            "CashFlowFromFinancingActivities",
-        ],
-        "Net Change in Cash": [
-            "CashAndCashEquivalentsPeriodIncreaseDecrease",
-            "IncreaseDecreaseInCashAndCashEquivalents",
-        ],
+    # Mapping from display names to normalized concept names in SynonymGroups
+    DISPLAY_NAME_TO_CONCEPT = {
+        "Operating Cash Flow": "operating_cash_flow",
+        "Investing Cash Flow": "investing_cash_flow",
+        "Financing Cash Flow": "financing_cash_flow",
+        "Net Change in Cash": "net_change_in_cash",
     }
+    
+    # Cached standard mapping
+    _STANDARD_MAPPING_CACHE: Optional[Dict[str, List[str]]] = None
+    
+    @classmethod
+    def _get_standard_mapping(cls) -> Dict[str, List[str]]:
+        """
+        Get standard mapping using SynonymGroups system.
+        
+        Returns:
+            Dictionary mapping display names to lists of XBRL concept synonyms
+        """
+        if cls._STANDARD_MAPPING_CACHE is not None:
+            return cls._STANDARD_MAPPING_CACHE
+        
+        synonyms = get_synonym_groups()
+        mapping = {}
+        
+        for display_name, concept_name in cls.DISPLAY_NAME_TO_CONCEPT.items():
+            group = synonyms.get_group(concept_name)
+            if group:
+                mapping[display_name] = group.synonyms
+            else:
+                log.warning(f"Concept '{concept_name}' not found in SynonymGroups for '{display_name}'")
+                mapping[display_name] = []
+        
+        cls._STANDARD_MAPPING_CACHE = mapping
+        return mapping
+    
+    @property
+    def STANDARD_MAPPING(self) -> Dict[str, List[str]]:
+        """Get standard mapping (backward compatibility)."""
+        return self._get_standard_mapping()
     
     def __init__(self, fact_set: FactSet):
         """
@@ -55,17 +76,18 @@ class CashFlowStatement:
         self._dataframe: Optional[pd.DataFrame] = None
     
     @classmethod
-    def from_company_facts(cls, company_facts: Dict[str, Any]) -> "CashFlowStatement":
+    def from_company_facts(cls, company_facts: Dict[str, Any], cik: Optional[str] = None) -> "CashFlowStatement":
         """
         Create cash flow statement from SEC company facts API response.
         
         Args:
             company_facts: Dictionary from SEC company facts API
+            cik: Optional CIK for entity info extraction
             
         Returns:
             CashFlowStatement object
         """
-        fact_set = FactSet.from_company_facts(company_facts)
+        fact_set = FactSet.from_company_facts(company_facts, cik=cik)
         return cls(fact_set)
     
     def to_dataframe(self) -> pd.DataFrame:
