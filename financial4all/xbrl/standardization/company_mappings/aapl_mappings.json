@@ -1,0 +1,39 @@
+{
+  "entity_info": {
+    "name": "Apple Inc.",
+    "cik": "0000320193",
+    "ticker": "AAPL",
+    "description": "Apple-specific concept mappings to handle unique XBRL taxonomy variations and period-specific concept changes"
+  },
+  "concept_mappings": {
+    "_comment_aapl_revenue": "AAPL changed revenue concepts: 'Revenues' (2007-2017) -> 'RevenueFromContractWithCustomer' (2018+). Period-aware resolution handles this.",
+    "_comment_aapl_interest": "AAPL has large cash holdings leading to significant Interest Income. Some tags may be misclassified as Operating Income.",
+    "_comment_aapl_other_income": "AAPL reports 'OtherIncomeExpense' without 'Net' suffix, which is already handled in standardization.py",
+    "Interest Income": [
+      "InterestIncome",
+      "InterestIncomeOperating",
+      "InterestIncomeNonoperating",
+      "InterestAndDividendIncome",
+      "InvestmentIncomeInterest"
+    ],
+    "Other, net": [
+      "OtherIncomeExpense",
+      "OtherIncomeExpenseNet",
+      "OtherNonoperatingIncomeExpense",
+      "OtherOperatingIncomeExpenseNet"
+    ]
+  },
+  "hierarchy_rules": {
+    "_comment": "AAPL-specific hierarchy rules if needed. Currently handled by period-aware resolution."
+  },
+  "business_context": {
+    "entity_type": "operating_company",
+    "industry": "technology_hardware",
+    "description": "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide",
+    "known_issues": [
+      "Interest Income can be misclassified as Operating Income due to similar magnitude for cash-rich periods",
+      "Revenue concept changed from 'Revenues' to 'RevenueFromContractWithCustomer' in 2018",
+      "Reports 'OtherIncomeExpense' without 'Net' suffix"
+    ]
+  }
+}

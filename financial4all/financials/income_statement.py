@@ -14,6 +14,7 @@ from collections import defaultdict
 from financial4all.xbrl.facts import FactSet, Fact
 from financial4all.xbrl.periods import PeriodType, classify_fiscal_period
 from financial4all.xbrl.standardization import get_synonym_groups, get_default_store
+from financial4all.xbrl.standardization.reverse_index import get_reverse_index
 from financial4all.xbrl.calculations import CalculationEngine
 from financial4all.core import log
 
@@ -41,10 +42,13 @@ class IncomeStatement:
         "Interest Expense": "interest_expense",
         "Other, net": "other_net",
         "Interest Income (Net)": "interest_income_net",
-        # Note: "Other income (expense), net" is calculated, not extracted
-        # It is calculated as: Interest Income + Interest Expense + Other, net
-        # Note: "Income Before Taxes" is calculated, not extracted
-        # It is calculated as: Operating Income + Other income (expense), net
+        # Note: "Other income (expense), net" can be extracted OR calculated
+        # If extracted: use directly
+        # If calculated: Interest Income + Interest Expense + Other, net
+        # Note: "Income Before Taxes" can be extracted OR calculated
+        # If extracted: use directly, then calculate Other income (expense), net = Income Before Taxes - Operating Income
+        # If calculated: Operating Income + Other income (expense), net
+        "Income Before Taxes": "income_before_tax",  # Try to extract first, calculate if not available
         "Taxes": "income_tax_expense",
         "Net Income": "net_income",
         "Basic EPS": "earnings_per_share_basic",
@@ -98,9 +102,9 @@ class IncomeStatement:
         "Interest Income",
         "Interest Expense",
         "Other, net",  # NVIDIA reports this
-        "Other income (expense), net",  # Calculated: Interest Income + Interest Expense + Other, net
+        "Other income (expense), net",  # Extract first, calculate if not available: Interest Income + Interest Expense + Other, net
         "Interest Income (Net)",  # Only if separate Interest Income/Expense don't exist
-        "Income Before Taxes",  # Calculated: Operating Income + Other income (expense), net
+        "Income Before Taxes",  # Extract first, calculate if not available: Operating Income + Other income (expense), net
         "Taxes",
         "Net Income",
         "Basic EPS",
@@ -351,15 +355,17 @@ class IncomeStatement:
         # Interest Income, we should ensure Interest Expense is always negative (it's an expense)
         # This ensures consistent accounting treatment: expenses reduce income
 
-        # First, validate Interest Income - it should not match Operating Income values
+        # First, validate Interest Income - it should not match Operating Income or Income Before Taxes values
         if "Interest Income" in df.columns and "Operating Income" in df.columns:
             interest_income_col = df["Interest Income"].copy()
             operating_income_col = df["Operating Income"]
+            income_before_taxes_col = df["Income Before Taxes"] if "Income Before Taxes" in df.columns else None
 
             # Check each period where both values exist
             for idx in df.index:
                 interest_val = interest_income_col.loc[idx]
                 operating_val = operating_income_col.loc[idx]
+                income_before_taxes_val = income_before_taxes_col.loc[idx] if income_before_taxes_col is not None else None
 
                 if (
                     pd.notna(interest_val)
@@ -370,30 +376,67 @@ class IncomeStatement:
                     ratio = (
                         abs(interest_val) / abs(operating_val)
                         if operating_val != 0
-                        else 0
+                        else float('inf')
                     )
                     diff_ratio = (
                         abs(interest_val - operating_val) / abs(operating_val)
                         if operating_val != 0
                         else 1
                     )
+                    abs_diff = abs(interest_val - operating_val)
 
-                    # If Interest Income is suspiciously close to Operating Income (> 50% similar), it's likely misclassified
-                    # Also check if they're within 10% of each other (very suspicious)
-                    if ratio > 0.5 or diff_ratio < 0.1:
+                    # Enhanced validation: Focus on detecting values suspiciously CLOSE to Operating Income
+                    # Values within 1% are almost certainly misclassified Operating Income
+                    # Values 1-5% close AND large (> 50% ratio) are also suspicious
+                    # We DON'T reject values that are just large but NOT close (legitimate for cash-rich companies)
+                    if diff_ratio < 0.01:  # Within 1% - very suspicious, likely misclassified
                         log.warning(
-                            f"Interest Income ({interest_val}) is suspiciously similar to Operating Income "
-                            f"({operating_val}) for period {idx} (ratio: {ratio:.1%}, diff: {diff_ratio:.1%}). "
-                            f"Setting Interest Income to NaN as this is likely misclassified."
+                            f"Interest Income ({interest_val:,.0f}) is suspiciously close to Operating Income "
+                            f"({operating_val:,.0f}) for period {idx} (diff: {diff_ratio:.3%}, abs_diff: {abs_diff:,.0f}). "
+                            f"Setting Interest Income to NaN as this is likely misclassified Operating Income."
                         )
                         interest_income_col.loc[idx] = np.nan
-                    # Also check if Interest Income is negative (shouldn't happen)
-                    elif interest_val < 0:
+                    elif 0.01 <= diff_ratio < 0.05 and ratio > 0.50:  # Moderately close (1-5%) AND large (> 50% ratio)
+                        log.warning(
+                            f"Interest Income ({interest_val:,.0f}) is suspiciously close to Operating Income "
+                            f"({operating_val:,.0f}) for period {idx} (diff: {diff_ratio:.2%}, ratio: {ratio:.1%}). "
+                            f"Setting Interest Income to NaN as this may be misclassified Operating Income."
+                        )
+                        interest_income_col.loc[idx] = np.nan
+                    
+                    # Also check against Income Before Taxes (which might be misclassified as Interest Income)
+                    if (
+                        income_before_taxes_val is not None
+                        and pd.notna(income_before_taxes_val)
+                        and pd.notna(interest_income_col.loc[idx])  # Only check if not already rejected
+                        and income_before_taxes_val != 0
+                    ):
+                        ibt_diff_ratio = (
+                            abs(interest_val - income_before_taxes_val) / abs(income_before_taxes_val)
+                            if income_before_taxes_val != 0
+                            else 1
+                        )
+                        ibt_abs_diff = abs(interest_val - income_before_taxes_val)
+                        
+                        # If Interest Income is suspiciously close to Income Before Taxes, it's likely misclassified
+                        if ibt_diff_ratio < 0.01:  # Within 1% - very suspicious, likely misclassified Income Before Taxes
+                            log.warning(
+                                f"Interest Income ({interest_val:,.0f}) is suspiciously close to Income Before Taxes "
+                                f"({income_before_taxes_val:,.0f}) for period {idx} (diff: {ibt_diff_ratio:.3%}, abs_diff: {ibt_abs_diff:,.0f}). "
+                                f"Setting Interest Income to NaN as this is likely misclassified Income Before Taxes."
+                            )
+                            interest_income_col.loc[idx] = np.nan
+                    
+                    # Negative Interest Income is always suspicious
+                    if interest_val < 0:
                         log.warning(
                             f"Interest Income is negative for period {idx}: {interest_val}. "
                             f"Setting to NaN as this is likely misclassified."
                         )
                         interest_income_col.loc[idx] = np.nan
+                    
+                    # NOTE: We DON'T reject values that are just large (> 10% ratio) but NOT close
+                    # Cash-rich companies can legitimately have Interest Income > 10% of Operating Income
 
             df["Interest Income"] = interest_income_col
 
@@ -469,22 +512,59 @@ class IncomeStatement:
             if facts:
                 all_facts_by_concept[concept] = facts
 
-        # If we didn't find enough facts, try synonym discovery using SynonymGroups
+        # If we didn't find enough facts, try synonym discovery using reverse_index and SynonymGroups
         # This helps find alternative concepts that might be used
         # BUT: We need to be careful not to match concepts from other metric groups
         if not all_facts_by_concept and xbrl_concepts:
             primary_concept = xbrl_concepts[0]
 
-            # First, try SynonymGroups for comprehensive synonym discovery
-            synonym_groups = get_synonym_groups()
-            concept_info = synonym_groups.identify_concept(primary_concept)
+            # First, try reverse_index for O(1) lookup and context-aware disambiguation
+            concept_info = None
+            synonym_tags = []
+            
+            try:
+                reverse_index = get_reverse_index()
+                # Provide context for better disambiguation (income statement context)
+                context = {
+                    'statement_type': 'IncomeStatement',
+                    'section': 'Other Income/Expense'  # Context helps disambiguate ambiguous tags
+                }
+                standard_concept = reverse_index.get_standard_concept(primary_concept, context)
+                
+                if standard_concept:
+                    # Get display name and find synonyms from SynonymGroups
+                    display_name = reverse_index.get_display_name(primary_concept, context)
+                    log.debug(
+                        f"Found concept '{primary_concept}' via reverse_index -> '{standard_concept}' (display: '{display_name}')"
+                    )
+                    
+                    # Use SynonymGroups to get all synonyms for this standard concept
+                    synonym_groups = get_synonym_groups()
+                    # Normalize standard_concept to group name format
+                    normalized_concept = standard_concept.lower().replace(' ', '_').replace('-', '_')
+                    concept_info = synonym_groups.get_group(normalized_concept)
+                    
+                    if concept_info:
+                        # Use synonyms from the identified group
+                        synonym_tags = concept_info.synonyms
+                        log.debug(
+                            f"Found {len(synonym_tags)} synonyms for '{normalized_concept}' via reverse_index + SynonymGroups"
+                        )
+            except (ImportError, AttributeError, Exception) as e:
+                # Fallback to SynonymGroups if reverse_index fails
+                log.debug(f"Reverse index lookup failed for '{primary_concept}': {e}, falling back to SynonymGroups")
+            
+            # Fallback to SynonymGroups if reverse_index didn't find a match
+            if not concept_info:
+                synonym_groups = get_synonym_groups()
+                concept_info = synonym_groups.identify_concept(primary_concept)
+                if concept_info:
+                    synonym_tags = concept_info.synonyms
+                    log.debug(
+                        f"Found concept '{primary_concept}' in SynonymGroups as '{concept_info.name}' with {len(synonym_tags)} synonyms"
+                    )
 
-            if concept_info:
-                # Found in SynonymGroups - get all synonyms from the SAME group only
-                synonym_tags = concept_info.synonyms
-                log.debug(
-                    f"Found concept '{primary_concept}' in SynonymGroups as '{concept_info.name}' with {len(synonym_tags)} synonyms"
-                )
+            if concept_info and synonym_tags:
 
                 # Check which synonyms exist in the fact set
                 all_concepts_in_factset = {
@@ -492,7 +572,7 @@ class IncomeStatement:
                 }
 
                 # Get concepts from other groups to avoid cross-contamination
-                # For Interest Income, we should NOT match Operating Income concepts
+                # For Interest Income, we should NOT match Operating Income or Income Before Taxes concepts
                 excluded_concepts = set()
                 if concept_info.name == "interest_income":
                     # Get Operating Income concepts to exclude
@@ -504,6 +584,21 @@ class IncomeStatement:
                             excluded_concepts.add(op_concept)
                             excluded_concepts.add(f"us-gaap_{op_concept}")
                             excluded_concepts.add(f"us-gaap:{op_concept}")
+                    
+                    # Get Income Before Taxes concepts to exclude (these are often similar magnitude to Operating Income)
+                    income_before_tax_group = synonym_groups.get_group(
+                        "income_before_tax"
+                    )
+                    if income_before_tax_group:
+                        for ibt_concept in income_before_tax_group.synonyms:
+                            excluded_concepts.add(ibt_concept)
+                            excluded_concepts.add(f"us-gaap_{ibt_concept}")
+                            excluded_concepts.add(f"us-gaap:{ibt_concept}")
+                    
+                    log.debug(
+                        f"Excluding {len(excluded_concepts)} concepts from Interest Income search "
+                        f"(Operating Income + Income Before Taxes) to prevent misclassification"
+                    )
 
                 for tag in synonym_tags:
                     # Try with and without namespace prefix
@@ -693,13 +788,19 @@ class IncomeStatement:
                 is_valid = True
 
                 # Cross-validate with other metrics to prevent misclassification
-                # For Interest Income, check against Operating Income
+                # For Interest Income, check against Operating Income AND Income Before Taxes
                 if std_name == "Interest Income" and other_metrics_data:
                     operating_income_data = other_metrics_data.get(
                         "Operating Income", {}
                     )
                     operating_val = operating_income_data.get(period_key)
+                    
+                    income_before_taxes_data = other_metrics_data.get(
+                        "Income Before Taxes", {}
+                    )
+                    income_before_taxes_val = income_before_taxes_data.get(period_key)
 
+                    # Check against Operating Income
                     if (
                         operating_val is not None
                         and isinstance(candidate_value, (int, float))
@@ -708,22 +809,67 @@ class IncomeStatement:
                         ratio = (
                             abs(candidate_value) / abs(operating_val)
                             if operating_val != 0
-                            else 0
+                            else float('inf')
                         )
                         diff_ratio = (
                             abs(candidate_value - operating_val) / abs(operating_val)
                             if operating_val != 0
                             else 1
                         )
+                        abs_diff = abs(candidate_value - operating_val)
 
-                        # If Interest Income is suspiciously similar to Operating Income, skip this candidate
-                        if ratio > 0.5 or diff_ratio < 0.1:
-                            log.debug(
+                        # Enhanced validation: Focus on detecting values suspiciously CLOSE to Operating Income
+                        # Values within 1% are almost certainly misclassified Operating Income
+                        # Values 1-5% close AND large (> 50% ratio) are also suspicious
+                        # We DON'T reject values that are just large but NOT close (legitimate for cash-rich companies)
+                        if diff_ratio < 0.01:  # Within 1% - very suspicious, likely misclassified
+                            log.warning(
                                 f"Skipping Interest Income fact candidate {candidate_idx} for period {period_key}: "
-                                f"value {candidate_value} is suspiciously similar to Operating Income {operating_val} "
-                                f"(ratio: {ratio:.1%}, diff: {diff_ratio:.1%})"
+                                f"value {candidate_value} is suspiciously close to Operating Income {operating_val} "
+                                f"(diff: {diff_ratio:.3%}, abs_diff: {abs_diff:,.0f}). This is likely misclassified Operating Income."
                             )
                             is_valid = False
+                        elif 0.01 <= diff_ratio < 0.05 and ratio > 0.50:  # Moderately close (1-5%) AND large (> 50% ratio)
+                            log.warning(
+                                f"Skipping Interest Income fact candidate {candidate_idx} for period {period_key}: "
+                                f"value {candidate_value} is suspiciously close to Operating Income {operating_val} "
+                                f"(diff: {diff_ratio:.2%}, ratio: {ratio:.1%}). This may be misclassified Operating Income."
+                            )
+                            is_valid = False
+                    
+                    # Also check against Income Before Taxes (which might be misclassified as Interest Income)
+                    if (
+                        income_before_taxes_val is not None
+                        and isinstance(candidate_value, (int, float))
+                        and isinstance(income_before_taxes_val, (int, float))
+                        and is_valid  # Only check if not already rejected
+                    ):
+                        ibt_diff_ratio = (
+                            abs(candidate_value - income_before_taxes_val) / abs(income_before_taxes_val)
+                            if income_before_taxes_val != 0
+                            else 1
+                        )
+                        ibt_abs_diff = abs(candidate_value - income_before_taxes_val)
+                        
+                        # If Interest Income is suspiciously close to Income Before Taxes, it's likely misclassified
+                        if ibt_diff_ratio < 0.01:  # Within 1% - very suspicious, likely misclassified Income Before Taxes
+                            log.warning(
+                                f"Skipping Interest Income fact candidate {candidate_idx} for period {period_key}: "
+                                f"value {candidate_value} is suspiciously close to Income Before Taxes {income_before_taxes_val} "
+                                f"(diff: {ibt_diff_ratio:.3%}, abs_diff: {ibt_abs_diff:,.0f}). This is likely misclassified Income Before Taxes."
+                            )
+                            is_valid = False
+                    
+                    # Negative Interest Income is always suspicious
+                    if candidate_value < 0:
+                        log.warning(
+                            f"Skipping Interest Income fact candidate {candidate_idx} for period {period_key}: "
+                            f"value {candidate_value} is negative, which is unusual. This may be misclassified."
+                        )
+                        is_valid = False
+                    
+                    # NOTE: We DON'T reject values that are just large (> 10% ratio) but NOT close
+                    # Cash-rich companies can legitimately have Interest Income > 10% of Operating Income
 
                 if is_valid:
                     fact_value = candidate_value
@@ -733,9 +879,21 @@ class IncomeStatement:
             # If no valid fact found after validation, skip this period
             if fact_value is None or best_fact is None:
                 log.debug(
-                    f"No valid fact found for {std_name} period {period_key} after cross-validation"
+                    f"No valid fact found for {std_name} period {period_key} after cross-validation "
+                    f"(checked {len(fact_candidates)} candidates)"
                 )
                 continue
+
+            # Log which candidate was selected (for debugging)
+            if std_name == "Interest Income":
+                selected_idx = next(
+                    (i for i, (ci, f) in enumerate(fact_candidates) if f == best_fact),
+                    -1
+                )
+                log.debug(
+                    f"Selected Interest Income fact for period {period_key}: value {fact_value:,.0f} "
+                    f"(from candidate {selected_idx} of {len(fact_candidates)}, concept: {best_fact.concept})"
+                )
 
             # Validate fact value - check for obviously wrong values
             # For revenue and other income statement metrics, values should generally be reasonable
@@ -770,26 +928,64 @@ class IncomeStatement:
 
                         # Try to find alternative fact for this period
                         # Look for facts with larger absolute values and no dimensions
-                        alternative_facts = [
-                            f
-                            for f in fact_candidates[1:]
-                            if isinstance(f[1].value, (int, float))
-                            and not f[
-                                1
-                            ].dimensions  # Prefer non-dimensional alternatives
-                            and abs(f[1].value)
-                            > abs(fact_value) * 5  # At least 5x larger
-                        ]
+                        # BUT: For Interest Income, validate alternatives against Operating Income
+                        alternative_facts = []
+                        for f in fact_candidates[1:]:
+                            if not isinstance(f[1].value, (int, float)):
+                                continue
+                            if f[1].dimensions:  # Skip dimensional facts
+                                continue
+                            if abs(f[1].value) <= abs(fact_value) * 5:  # Must be at least 5x larger
+                                continue
+                            
+                            # For Interest Income, validate alternative against Operating Income
+                            if std_name == "Interest Income" and other_metrics_data:
+                                operating_income_data = other_metrics_data.get("Operating Income", {})
+                                operating_val = operating_income_data.get(period_key)
+                                if operating_val is not None and isinstance(operating_val, (int, float)):
+                                    alt_ratio = abs(f[1].value) / abs(operating_val) if operating_val != 0 else float('inf')
+                                    alt_diff_ratio = abs(f[1].value - operating_val) / abs(operating_val) if operating_val != 0 else 1
+                                    alt_abs_diff = abs(f[1].value - operating_val)
+                                    
+                                    # Skip if alternative is also suspiciously close to Operating Income
+                                    if alt_diff_ratio < 0.05 or alt_abs_diff < abs(operating_val) * 0.05:
+                                        log.debug(
+                                            f"Skipping alternative Interest Income fact for period {period_key}: "
+                                            f"value {f[1].value} is also suspiciously close to Operating Income"
+                                        )
+                                        continue
+                                    if alt_ratio > 0.10:
+                                        log.debug(
+                                            f"Skipping alternative Interest Income fact for period {period_key}: "
+                                            f"value {f[1].value} is also suspiciously large relative to Operating Income"
+                                        )
+                                        continue
+                            
+                            alternative_facts.append(f)
 
-                        # If no non-dimensional alternatives, try any larger value
+                        # If no non-dimensional alternatives, try any larger value (but still validate for Interest Income)
                         if not alternative_facts:
-                            alternative_facts = [
-                                f
-                                for f in fact_candidates[1:]
-                                if isinstance(f[1].value, (int, float))
-                                and abs(f[1].value)
-                                > abs(fact_value) * 10  # At least 10x larger
-                            ]
+                            for f in fact_candidates[1:]:
+                                if not isinstance(f[1].value, (int, float)):
+                                    continue
+                                if abs(f[1].value) <= abs(fact_value) * 10:  # Must be at least 10x larger
+                                    continue
+                                
+                                # For Interest Income, validate alternative against Operating Income
+                                if std_name == "Interest Income" and other_metrics_data:
+                                    operating_income_data = other_metrics_data.get("Operating Income", {})
+                                    operating_val = operating_income_data.get(period_key)
+                                    if operating_val is not None and isinstance(operating_val, (int, float)):
+                                        alt_ratio = abs(f[1].value) / abs(operating_val) if operating_val != 0 else float('inf')
+                                        alt_diff_ratio = abs(f[1].value - operating_val) / abs(operating_val) if operating_val != 0 else 1
+                                        alt_abs_diff = abs(f[1].value - operating_val)
+                                        
+                                        if alt_diff_ratio < 0.05 or alt_abs_diff < abs(operating_val) * 0.05:
+                                            continue
+                                        if alt_ratio > 0.10:
+                                            continue
+                                
+                                alternative_facts.append(f)
 
                         if alternative_facts:
                             alt_fact = alternative_facts[0][1]
@@ -1142,76 +1338,147 @@ class IncomeStatement:
                     - df_calc.loc[mask, "Operating Expenses"]
                 )
 
+        # PRIORITY 1: If Income Before Taxes was extracted directly, use it and calculate backwards
+        # Income Before Taxes (extracted) -> Other income (expense), net = Income Before Taxes - Operating Income
+        income_before_taxes_extracted = False
+        if "Income Before Taxes" in df_calc.columns:
+            # Check if Income Before Taxes has any extracted (non-null) values
+            if df_calc["Income Before Taxes"].notna().any():
+                income_before_taxes_extracted = True
+                
+                # Cross-validate Income Before Taxes = Net Income + Taxes
+                # Note: We may be using "Net Income Attributable to Common Stockholders" which excludes
+                # noncontrolling interests, so the validation needs to account for this
+                if "Net Income" in df_calc.columns and "Taxes" in df_calc.columns:
+                    for idx in df_calc.index:
+                        ibt_val = df_calc.loc[idx, "Income Before Taxes"]
+                        net_income_val = df_calc.loc[idx, "Net Income"]
+                        taxes_val = df_calc.loc[idx, "Taxes"]
+                        
+                        if pd.notna(ibt_val) and pd.notna(net_income_val) and pd.notna(taxes_val):
+                            calculated_ibt = net_income_val + taxes_val
+                            diff = abs(ibt_val - calculated_ibt)
+                            
+                            # Check if difference could be explained by noncontrolling interests
+                            # If Income Before Taxes - Taxes > Net Income, the difference is likely noncontrolling interests
+                            noncontrolling_interest = ibt_val - taxes_val - net_income_val
+                            
+                            # Calculate relative difference
+                            if calculated_ibt != 0:
+                                diff_ratio = diff / abs(calculated_ibt)
+                            else:
+                                diff_ratio = 1 if diff > 0 else 0
+                            
+                            # Only warn if difference is significant AND doesn't look like noncontrolling interests
+                            # Noncontrolling interests are typically small relative to Net Income (< 5% for most companies)
+                            # If the difference is large relative to Net Income, it's likely a real issue
+                            if diff_ratio > 0.01:  # More than 1% difference
+                                # Check if difference could be noncontrolling interests
+                                if abs(noncontrolling_interest) > 0 and abs(noncontrolling_interest) < abs(net_income_val) * 0.10:
+                                    # Difference is small relative to Net Income (< 10%), likely noncontrolling interests
+                                    log.debug(
+                                        f"Income Before Taxes ({ibt_val:,.0f}) - Taxes ({taxes_val:,.0f}) = "
+                                        f"{ibt_val - taxes_val:,.0f}, but Net Income ({net_income_val:,.0f}) is "
+                                        f"{noncontrolling_interest:,.0f} less. This is likely due to noncontrolling interests. "
+                                        f"Using extracted Income Before Taxes value."
+                                    )
+                                else:
+                                    # Difference is large, likely a real issue
+                                    log.warning(
+                                        f"Income Before Taxes ({ibt_val:,.0f}) doesn't match Net Income + Taxes "
+                                        f"({calculated_ibt:,.0f}) for period {idx} (diff: {diff:,.0f}, {diff_ratio:.2%}). "
+                                        f"Using extracted Income Before Taxes value."
+                                    )
+                
+                # Calculate Other income (expense), net backwards: Other income = Income Before Taxes - Operating Income
+                if "Operating Income" in df_calc.columns:
+                    if "Other income (expense), net" not in df_calc.columns:
+                        df_calc["Other income (expense), net"] = np.nan
+                    
+                    # Calculate: Other income (expense), net = Income Before Taxes - Operating Income
+                    # Only calculate where Income Before Taxes exists and Other income (expense), net is missing
+                    mask = df_calc["Income Before Taxes"].notna() & df_calc["Other income (expense), net"].isna()
+                    if mask.any() and "Operating Income" in df_calc.columns:
+                        df_calc.loc[mask, "Other income (expense), net"] = (
+                            df_calc.loc[mask, "Income Before Taxes"]
+                            - df_calc.loc[mask, "Operating Income"]
+                        )
+                        log.debug(
+                            f"Calculated Other income (expense), net from extracted Income Before Taxes "
+                            f"for {mask.sum()} periods"
+                        )
+
+        # PRIORITY 2: If Income Before Taxes was NOT extracted, calculate it from components
+        # Income Before Taxes = Operating Income + Other income (expense), net
+        if "Operating Income" in df_calc.columns:
+            # Create or update the column if it doesn't exist
+            if "Income Before Taxes" not in df_calc.columns:
+                df_calc["Income Before Taxes"] = np.nan
+            
+            # Only calculate if Income Before Taxes wasn't extracted (or fill in missing periods)
+            if not income_before_taxes_extracted or df_calc["Income Before Taxes"].isna().any():
+                # Calculate: Operating Income + Other income (expense), net
+                # Prefer "Other income (expense), net" if it exists, otherwise try "Interest Income (Net)"
+                other_income_component = None
+
+                if "Other income (expense), net" in df_calc.columns:
+                    other_income_component = df_calc["Other income (expense), net"]
+                elif "Interest Income (Net)" in df_calc.columns:
+                    # Fallback to Interest Income (Net) if Other income (expense), net doesn't exist
+                    other_income_component = df_calc["Interest Income (Net)"]
+
+                if other_income_component is not None:
+                    # Calculate: Operating Income + Other income component
+                    # Only fill in missing values (don't overwrite extracted values)
+                    mask = df_calc["Income Before Taxes"].isna()
+                    if mask.any():
+                        income_before_taxes = df_calc.loc[mask, "Operating Income"].fillna(0) + other_income_component.loc[mask].fillna(0)
+                        df_calc.loc[mask, "Income Before Taxes"] = income_before_taxes
+
+        # PRIORITY 3: Calculate Other income (expense), net from components if not already calculated
         # Other income (expense), net = Interest Income - Interest Expense + Other, net
         # IMPORTANT: Interest Expense is normalized to be negative (see Step 3.5),
         # so we ADD it (not subtract) because subtracting a negative = adding
-        # Always calculate this field if components are available
+        # Only calculate if not already set from Income Before Taxes
         if (
-            len(
-                [
-                    col
-                    for col in ["Interest Income", "Interest Expense", "Other, net"]
-                    if col in df_calc.columns
-                ]
-            )
-            >= 2
+            "Other income (expense), net" not in df_calc.columns
+            or df_calc["Other income (expense), net"].isna().any()
         ):
-            # Create or update the column
-            if "Other income (expense), net" not in df_calc.columns:
-                df_calc["Other income (expense), net"] = np.nan
+            if (
+                len(
+                    [
+                        col
+                        for col in ["Interest Income", "Interest Expense", "Other, net"]
+                        if col in df_calc.columns
+                    ]
+                )
+                >= 2
+            ):
+                # Create or update the column
+                if "Other income (expense), net" not in df_calc.columns:
+                    df_calc["Other income (expense), net"] = np.nan
 
-            # Calculate: Interest Income + Interest Expense + Other, net
-            # Note: Interest Expense is already negative (normalized), so we add it
-            # Treating NaN as 0 for calculation
-            other_income_expense = pd.Series(0.0, index=df_calc.index)
+                # Calculate: Interest Income + Interest Expense + Other, net
+                # Note: Interest Expense is already negative (normalized), so we add it
+                # Only fill in missing values (don't overwrite values calculated from Income Before Taxes)
+                mask = df_calc["Other income (expense), net"].isna()
+                if mask.any():
+                    other_income_expense = pd.Series(0.0, index=df_calc.index[mask])
 
-            # Add Interest Income (positive)
-            if "Interest Income" in df_calc.columns:
-                other_income_expense = other_income_expense + df_calc[
-                    "Interest Income"
-                ].fillna(0)
+                    # Add Interest Income (positive)
+                    if "Interest Income" in df_calc.columns:
+                        other_income_expense = other_income_expense + df_calc.loc[mask, "Interest Income"].fillna(0)
 
-            # Add Interest Expense (already negative due to normalization, so adding = subtracting)
-            if "Interest Expense" in df_calc.columns:
-                other_income_expense = other_income_expense + df_calc[
-                    "Interest Expense"
-                ].fillna(0)
+                    # Add Interest Expense (already negative due to normalization, so adding = subtracting)
+                    if "Interest Expense" in df_calc.columns:
+                        other_income_expense = other_income_expense + df_calc.loc[mask, "Interest Expense"].fillna(0)
 
-            # Add Other, net (can be positive or negative)
-            if "Other, net" in df_calc.columns:
-                other_income_expense = other_income_expense + df_calc[
-                    "Other, net"
-                ].fillna(0)
+                    # Add Other, net (can be positive or negative)
+                    if "Other, net" in df_calc.columns:
+                        other_income_expense = other_income_expense + df_calc.loc[mask, "Other, net"].fillna(0)
 
-            # Update all values (calculated field, so always recalculate)
-            df_calc["Other income (expense), net"] = other_income_expense
-
-        # Income Before Taxes = Operating Income + Other income (expense), net
-        # Always calculate this field if components are available
-        if "Operating Income" in df_calc.columns:
-            # Create or update the column
-            if "Income Before Taxes" not in df_calc.columns:
-                df_calc["Income Before Taxes"] = np.nan
-
-            # Calculate: Operating Income + Other income (expense), net
-            # Prefer "Other income (expense), net" if it exists, otherwise try "Interest Income (Net)"
-            other_income_component = None
-
-            if "Other income (expense), net" in df_calc.columns:
-                other_income_component = df_calc["Other income (expense), net"]
-            elif "Interest Income (Net)" in df_calc.columns:
-                # Fallback to Interest Income (Net) if Other income (expense), net doesn't exist
-                other_income_component = df_calc["Interest Income (Net)"]
-
-            if other_income_component is not None:
-                # Calculate: Operating Income + Other income component
-                # Treating NaN as 0 for calculation
-                income_before_taxes = df_calc["Operating Income"].fillna(
-                    0
-                ) + other_income_component.fillna(0)
-
-                # Update all values (calculated field, so always recalculate)
-                df_calc["Income Before Taxes"] = income_before_taxes
+                    # Update only missing values
+                    df_calc.loc[mask, "Other income (expense), net"] = other_income_expense
 
         # Net Income = Income Before Taxes - Taxes
         if "Net Income" in df_calc.columns:

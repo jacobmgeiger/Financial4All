@@ -33,6 +33,7 @@ from .unmapped_logger import (
     get_unmapped_logger, log_unmapped, log_ambiguous
 )
 from .core import MappingStore, ConceptMapper
+from .calculation_validation import CalculationValidator
 
 # Re-export parent module functions for backward compatibility
 # Import from parent standardization.py module directly using importlib
@@ -155,6 +156,9 @@ __all__ = [
     # Core
     "MappingStore",
     "ConceptMapper",
+    
+    # Calculation Validation
+    "CalculationValidator",
     
     # Parent module exports (if available)
     "SynonymGroup",

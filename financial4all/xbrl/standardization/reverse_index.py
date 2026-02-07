@@ -90,21 +90,54 @@ class ReverseIndex:
             display_names_path = os.path.join(module_dir, "display_names.json")
         
         # Load the mappings
-        self._gaap_mappings: Dict[str, dict] = self._load_json(gaap_mappings_path)
+        self._gaap_mappings: Dict[str, Any] = self._load_json(gaap_mappings_path)
         self._display_names: Dict[str, str] = self._load_json(display_names_path)
         
-        # Build the reverse index
-        self._index: Dict[str, dict] = self._gaap_mappings
+        # Build the reverse index: convert from concept -> [tags] to tag -> [concepts]
+        # Our gaap_mappings.json format: standard_concept -> [tag1, tag2, ...]
+        self._index: Dict[str, List[str]] = {}
+        
+        for standard_concept, tags in self._gaap_mappings.items():
+            if isinstance(tags, list):
+                # Our format: standard_concept -> [tag1, tag2, ...]
+                for tag in tags:
+                    # Normalize tag (strip namespace) for consistent lookup
+                    # Handle both 'us-gaap:Tag' and 'Tag' formats
+                    normalized_tag = tag
+                    if ':' in normalized_tag:
+                        normalized_tag = normalized_tag.split(':', 1)[1]
+                    if '_' in normalized_tag:
+                        parts = normalized_tag.split('_', 1)
+                        if len(parts) > 1 and parts[0].lower().replace('-', '') in ('usgaap', 'dei', 'srt', 'ifrs'):
+                            normalized_tag = parts[1]
+                    
+                    # Store mapping: tag -> [standard_concept]
+                    if normalized_tag not in self._index:
+                        self._index[normalized_tag] = []
+                    if standard_concept not in self._index[normalized_tag]:
+                        self._index[normalized_tag].append(standard_concept)
+            elif isinstance(tags, dict):
+                # Edgartools format: tag -> {standard_tags: [...], ambiguous: bool, ...}
+                # This is already in reverse format, but we need to convert to our format
+                tag = standard_concept  # In this format, the key is the tag
+                standard_concepts_list = tags.get("standard_tags", [tags.get("standard_tag", tag)])
+                self._index[tag] = standard_concepts_list if isinstance(standard_concepts_list, list) else [standard_concepts_list]
+            else:
+                # String format: tag -> concept (simple mapping)
+                tag = standard_concept  # In this format, the key is the tag
+                self._index[tag] = [tags] if isinstance(tags, str) else [tag]
         
         # Cache for normalized lookups (strips namespace prefixes)
         self._normalized_cache: Dict[str, str] = {}
         self._build_normalized_cache()
         
         # Statistics
+        ambiguous_count = sum(1 for v in self._index.values() 
+                              if isinstance(v, list) and len(v) > 1)
         self._stats = {
             "total_mappings": len(self._index),
-            "ambiguous_count": sum(1 for v in self._index.values() if isinstance(v, dict) and v.get("ambiguous", False)),
-            "deprecated_count": sum(1 for v in self._index.values() if isinstance(v, dict) and v.get("deprecated")),
+            "ambiguous_count": ambiguous_count,
+            "deprecated_count": 0,  # Not currently tracked in our format
             "excluded_count": len(EXCLUDED_TAGS),
         }
         
@@ -192,23 +225,25 @@ class ReverseIndex:
         if normalized is None:
             return None
         
-        # Get the mapping entry
+        # Get the mapping entry (now always a list of standard concepts)
         entry = self._index.get(normalized)
         if entry is None:
             return None
         
-        # Handle both dict and list formats
-        if isinstance(entry, dict):
-            standard_tags = entry.get("standard_tags", [])
-            is_ambiguous = entry.get("ambiguous", False)
-            deprecated = entry.get("deprecated")
-            comment = entry.get("comment")
-        elif isinstance(entry, list):
+        # Handle list format (our format: tag -> [concept1, concept2, ...])
+        if isinstance(entry, list):
             standard_tags = entry
             is_ambiguous = len(entry) > 1
             deprecated = None
             comment = None
+        elif isinstance(entry, dict):
+            # Legacy format support
+            standard_tags = entry.get("standard_tags", [])
+            is_ambiguous = entry.get("ambiguous", False)
+            deprecated = entry.get("deprecated")
+            comment = entry.get("comment")
         else:
+            # String format (single concept)
             standard_tags = [entry] if entry else []
             is_ambiguous = False
             deprecated = None

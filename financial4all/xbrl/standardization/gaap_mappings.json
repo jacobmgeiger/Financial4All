@@ -1,103 +1,338 @@
 {
+  "Accounts Payable": [
+    "AccountsPayable",
+    "AccountsPayableCurrent",
+    "AccountsPayableTradeCurrent"
+  ],
+  "Accounts Receivable": [
+    "AccountsReceivableGross",
+    "AccountsReceivableNet",
+    "AccountsReceivableNetCurrent",
+    "ReceivablesNetCurrent"
+  ],
+  "Accrued Liabilities": [
+    "AccruedLiabilitiesCurrent",
+    "EmployeeRelatedLiabilitiesCurrent",
+    "OtherAccruedLiabilitiesCurrent"
+  ],
+  "Accumulated Other Comprehensive Income": [
+    "AccumulatedOtherComprehensiveIncomeLoss",
+    "AccumulatedOtherComprehensiveIncomeLossNetOfTax"
+  ],
+  "Additional Paid In Capital": [
+    "AdditionalPaidInCapital",
+    "AdditionalPaidInCapitalCommonStock"
+  ],
+  "Basic EPS": [
+    "EarningsPerShare",
+    "EarningsPerShareBasic"
+  ],
+  "Book Value Per Share": [
+    "BookValuePerShare",
+    "BookValuePerShareCommon"
+  ],
+  "Capital Expenditures": [
+    "CapitalExpenditures",
+    "PaymentsToAcquireProductiveAssets",
+    "PaymentsToAcquirePropertyPlantAndEquipment",
+    "PurchaseOfPropertyPlantAndEquipment"
+  ],
+  "Cash and Cash Equivalents": [
+    "Cash",
+    "CashAndCashEquivalentsAtCarryingValue",
+    "CashCashEquivalentsAndShortTermInvestments",
+    "CashEquivalentsAtCarryingValue"
+  ],
+  "Common Shares Outstanding": [
+    "CommonStockSharesOutstanding",
+    "WeightedAverageNumberOfSharesOutstandingBasic"
+  ],
+  "Common Stock": [
+    "CommonStockValue",
+    "CommonStocksIncludingAdditionalPaidInCapital",
+    "StockholdersEquityCommonStock"
+  ],
+  "Cost of Revenue": [
+    "CostOfGoodsAndServiceExcludingDepreciationDepletionAndAmortization",
+    "CostOfGoodsAndServicesSold",
+    "CostOfGoodsSold",
+    "CostOfRevenue",
+    "CostOfSales",
+    "DirectOperatingCosts"
+  ],
+  "Debt Proceeds": [
+    "ProceedsFromDebtNetOfIssuanceCosts",
+    "ProceedsFromIssuanceOfDebt",
+    "ProceedsFromIssuanceOfLongTermDebt"
+  ],
+  "Debt Repayment": [
+    "RepaymentsOfDebt",
+    "RepaymentsOfLongTermDebt",
+    "RepaymentsOfShortTermDebt"
+  ],
+  "Deferred Revenue": [
+    "ContractWithCustomerLiability",
+    "ContractWithCustomerLiabilityCurrent",
+    "DeferredRevenue",
+    "DeferredRevenueCurrent",
+    "DeferredRevenueNoncurrent"
+  ],
+  "Deferred Tax Assets": [
+    "DeferredIncomeTaxAssetsNet",
+    "DeferredTaxAssetsNet",
+    "DeferredTaxAssetsNetCurrent",
+    "DeferredTaxAssetsNetNoncurrent"
+  ],
+  "Deferred Tax Liabilities": [
+    "DeferredIncomeTaxLiabilitiesNet",
+    "DeferredTaxLiabilitiesNoncurrent"
+  ],
+  "Depreciation and Amortization": [
+    "AmortizationOfIntangibleAssets",
+    "Depreciation",
+    "DepreciationAndAmortization",
+    "DepreciationDepletionAndAmortization"
+  ],
+  "Diluted EPS": [
+    "EarningsPerShareDiluted",
+    "EarningsPerShareDilutedOne"
+  ],
+  "Dividends Paid": [
+    "DividendsPaid",
+    "PaymentsOfDividends",
+    "PaymentsOfDividendsCommonStock"
+  ],
+  "EBITDA": [
+    "EBITDA",
+    "EarningsBeforeInterestTaxesDepreciationAndAmortization"
+  ],
+  "Finance Lease Liability": [
+    "CapitalLeaseObligations",
+    "FinanceLeaseLiability",
+    "FinanceLeaseLiabilityCurrent",
+    "FinanceLeaseLiabilityNoncurrent"
+  ],
+  "Free Cash Flow": [
+    "FreeCashFlow"
+  ],
+  "Goodwill": [
+    "Goodwill"
+  ],
+  "Gross Profit": [
+    "GrossProfit"
+  ],
+  "Income Before Tax": [
+    "IncomeLossBeforeIncomeTaxes",
+    "IncomeLossFromContinuingOperationsBeforeIncomeTaxes",
+    "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+  ],
+  "Income Tax Expense": [
+    "IncomeTaxExpenseBenefit",
+    "IncomeTaxesPaidNet",
+    "ProvisionForIncomeTaxes"
+  ],
+  "Intangible Assets": [
+    "FiniteLivedIntangibleAssetsNet",
+    "IntangibleAssetsNetExcludingGoodwill",
+    "IntangibleAssetsNetIncludingGoodwill"
+  ],
+  "Interest Expense": [
+    "InterestAndDebtExpense",
+    "InterestAndFeeExpense",
+    "InterestExpense",
+    "InterestExpenseNonoperating",
+    "InterestExpenseOperating"
+  ],
+  "Interest Income": [
+    "InterestAndDividendIncome",
+    "InterestAndDividendIncomeSecurities",
+    "InterestAndFeeIncomeLoansAndLeases",
+    "InterestIncome",
+    "InterestIncomeDebtSecuritiesOperating",
+    "InterestIncomeDepositsWithFinancialInstitutions",
+    "InterestIncomeFederalFundsSoldAndSecuritiesPurchasedUnderAgreementsToResell",
+    "InterestIncomeNonoperating",
+    "InterestIncomeOperating",
+    "InterestIncomePurchasedReceivables",
+    "InvestmentIncomeInterest",
+    "OtherInterestAndDividendIncome"
+  ],
+  "Interest Income (Net)": [
+    "InterestIncomeExpenseAfterProvisionForLoanLoss",
+    "InterestIncomeExpenseNet",
+    "NetInvestmentIncome"
+  ],
+  "Inventory": [
+    "InventoryFinishedGoods",
+    "InventoryGross",
+    "InventoryNet"
+  ],
+  "Long Term Debt": [
+    "LongTermBorrowings",
+    "LongTermDebt",
+    "LongTermDebtAndCapitalLeaseObligations",
+    "LongTermDebtNoncurrent",
+    "LongTermNotesAndLoans"
+  ],
+  "Long Term Investments": [
+    "AvailableForSaleSecuritiesDebtSecuritiesNoncurrent",
+    "LongTermInvestments",
+    "MarketableSecuritiesNoncurrent"
+  ],
+  "Net Cash from Financing Activities": [
+    "CashFlowFromFinancingActivities",
+    "NetCashProvidedByUsedInFinancingActivities",
+    "NetCashProvidedByUsedInFinancingActivitiesContinuingOperations"
+  ],
+  "Net Cash from Investing Activities": [
+    "CashFlowFromInvestingActivities",
+    "NetCashProvidedByUsedInInvestingActivities",
+    "NetCashProvidedByUsedInInvestingActivitiesContinuingOperations"
+  ],
+  "Net Cash from Operating Activities": [
+    "CashFlowFromOperatingActivities",
+    "NetCashProvidedByUsedInOperatingActivities",
+    "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations"
+  ],
+  "Net Change in Cash": [
+    "CashAndCashEquivalentsPeriodIncreaseDecrease",
+    "IncreaseDecreaseInCashAndCashEquivalents"
+  ],
+  "Net Income": [
+    "IncomeLossFromContinuingOperations",
+    "NetEarnings",
+    "NetIncome",
+    "NetIncomeLoss",
+    "NetIncomeLossAttributableToParent",
+    "NetIncomeLossAvailableToCommonStockholdersBasic",
+    "NetIncomeLossAvailableToCommonStockholdersDiluted",
+    "ProfitLoss"
+  ],
+  "Operating Expenses": [
+    "CostsAndExpenses",
+    "NoninterestExpense",
+    "OperatingCostsAndExpenses",
+    "OperatingExpenses"
+  ],
+  "Operating Income": [
+    "IncomeFromOperations",
+    "IncomeLossFromContinuingOperationsBeforeInterestAndTaxes",
+    "OperatingIncome",
+    "OperatingIncomeLoss"
+  ],
+  "Operating Lease Liability": [
+    "OperatingLeaseLiability",
+    "OperatingLeaseLiabilityCurrent",
+    "OperatingLeaseLiabilityNoncurrent"
+  ],
+  "Operating Lease Payments": [
+    "LesseeOperatingLeaseLiabilityPaymentsDue",
+    "OperatingLeasePayments",
+    "OperatingLeasesFutureMinimumPaymentsDue",
+    "PaymentsForOperatingLeases"
+  ],
+  "Operating Lease Right-of-Use Asset": [
+    "OperatingLeaseRightOfUseAsset",
+    "RightOfUseAssetObtainedInExchangeForOperatingLeaseLiability"
+  ],
+  "Other, net": [
+    "OtherIncomeExpense",
+    "OtherIncomeExpenseNet",
+    "OtherNonoperatingIncomeExpense",
+    "OtherOperatingIncomeExpenseNet"
+  ],
+  "Prepaid Expenses": [
+    "PrepaidExpense",
+    "PrepaidExpenseAndOtherAssetsCurrent",
+    "PrepaidExpenseCurrent"
+  ],
+  "Property, Plant and Equipment": [
+    "FixedAssets",
+    "PropertyPlantAndEquipmentGross",
+    "PropertyPlantAndEquipmentNet"
+  ],
+  "Research and Development Expense": [
+    "ResearchAndDevelopment",
+    "ResearchAndDevelopmentCosts",
+    "ResearchAndDevelopmentExpense"
+  ],
+  "Retained Earnings": [
+    "RetainedEarnings",
+    "RetainedEarningsAccumulatedDeficit"
+  ],
+  "Return On Assets": [
+    "ROA",
+    "ReturnOnAssets"
+  ],
+  "Return On Equity": [
+    "ROE",
+    "ReturnOnEquity"
+  ],
   "Revenue": [
+    "NetSales",
+    "OperatingRevenue",
+    "Revenue",
     "RevenueFromContractWithCustomerExcludingAssessedTax",
     "RevenueFromContractWithCustomerIncludingAssessedTax",
     "Revenues",
-    "Revenue",
-    "SalesRevenueNet",
+    "RevenuesNetOfInterestExpense",
     "SalesRevenueGoodsNet",
+    "SalesRevenueNet",
     "SalesRevenueNetOfReturnsAndAllowances",
-    "TotalRevenues",
-    "NetSales",
-    "OperatingRevenue"
+    "TotalRevenues"
   ],
-  "Net Income": [
-    "NetIncomeLoss",
-    "ProfitLoss",
-    "NetIncome",
-    "NetEarnings",
-    "NetIncomeLossAttributableToParent",
-    "NetIncomeLossAvailableToCommonStockholdersBasic",
-    "IncomeLossFromContinuingOperations"
+  "Selling, General and Administrative Expense": [
+    "AdministrativeExpense",
+    "GeneralAndAdministrativeExpense",
+    "SellingAndMarketingExpense",
+    "SellingExpense",
+    "SellingGeneralAndAdministrativeExpense"
   ],
-  "Cash and Cash Equivalents": [
-    "CashAndCashEquivalentsAtCarryingValue",
-    "CashCashEquivalentsAndShortTermInvestments",
-    "CashEquivalentsAtCarryingValue",
-    "Cash"
+  "Share Repurchases": [
+    "PaymentsForRepurchaseOfCommonStock",
+    "PaymentsForRepurchaseOfEquity",
+    "StockRepurchasedDuringPeriodValue"
+  ],
+  "Short Term Debt": [
+    "DebtCurrent",
+    "LongTermDebtCurrent",
+    "NotesPayableCurrent",
+    "ShortTermBorrowings"
+  ],
+  "Short Term Investments": [
+    "AvailableForSaleSecuritiesDebtSecuritiesCurrent",
+    "MarketableSecuritiesCurrent",
+    "ShortTermInvestments"
   ],
   "Total Assets": [
     "Assets",
     "AssetsTotal"
   ],
-  "Accounts Receivable": [
-    "AccountsReceivableNetCurrent",
-    "AccountsReceivableNet",
-    "ReceivablesNetCurrent",
-    "AccountsReceivableGross"
+  "Total Current Assets": [
+    "AssetsCurrent",
+    "CurrentAssets"
   ],
-  "Inventory": [
-    "InventoryNet",
-    "InventoryGross",
-    "InventoryFinishedGoods"
+  "Total Current Liabilities": [
+    "CurrentLiabilities",
+    "LiabilitiesCurrent"
   ],
-  "Property, Plant and Equipment": [
-    "PropertyPlantAndEquipmentNet",
-    "PropertyPlantAndEquipmentGross",
-    "FixedAssets"
-  ],
-  "Goodwill": [
-    "Goodwill"
-  ],
-  "Intangible Assets": [
-    "IntangibleAssetsNetExcludingGoodwill",
-    "IntangibleAssetsNetIncludingGoodwill",
-    "FiniteLivedIntangibleAssetsNet"
-  ],
-  "Accounts Payable": [
-    "AccountsPayableCurrent",
-    "AccountsPayableTradeCurrent",
-    "AccountsPayable"
-  ],
-  "Long Term Debt": [
-    "LongTermDebtNoncurrent",
-    "LongTermDebt",
-    "LongTermDebtAndCapitalLeaseObligations",
-    "LongTermBorrowings"
+  "Total Liabilities": [
+    "Liabilities",
+    "LiabilitiesTotal"
   ],
   "Total Stockholders' Equity": [
-    "StockholdersEquity",
     "Equity",
-    "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"
+    "EquityAttributableToParent",
+    "MembersEquity",
+    "PartnersCapital",
+    "ShareholdersEquity",
+    "StockholdersEquity",
+    "StockholdersEquityAttributableToParent",
+    "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",
+    "TotalEquity"
   ],
-  "Cost of Revenue": [
-    "CostOfRevenue",
-    "CostOfGoodsAndServicesSold",
-    "CostOfGoodsSold",
-    "CostOfSales"
-  ],
-  "Gross Profit": [
-    "GrossProfit"
-  ],
-  "Operating Expenses": [
-    "OperatingExpenses",
-    "OperatingCostsAndExpenses",
-    "NoninterestExpense",
-    "CostsAndExpenses"
-  ],
-  "Operating Income": [
-    "OperatingIncomeLoss",
-    "OperatingIncome",
-    "IncomeFromOperations"
-  ],
-  "Net Cash from Operating Activities": [
-    "NetCashProvidedByUsedInOperatingActivities",
-    "CashAndCashEquivalentsPeriodIncreaseDecreaseOperating"
-  ],
-  "Net Cash from Investing Activities": [
-    "NetCashProvidedByUsedInInvestingActivities"
-  ],
-  "Net Cash from Financing Activities": [
-    "NetCashProvidedByUsedInFinancingActivities"
+  "Treasury Stock": [
+    "TreasuryStockCommonValue",
+    "TreasuryStockValue"
   ]
 }

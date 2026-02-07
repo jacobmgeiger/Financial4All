@@ -961,6 +961,11 @@ def display_standard_is(
         analyzer = ProfitabilityAnalyzer()
         profitability_df = analyzer.calculate_ratios(df_for_analysis)
         
+        # Store original revenue values for converting Revenue absolute difference to percentage
+        # This will be used when displaying Revenue Y/Y change
+        if "Revenue" in df_for_analysis.columns:
+            profitability_df.attrs = {"original_revenue": df_for_analysis["Revenue"].to_dict()}
+        
         # Format date columns in profitability_df to match df_display format
         if not profitability_df.empty:
             formatted_profitability_cols = ["Metric"]
@@ -1006,7 +1011,7 @@ def display_standard_is(
                 header_content.append(
                     html.Div(
                         f"({unit_label})",
-                        style={"fontSize": "0.75em", "color": "#B0B0B0", "marginTop": "2px"},
+                        style={"fontSize": "0.85em", "color": "#B0B0B0", "marginTop": "2px"},
                     )
                 )
             header_cells.append(
@@ -1019,7 +1024,7 @@ def display_standard_is(
                         "textAlign": "left",
                         "border": "1px solid #444",
                         "backgroundColor": "#1a1a1a",
-                        "fontSize": "0.85em",
+                        "fontSize": "0.95em",
                     },
                 )
             )
@@ -1034,7 +1039,7 @@ def display_standard_is(
                         "verticalAlign": "middle",
                         "border": "1px solid #444",
                         "backgroundColor": "#1a1a1a",
-                        "fontSize": "0.85em",
+                        "fontSize": "0.95em",
                     },
                 )
             )
@@ -1207,22 +1212,30 @@ def display_standard_is(
         # Note: "Revenue" removed - no spacer between Revenue growth and Expenses section
         spacer_after_metrics = ["Operating Margin"]
         
+        # Check if we're in the Y/Y change section (for conditional formatting)
+        in_yoy_section = False
+        
         # Iterate through profitability DataFrame and add rows
         for idx, row in profitability_df.iterrows():
             metric_name = row["Metric"]
             is_bold = metric_name in bold_metrics
             is_header = metric_name == "Expenses as % of Revenue"
+            is_yoy_header = metric_name == "**%Change y/y Change (Trends)**"
+            
+            # Track when we enter the Y/Y change section
+            if is_yoy_header:
+                in_yoy_section = True
             
             # Build metric name cell
             metric_cell = html.Td(
-                metric_name,
+                metric_name.replace("**", ""),  # Remove markdown bold markers
                 style={
-                    "padding": "6px 8px",
+                    "padding": "10px 12px",
                     "verticalAlign": "middle",
-                    "minWidth": "200px",
+                    "minWidth": "220px",
                     "border": "1px solid #444",
-                    "fontSize": "0.9em",
-                    "fontWeight": "bold" if (is_bold or is_header) else "normal",
+                    "fontSize": "1em",
+                    "fontWeight": "bold" if (is_bold or is_header or is_yoy_header) else "normal",
                 },
             )
             
@@ -1232,24 +1245,88 @@ def display_standard_is(
             for col in df_display.columns[1:]:
                 value = row.get(col)
                 
-                # Header rows (like "Expenses as % of Revenue") should have blank cells, not dashes
-                if is_header:
+                # Header rows (like "Expenses as % of Revenue" or Y/Y header) should have blank cells, not dashes
+                if is_header or is_yoy_header:
                     display_value = ""
+                    cell_style = {
+                        "padding": "10px 12px",
+                        "textAlign": "right",
+                        "verticalAlign": "middle",
+                        "border": "1px solid #444",
+                        "fontSize": "1em",
+                        "fontFamily": "monospace",
+                        "fontWeight": "bold" if is_bold else "normal",
+                    }
                 else:
-                    display_value = format_percentage_display(value)
+                    # Format display value - handle Revenue differently in Y/Y section
+                    if in_yoy_section and not is_yoy_header and metric_name == "Revenue":
+                        # Revenue absolute difference is in dollars, convert to percentage of previous year
+                        if value is not None and not pd.isna(value):
+                            try:
+                                # Get previous year's revenue to calculate percentage
+                                col_idx = list(df_display.columns[1:]).index(col)
+                                if col_idx + 1 < len(df_display.columns[1:]):
+                                    prev_col = df_display.columns[1:][col_idx + 1]
+                                    # Get original revenue from profitability_df attributes
+                                    if hasattr(profitability_df, 'attrs') and 'original_revenue' in profitability_df.attrs:
+                                        prev_revenue = profitability_df.attrs['original_revenue'].get(prev_col)
+                                        if prev_revenue and prev_revenue != 0:
+                                            # Convert dollar difference to percentage: (difference / previous) * 100
+                                            pct_change = (float(value) / prev_revenue) * 100
+                                            display_value = f"{pct_change:.2f}%"
+                                        else:
+                                            display_value = "—"
+                                    else:
+                                        # Fallback: just show the value as percentage (assuming it's already a decimal)
+                                        display_value = format_percentage_display(value)
+                                else:
+                                    display_value = "—"
+                            except (ValueError, TypeError, IndexError, AttributeError, KeyError):
+                                display_value = format_percentage_display(value)
+                        else:
+                            display_value = "—"
+                    else:
+                        display_value = format_percentage_display(value)
+                    
+                    # Conditional formatting for Y/Y change section
+                    cell_style = {
+                        "padding": "10px 12px",
+                        "textAlign": "right",
+                        "verticalAlign": "middle",
+                        "border": "1px solid #444",
+                        "fontSize": "1em",
+                        "fontFamily": "monospace",
+                        "fontWeight": "bold" if is_bold else "normal",
+                    }
+                    
+                    # Apply conditional formatting for Y/Y change values
+                    if in_yoy_section and not is_yoy_header and value is not None:
+                        try:
+                            # Parse the percentage value
+                            if isinstance(value, (int, float)) and not pd.isna(value):
+                                pct_value = float(value)
+                                if pct_value > 0:
+                                    # Positive change - green background with better contrast
+                                    cell_style["backgroundColor"] = "#4CAF50"  # Darker green for better contrast
+                                    cell_style["color"] = "#FFFFFF"  # White text for readability
+                                elif pct_value < 0:
+                                    # Negative change - red background with better contrast
+                                    cell_style["backgroundColor"] = "#F44336"  # Darker red for better contrast
+                                    cell_style["color"] = "#FFFFFF"  # White text for readability
+                                else:
+                                    # Zero - no special background, ensure text is visible
+                                    cell_style["color"] = "#E0E0E0"
+                                # Zero or NaN - no special background (default)
+                        except (ValueError, TypeError):
+                            pass  # Keep default styling if parsing fails
+                    else:
+                        # For non-Y/Y section cells, ensure text color is visible
+                        cell_style["color"] = "#E0E0E0"
                 
                 cells.append(
                     html.Td(
                         display_value,
-                        style={
-                            "padding": "6px 8px",
-                            "textAlign": "right",
-                            "verticalAlign": "middle",
-                            "border": "1px solid #444",
-                            "fontSize": "0.9em",
-                            "fontFamily": "monospace",
-                            "fontWeight": "bold" if is_bold else "normal",
-                        },
+                        style=cell_style,
                     )
                 )
             
@@ -1274,7 +1351,7 @@ def display_standard_is(
             "backgroundColor": "#2C2C2C",
             "color": "#E0E0E0",
             "border": "1px solid #444",
-            "fontSize": "0.9em",
+            "fontSize": "1em",
         },
     )
 

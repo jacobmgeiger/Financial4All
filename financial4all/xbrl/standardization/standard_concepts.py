@@ -94,6 +94,12 @@ class StandardConcept(str, Enum):
     CASH_FROM_FINANCING = "Net Cash from Financing Activities"
     NET_CHANGE_IN_CASH = "Net Change in Cash"
     
+    # Lease-Related (Phil Oakley Framework)
+    OPERATING_LEASE_PAYMENTS = "Operating Lease Payments"
+    OPERATING_LEASE_LIABILITY = "Operating Lease Liability"
+    OPERATING_LEASE_RIGHT_OF_USE_ASSET = "Operating Lease Right-of-Use Asset"
+    FINANCE_LEASE_LIABILITY = "Finance Lease Liability"
+    
     @classmethod
     def get_from_label(cls, label: str) -> Optional['StandardConcept']:
         """

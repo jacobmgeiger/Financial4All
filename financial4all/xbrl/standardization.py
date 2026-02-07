@@ -798,6 +798,51 @@ def _get_builtin_groups_cached() -> List[SynonymGroup]:
         ),
         
         # ═══════════════════════════════════════════════════════════════════
+        # LEASE-RELATED (Phil Oakley Framework)
+        # ═══════════════════════════════════════════════════════════════════
+        SynonymGroup(
+            name='operating_lease_payments',
+            synonyms=[
+                'OperatingLeasePayments',
+                'PaymentsForOperatingLeases',
+                'LesseeOperatingLeaseLiabilityPaymentsDue',
+                'OperatingLeasesFutureMinimumPaymentsDue',
+            ],
+            description='Operating lease payments (Phil Oakley framework)',
+            category='cash_flow'
+        ),
+        SynonymGroup(
+            name='operating_lease_liability',
+            synonyms=[
+                'OperatingLeaseLiability',
+                'OperatingLeaseLiabilityCurrent',
+                'OperatingLeaseLiabilityNoncurrent',
+            ],
+            description='Operating lease liability',
+            category='balance_sheet'
+        ),
+        SynonymGroup(
+            name='operating_lease_right_of_use_asset',
+            synonyms=[
+                'OperatingLeaseRightOfUseAsset',
+                'RightOfUseAssetObtainedInExchangeForOperatingLeaseLiability',
+            ],
+            description='Operating lease right-of-use asset',
+            category='balance_sheet'
+        ),
+        SynonymGroup(
+            name='finance_lease_liability',
+            synonyms=[
+                'FinanceLeaseLiability',
+                'FinanceLeaseLiabilityCurrent',
+                'FinanceLeaseLiabilityNoncurrent',
+                'CapitalLeaseObligations',
+            ],
+            description='Finance/capital lease liability',
+            category='balance_sheet'
+        ),
+        
+        # ═══════════════════════════════════════════════════════════════════
         # FINANCIAL RATIOS / METRICS
         # ═══════════════════════════════════════════════════════════════════
         SynonymGroup(

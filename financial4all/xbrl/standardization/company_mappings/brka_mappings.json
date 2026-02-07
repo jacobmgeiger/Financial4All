@@ -1,0 +1,31 @@
+{
+  "entity_info": {
+    "name": "Berkshire Hathaway Inc.",
+    "cik": "0001067983",
+    "ticker": "BRKA",
+    "description": "Berkshire Hathaway-specific concept mappings for holding company structure"
+  },
+  "concept_mappings": {
+    "Sales and Service Revenue": [
+      "brka_SalesAndServiceRevenue"
+    ],
+    "Operating Lease Revenue": [
+      "brka_OperatingLeaseRevenue",
+      "brka_LeaseRevenue"
+    ]
+  },
+  "hierarchy_rules": {
+    "Revenue": {
+      "components": [
+        "Sales and Service Revenue",
+        "Operating Lease Revenue"
+      ],
+      "description": "Total revenue comprises sales/service revenue and operating lease income for holding company"
+    }
+  },
+  "business_context": {
+    "entity_type": "holding_company",
+    "industry": "diversified_conglomerate",
+    "description": "Berkshire Hathaway operates diverse businesses including insurance, utilities, railroads, and manufacturing"
+  }
+}

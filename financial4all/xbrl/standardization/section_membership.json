@@ -9,7 +9,8 @@
     "Non-Current Assets": [
       "Property, Plant and Equipment",
       "Goodwill",
-      "Intangible Assets"
+      "Intangible Assets",
+      "Operating Lease Right-of-Use Asset"
     ],
     "Total Assets": [
       "Total Assets"
@@ -21,7 +22,9 @@
     ],
     "Non-Current Liabilities": [
       "Long Term Debt",
-      "Deferred Revenue"
+      "Deferred Revenue",
+      "Operating Lease Liability",
+      "Finance Lease Liability"
     ],
     "Total Liabilities": [
       "Total Liabilities"
@@ -55,7 +58,8 @@
   },
   "CashFlowStatement": {
     "Operating Activities": [
-      "Net Cash from Operating Activities"
+      "Net Cash from Operating Activities",
+      "Operating Lease Payments"
     ],
     "Investing Activities": [
       "Net Cash from Investing Activities"

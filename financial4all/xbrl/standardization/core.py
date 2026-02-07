@@ -17,6 +17,22 @@ from .standard_concepts import StandardConcept
 
 logger = logging.getLogger(__name__)
 
+# Lazy import to avoid circular dependencies
+_calculation_validator = None
+
+def _get_calculation_validator():
+    """Get or create the calculation validator instance."""
+    global _calculation_validator
+    if _calculation_validator is None:
+        try:
+            from .calculation_validation import CalculationValidator
+            from financial4all.xbrl.calculations import CalculationEngine
+            _calculation_validator = CalculationValidator(CalculationEngine())
+        except (ImportError, Exception) as e:
+            logger.debug("Calculation validation not available: %s", e)
+            _calculation_validator = None
+    return _calculation_validator
+
 
 class MappingStore:
     """
@@ -320,12 +336,19 @@ class ConceptMapper:
     
     def map_concept(self, company_concept: str, label: str, context: Dict[str, Any]) -> Optional[str]:
         """
-        Map a company concept to a standard concept.
+        Map a company concept to a standard concept with optional calculation validation.
         
         Args:
             company_concept: The company-specific concept
             label: The label for the concept
             context: Additional context information (statement type, calculation relationships, etc.)
+                    May include:
+                    - statement_type: Type of financial statement
+                    - section: Section within statement
+                    - calculation_parent: Parent concept from calculation linkbase
+                    - calculation_children: List of child concepts with weights
+                    - available_facts: Dictionary of available fact values for validation
+                    - validate_with_calculations: Boolean to enable calculation validation (default: True)
         
         Returns:
             The standard concept or None if no mapping found
@@ -339,12 +362,65 @@ class ConceptMapper:
         # Pass context for context-aware disambiguation of ambiguous tags
         standard_concept = self.mapping_store.get_standard_concept(company_concept, context)
         if standard_concept:
+            # Optionally validate the mapping using calculation relationships
+            validate = context.get('validate_with_calculations', True)
+            if validate:
+                validation_result = self._validate_mapping_with_calculations(
+                    standard_concept, company_concept, context
+                )
+                if validation_result is not None:
+                    is_valid, error_msg = validation_result
+                    if not is_valid:
+                        logger.warning(
+                            "Calculation validation failed for mapping %s -> %s: %s",
+                            company_concept, standard_concept, error_msg
+                        )
+                        # Still return the mapping, but log the warning
+                        # This allows the system to continue while flagging potential issues
+            
             self._cache[cache_key] = standard_concept
             return standard_concept
         
         # Cache negative results too to avoid repeated inference
         self._cache[cache_key] = None
         return None
+    
+    def _validate_mapping_with_calculations(
+        self,
+        standard_concept: str,
+        company_concept: str,
+        context: Dict[str, Any]
+    ) -> Optional[Tuple[bool, Optional[str]]]:
+        """
+        Validate a mapping using calculation relationships.
+        
+        Args:
+            standard_concept: The standard concept that was mapped
+            company_concept: The original company-specific concept
+            context: Context information including calculation relationships and available facts
+        
+        Returns:
+            Tuple of (is_valid, error_message) if validation was performed, None otherwise
+        """
+        validator = _get_calculation_validator()
+        if validator is None:
+            return None  # Validation not available
+        
+        calculation_parent = context.get('calculation_parent')
+        calculation_children = context.get('calculation_children')
+        available_facts = context.get('available_facts', {})
+        
+        # Only validate if we have sufficient information
+        if not available_facts and not calculation_parent:
+            return None
+        
+        return validator.validate_mapping(
+            mapped_concept=standard_concept,
+            calculation_parent=calculation_parent,
+            calculation_children=calculation_children,
+            available_facts=available_facts,
+            context=context
+        )
     
     def _infer_mapping(self, company_concept: str, label: str, context: Dict[str, Any]) -> Tuple[Optional[str], float]:
         """

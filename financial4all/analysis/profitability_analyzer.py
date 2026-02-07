@@ -11,8 +11,6 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Optional, Union
 
-from financial4all.core import log
-
 
 class ProfitabilityAnalyzer:
     """
@@ -41,19 +39,29 @@ class ProfitabilityAnalyzer:
         # Get date columns (periods) from index
         date_columns = is_df.index.tolist()
         
-        # Initialize result dictionary
-        result_data = {}
+        # Initialize ordered list to preserve metric order
+        # Format: [(metric_name, {date: value, ...}), ...]
+        ordered_metrics = []
         
-        # 1. Y/Y Revenue Growth
+        # Store percentage values separately for Y/Y change calculation
+        pct_values = {}
+        
+        # 1. Y/Y Revenue Growth (percentage change for initial display)
+        revenue_yoy_data = None
         if "Revenue" in is_df.columns:
             revenue_growth = ProfitabilityAnalyzer._calculate_yoy_growth(
                 is_df["Revenue"], date_columns
             )
-            result_data["Revenue"] = revenue_growth
+            ordered_metrics.append(("Revenue", revenue_growth))
+            # For Y/Y change section, calculate absolute difference instead
+            revenue_absolute_diff = ProfitabilityAnalyzer._calculate_yoy_absolute_difference(
+                is_df["Revenue"], date_columns
+            )
+            revenue_yoy_data = revenue_absolute_diff
         
         # 2. Expenses as % of Revenue section
         # Add section header row (empty values)
-        result_data["Expenses as % of Revenue"] = {col: np.nan for col in date_columns}
+        ordered_metrics.append(("Expenses as % of Revenue", {col: np.nan for col in date_columns}))
         
         # Calculate each expense as % of Revenue
         expense_metrics = [
@@ -72,14 +80,18 @@ class ProfitabilityAnalyzer:
                 expense_pct = ProfitabilityAnalyzer._calculate_percentage_of_revenue(
                     is_df[metric_name], is_df["Revenue"], date_columns
                 )
-                result_data[display_name] = expense_pct
+                ordered_metrics.append((display_name, expense_pct))
+                # Store for Y/Y change calculation
+                pct_values[display_name] = expense_pct
         
         # 3. Operating Margin = Operating Income / Revenue
         if "Operating Income" in is_df.columns and "Revenue" in is_df.columns:
             operating_margin = ProfitabilityAnalyzer._calculate_percentage_of_revenue(
                 is_df["Operating Income"], is_df["Revenue"], date_columns
             )
-            result_data["Operating Margin"] = operating_margin
+            ordered_metrics.append(("Operating Margin", operating_margin))
+            # Store for Y/Y change calculation
+            pct_values["Operating Margin"] = operating_margin
         
         # 4. Tax Rate = Income Tax Expense (benefit) / Profit Before Taxes
         # Note: "Taxes" is the standard metric name, "Income Before Taxes" is the standard name
@@ -87,18 +99,43 @@ class ProfitabilityAnalyzer:
             tax_rate = ProfitabilityAnalyzer._calculate_percentage_of_revenue(
                 is_df["Taxes"], is_df["Income Before Taxes"], date_columns
             )
-            result_data["Tax rate"] = tax_rate
+            ordered_metrics.append(("Tax rate", tax_rate))
+            # Store for Y/Y change calculation
+            pct_values["Tax rate"] = tax_rate
         
-        # Convert to DataFrame with Metric as index, then transpose to get Metric column
-        if not result_data:
+        # 5. Year-over-Year % Change (Trends) section
+        # Add section header row (empty values)
+        ordered_metrics.append(("**%Change y/y Change (Trends)**", {col: np.nan for col in date_columns}))
+        
+        # Revenue Y/Y change (reuse the value calculated above)
+        if revenue_yoy_data is not None:
+            ordered_metrics.append(("Revenue", revenue_yoy_data))
+        
+        # Calculate Y/Y change for percentage metrics (absolute difference: this year's % - last year's %)
+        # These are calculated from the percentage values stored above
+        for display_name, pct_data in pct_values.items():
+            pct_series = pd.Series(pct_data, index=date_columns)
+            yoy_change = ProfitabilityAnalyzer._calculate_yoy_absolute_difference(
+                pct_series, date_columns
+            )
+            # Add Y/Y change values - these appear after the Y/Y header
+            ordered_metrics.append((display_name, yoy_change))
+        
+        # Convert to DataFrame directly from ordered list to preserve order and handle duplicates
+        if not ordered_metrics:
             return pd.DataFrame()
         
-        # Build DataFrame: rows are metrics, columns are dates
-        result_df = pd.DataFrame(result_data, index=date_columns)
-        result_df = result_df.T  # Transpose: rows become metrics, columns become dates
+        # Build DataFrame rows directly
+        rows = []
+        for metric_name, values_dict in ordered_metrics:
+            row = {"Metric": metric_name}
+            # Add values for each date column
+            for date_col in date_columns:
+                row[date_col] = values_dict.get(date_col, np.nan)
+            rows.append(row)
         
-        # Reset index and rename to "Metric"
-        result_df = result_df.reset_index().rename(columns={"index": "Metric"})
+        # Create DataFrame from rows
+        result_df = pd.DataFrame(rows)
         
         return result_df
     
@@ -194,6 +231,53 @@ class ProfitabilityAnalyzer:
                 growth_data[date_col] = np.nan
         
         return growth_data
+    
+    @staticmethod
+    def _calculate_yoy_absolute_difference(series: pd.Series, date_columns: list) -> Dict[str, float]:
+        """
+        Calculate year-over-year absolute difference for percentage metrics.
+        
+        With periods ordered newest-first, calculates: current % - previous %
+        For example, with [2024, 2023, 2022]:
+        - 2024 difference = 2024 % - 2023 %
+        - 2023 difference = 2023 % - 2022 %
+        - 2022 difference is NaN (no older period)
+        
+        Args:
+            series: Series with percentage values indexed by period
+            date_columns: List of date column names (periods), ordered newest-first
+        
+        Returns:
+            Dictionary mapping date columns to absolute differences (as decimals, e.g., 0.05 for 5%)
+        """
+        diff_data = {}
+        
+        # Iterate through periods (newest to oldest)
+        # Compare each period to the next period (which is older)
+        for i, date_col in enumerate(date_columns):
+            current_value = series.get(date_col)
+            current_float = ProfitabilityAnalyzer._parse_numeric_value(current_value)
+            
+            # Check if there's a next (older) period to compare to
+            if i + 1 < len(date_columns):
+                next_date_col = date_columns[i + 1]
+                next_value = series.get(next_date_col)
+                next_float = ProfitabilityAnalyzer._parse_numeric_value(next_value)
+                
+                if current_float is not None and next_float is not None:
+                    try:
+                        # Absolute difference = current % - previous %
+                        diff = current_float - next_float
+                        diff_data[date_col] = diff
+                    except (ValueError, TypeError):
+                        diff_data[date_col] = np.nan
+                else:
+                    diff_data[date_col] = np.nan
+            else:
+                # No older period to compare to (oldest period)
+                diff_data[date_col] = np.nan
+        
+        return diff_data
     
     @staticmethod
     def _calculate_percentage_of_revenue(
