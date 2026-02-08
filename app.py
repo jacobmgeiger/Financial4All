@@ -88,82 +88,6 @@ app.layout = html.Div(
                 children=[
                     # --- NEW: Key Ratios Display ---
                     html.Div(id="key-ratios-display", style={"marginBottom": "20px"}),
-                    # --- Metric Filtering and Selection ---
-                    html.Div(
-                        [
-                            html.Label("Filter Metrics:", style={"color": "#B0B0B0"}),
-                            dcc.Input(
-                                id="metric-filter-input",
-                                type="text",
-                                value="",
-                                placeholder="Type to filter metrics...",
-                                style={
-                                    "width": "100%",
-                                    "backgroundColor": "#333333",
-                                    "color": "#E0E0E0",
-                                    "border": "1px solid #555555",
-                                },
-                            ),
-                            dcc.Checklist(
-                                id="fill-rate-checkbox",
-                                options=[
-                                    {
-                                        "label": "Only show metrics with >= 80% data fill",
-                                        "value": "80_percent",
-                                    }
-                                ],
-                                value=[],
-                                style={"marginTop": "10px", "color": "#B0B0B0"},
-                            ),
-                            dcc.Checklist(
-                                id="only-financial-checkbox",
-                                options=[
-                                    {
-                                        "label": "Show only standardized metrics",
-                                        "value": "standardized_only",
-                                    }
-                                ],
-                                value=[
-                                    "standardized_only"
-                                ],  # Default to showing only standard metrics
-                                style={"marginTop": "5px", "color": "#B0B0B0"},
-                            ),
-                        ],
-                        style={"width": "80%", "margin": "auto", "padding": "10px"},
-                    ),
-                    # --- Metric Selection Dropdown ---
-                    html.Div(
-                        [
-                            html.Label("Select Metrics to Plot:", style={"color": "#B0B0B0"}),
-                            dcc.Dropdown(
-                                id="available-metrics-selector",
-                                options=[],
-                                value=[],
-                                multi=True,
-                                style={
-                                    "backgroundColor": "#333333",
-                                    "color": "#E0E0E0",
-                                },
-                            ),
-                        ],
-                        style={"width": "80%", "margin": "auto", "padding": "10px"},
-                    ),
-                    # --- Regression Option ---
-                    html.Div(
-                        [
-                            dcc.Checklist(
-                                id="linear-regression-checkbox",
-                                options=[
-                                    {"label": "Show Linear Regression", "value": "show_regression"}
-                                ],
-                                value=[],
-                                style={"color": "#B0B0B0"},
-                            ),
-                        ],
-                        style={"width": "80%", "margin": "auto", "padding": "10px"},
-                    ),
-                    # --- Main Graph ---
-                    dcc.Graph(id="live-update-graph"),
                     html.Hr(style={"borderColor": "#555555"}),
                     # --- Action Buttons ---
                     html.Div(
@@ -233,15 +157,6 @@ app.layout = html.Div(
                     ),
                     # --- Output Sections ---
                     html.Div(id="standard-is-output", style={"marginTop": "20px"}),
-                    html.H2(
-                        "Selected Metrics Statistics:",
-                        style={
-                            "color": "#E0E0E0",
-                            "marginTop": "20px",
-                            "textAlign": "center",
-                        },
-                    ),
-                    html.Div(id="statistics-output", style={"color": "#E0E0E0"}),
                 ],
             ),
         ),
@@ -304,8 +219,6 @@ def on_ticker_submit(n_submit, ticker):
 @app.callback(
     [
         Output("status-output", "children", allow_duplicate=True),
-        Output("available-metrics-selector", "options"),
-        Output("available-metrics-selector", "value"),
         Output("current-df-store", "data"),
         Output("all-plottable-metrics-store", "data"),
         Output("standard-is-store", "data"),
@@ -342,7 +255,7 @@ def on_ticker_change(ticker_upper):
             status_message = html.P(
                 f"No data retrieved for {ticker_upper}.", style={"color": "orange"}
             )
-            return status_message, [], [], None, [], None, None, {}, [], None
+            return status_message, None, [], None, None, {}, [], None
         
         # For backward compatibility, create df_merged (all metrics)
         # This combines income statement with other available metrics
@@ -411,19 +324,8 @@ def on_ticker_change(ticker_upper):
         status_message = html.Div(
             [
                 html.P(f"Company: {info['title']} (CIK: {info['cik']})"),
-                html.P(f"Data loaded for {ticker_upper}. Select metrics to plot."),
+                html.P(f"Data loaded for {ticker_upper}."),
             ]
-        )
-
-        # Correctly filter the initial view to show only standardized metrics by default
-        filtered_options, current_selected_metrics = _apply_all_filters(
-            df_merged,
-            all_plottable_metrics,
-            "", # No text filter initially
-            ["standardized_only"], # Checkbox is checked by default
-            [], # No fill rate filter initially
-            [], # No metrics are selected yet
-            standard_metrics,
         )
         # Safely convert DataFrames to JSON
         # Empty DataFrames can still be converted to JSON (they'll just have empty data arrays)
@@ -444,8 +346,6 @@ def on_ticker_change(ticker_upper):
         
         return (
             status_message,
-            filtered_options,
-            current_selected_metrics,
             df_merged_json,
             all_plottable_metrics,
             transposed_df_json,
@@ -460,209 +360,7 @@ def on_ticker_change(ticker_upper):
         )
         import traceback
         traceback.print_exc()  # Print full traceback for debugging
-        return status_message, [], [], None, [], None, None, {}, [], None
-
-
-def _apply_all_filters(
-    df,
-    all_metrics,
-    text_filter,
-    financial_checked,
-    fill_rate_checked,
-    current_selection,
-    standard_metrics,
-):
-    """
-    A helper function to apply the user's selected filters to the list of available metrics.
-    """
-    filtered_metrics = []
-
-    for metric_info in all_metrics:
-        metric_name = metric_info["value"]
-        fill_rate = metric_info["fill_rate"]
-
-        # Text filter
-        if text_filter and text_filter.lower() not in metric_name.lower():
-            continue
-
-        # Standardized metrics filter
-        if "standardized_only" in financial_checked:
-            if metric_name not in standard_metrics:
-                continue
-
-        # Fill rate filter
-        if "80_percent" in fill_rate_checked:
-            if fill_rate < 0.8:
-                continue
-
-        filtered_metrics.append(metric_info)
-
-    # Determine current selection based on filters
-    current_selected = []
-    if current_selection:
-        # Only include selected metrics that pass the filters
-        for metric in current_selection:
-            if any(m["value"] == metric for m in filtered_metrics):
-                current_selected.append(metric)
-
-    return filtered_metrics, current_selected
-
-
-# --- Callback to update metric options based on filters ---
-@app.callback(
-    [
-        Output("available-metrics-selector", "options", allow_duplicate=True),
-        Output("available-metrics-selector", "value", allow_duplicate=True),
-    ],
-    [
-        Input("metric-filter-input", "value"),
-        Input("fill-rate-checkbox", "value"),
-        Input("only-financial-checkbox", "value"),
-    ],
-    [
-        State("all-plottable-metrics-store", "data"),
-        State("available-metrics-selector", "value"),
-        State("standard-metrics-store", "data"),
-    ],
-    prevent_initial_call=True,
-)
-def update_metric_filters(text_filter, fill_rate_checked, financial_checked, all_metrics, current_selection, standard_metrics):
-    """
-    Updates the available metrics dropdown based on user filters.
-    """
-    if not all_metrics:
-        return [], []
-
-    filtered_options, current_selected = _apply_all_filters(
-        None,  # df not needed for filtering
-        all_metrics,
-        text_filter or "",
-        financial_checked or [],
-        fill_rate_checked or [],
-        current_selection or [],
-        standard_metrics or [],
-    )
-
-    return filtered_options, current_selected
-
-
-# --- Callback to update graph based on selected metrics ---
-@app.callback(
-    Output("live-update-graph", "figure"),
-    [
-        Input("available-metrics-selector", "value"),
-        Input("linear-regression-checkbox", "value"),
-    ],
-    [State("ticker-input", "value"), State("current-df-store", "data")],
-)
-def update_graph(selected_metrics, regression_checked, ticker, current_df_json):
-    """
-    Updates the main graph based on the selected metrics and regression option.
-    """
-    import statsmodels.api as sm
-
-    if not current_df_json:
-        fig = go.Figure()
-        fig.update_layout(
-            title="No data loaded. Please enter a ticker.",
-            template="plotly_dark",
-            paper_bgcolor="#222222",
-            plot_bgcolor="#222222",
-        )
-        return fig
-
-    try:
-        # Handle both string and dict formats from Dash Store
-        if isinstance(current_df_json, str):
-            df = pd.read_json(io.StringIO(current_df_json), orient="split")
-        elif isinstance(current_df_json, dict):
-            df = pd.DataFrame(
-                data=current_df_json.get("data", []),
-                columns=current_df_json.get("columns", []),
-                index=current_df_json.get("index", [])
-            )
-        else:
-            df = pd.DataFrame()
-    except (ValueError, TypeError, KeyError, json.JSONDecodeError):
-        # Invalid JSON or empty data
-        fig = go.Figure()
-        fig.update_layout(
-            title="Error loading data. Please try again.",
-            template="plotly_dark",
-            paper_bgcolor="#222222",
-            plot_bgcolor="#222222",
-        )
-        return fig
-    
-    if df.empty or "end" not in df.columns:
-        fig = go.Figure()
-        fig.update_layout(
-            title="No data available to plot.",
-            template="plotly_dark",
-            paper_bgcolor="#222222",
-            plot_bgcolor="#222222",
-        )
-        return fig
-
-    fig = go.Figure()
-    
-    # Handle case where selected_metrics might be None or empty
-    if not selected_metrics:
-        fig.update_layout(
-            title="Please select metrics to plot.",
-            template="plotly_dark",
-            paper_bgcolor="#222222",
-            plot_bgcolor="#222222",
-        )
-        return fig
-    
-    for metric in selected_metrics:
-        if metric and metric in df.columns:
-            # Create a temporary dataframe for plotting to handle potential missing values
-            plot_df = df[["end", metric]].dropna()
-            if not plot_df.empty:
-                # Ensure 'end' is a datetime object for proper plotting
-                plot_df["end"] = pd.to_datetime(plot_df["end"])
-                fig.add_trace(
-                    go.Scatter(x=plot_df["end"], y=plot_df[metric], mode="lines+markers", name=metric)
-                )
-
-                if "show_regression" in regression_checked:
-                    # For regression on time series, it's better to use numeric values for the x-axis.
-                    # We convert dates to ordinal numbers for the regression model.
-                    plot_df["end_ordinal"] = plot_df["end"].apply(lambda date: date.toordinal())
-                    X = sm.add_constant(plot_df["end_ordinal"])
-                    model = sm.OLS(plot_df[metric], X).fit()
-                    fig.add_trace(
-                        go.Scatter(
-                            x=plot_df["end"], # Plot against the actual dates
-                            y=model.predict(X),
-                            mode="lines",
-                            name=f"{metric} (Regression)",
-                            line=dict(dash="dash"),
-                        )
-                    )
-
-    # Only update layout if we have traces
-    if len(fig.data) == 0:
-        fig.update_layout(
-            title="No metrics selected or no data available.",
-            template="plotly_dark",
-            paper_bgcolor="#222222",
-            plot_bgcolor="#222222",
-        )
-    else:
-        ticker_display = ticker.upper() if ticker else "Company"
-        fig.update_layout(
-            title=f"Financial Metrics for {ticker_display}",
-            xaxis_title="End Date",
-            yaxis_title="Value",
-            hovermode="x unified",
-            template="plotly_dark",
-            paper_bgcolor="#222222",
-            plot_bgcolor="#222222",
-        )
-    return fig
+        return status_message, None, [], None, None, {}, [], None
 
 
 # --- NEW: Callback to display key ratio cards ---
@@ -704,30 +402,49 @@ def update_key_ratios_display(ratios_json, ticker):
 
         cards = []
         for ratio_name in ratios_df.columns:
-            # The data is sorted from most recent to oldest.
+            # Get the series for this ratio
             series = ratios_df[ratio_name].dropna()
             if series.empty:
                 continue
 
-            # The latest value is the first item in the series.
             try:
-                latest_value = float(series.iloc[0])
-            except (ValueError, IndexError, TypeError):
-                continue
-
-            # For the sparkline, we want to show time moving left-to-right (oldest to newest).
-            # So, we reverse the series for plotting.
-            try:
-                sparkline_series = series.iloc[::-1].values.tolist()
+                # Ensure chronological order: sort by index to get oldest to newest (left to right)
+                # Try to parse index as dates for proper sorting
+                try:
+                    # Convert index to datetime if possible
+                    date_index = pd.to_datetime(series.index, errors='coerce')
+                    if not date_index.isna().all():
+                        # Sort by date ascending (oldest first, newest last)
+                        sorted_indices = date_index.sort_values().index
+                        sorted_series = series.reindex(sorted_indices)
+                    else:
+                        # Index is not dates, try sorting as strings/numbers
+                        # Sort index in ascending order (assumes oldest is smaller)
+                        sorted_series = series.sort_index(ascending=True)
+                except (ValueError, TypeError, AttributeError):
+                    # Fallback: sort index ascending
+                    sorted_series = series.sort_index(ascending=True)
                 
-                if len(sparkline_series) == 0:
+                # After sorting, the series is now oldest to newest
+                # Get the latest value (last item = newest)
+                latest_value = float(sorted_series.iloc[-1])
+                
+                # Get values in chronological order (oldest to newest) for sparkline
+                sparkline_values = sorted_series.values.tolist()
+                
+                if len(sparkline_values) == 0:
                     continue
 
-                # Create a sparkline figure
+                # Create x-axis positions (0, 1, 2, ...) for left-to-right display
+                # Position 0 = oldest (left), last position = newest (right)
+                x_positions = list(range(len(sparkline_values)))
+
+                # Create a sparkline figure with data ordered left-to-right (oldest to newest)
+                # The first value in sparkline_values is oldest, last value is newest
                 sparkline = go.Figure(
                     go.Scatter(
-                        x=list(range(len(sparkline_series))),
-                        y=sparkline_series,
+                        x=x_positions,
+                        y=sparkline_values,
                         mode="lines",
                         line=dict(color="#007BFF", width=2),
                         fill="tozeroy",
@@ -739,7 +456,11 @@ def update_key_ratios_display(ratios_json, ticker):
                     paper_bgcolor="rgba(0,0,0,0)",
                     plot_bgcolor="rgba(0,0,0,0)",
                     margin=dict(l=0, r=0, t=0, b=0),
-                    xaxis=dict(visible=False),
+                    xaxis=dict(
+                        visible=False,
+                        range=[0, len(sparkline_values) - 1],  # Explicitly set range: 0 (left) = oldest, max (right) = newest
+                        autorange=False,
+                    ),
                     yaxis=dict(visible=False),
                     height=50,
                 )
@@ -759,7 +480,14 @@ def update_key_ratios_display(ratios_json, ticker):
                         ]
                     ),
                 ]
-                cards.append(dbc.Col(dbc.Card(card_content, color="dark", outline=True), width=4))
+                # Add vertical margin to cards for spacing between rows
+                cards.append(
+                    dbc.Col(
+                        dbc.Card(card_content, color="dark", outline=True), 
+                        width=4,
+                        style={"marginBottom": "10px"}
+                    )
+                )
             except Exception:
                 # Skip this ratio if there's an error creating the card
                 continue
@@ -767,7 +495,8 @@ def update_key_ratios_display(ratios_json, ticker):
         if not cards:
             return html.Div("No ratio data available.", style={"color": "#B0B0B0", "textAlign": "center"})
         
-        return dbc.Row(cards)
+        # Return Row with proper spacing between cards
+        return dbc.Row(cards, style={"marginBottom": "10px"})
     except Exception as e:
         # Catch any unexpected errors and return empty list
         return html.Div(
@@ -1343,63 +1072,6 @@ def display_standard_is(
         ],
         style={"marginTop": "20px"},
     )
-
-
-# --- Callback to update statistics display ---
-@app.callback(
-    Output("statistics-output", "children"),
-    [
-        Input("available-metrics-selector", "value"),
-        Input("current-df-store", "data"),
-    ],
-)
-def update_statistics(selected_metrics, current_df_json):
-    """
-    Updates the statistics display based on selected metrics.
-    """
-    if not selected_metrics or not current_df_json:
-        return html.Div("Select metrics to view statistics.", style={"color": "#B0B0B0"})
-
-    try:
-        # Handle both string and dict formats from Dash Store
-        if isinstance(current_df_json, str):
-            df = pd.read_json(io.StringIO(current_df_json), orient="split")
-        elif isinstance(current_df_json, dict):
-            df = pd.DataFrame(
-                data=current_df_json.get("data", []),
-                columns=current_df_json.get("columns", []),
-                index=current_df_json.get("index", [])
-            )
-        else:
-            df = pd.DataFrame()
-    except (ValueError, TypeError, KeyError, json.JSONDecodeError):
-        return html.Div("Error loading data.", style={"color": "#FF6B6B"})
-
-    if df.empty:
-        return html.Div("No data available.", style={"color": "#B0B0B0"})
-
-    stats_list = []
-    for metric in selected_metrics:
-        if metric in df.columns:
-            series = df[metric].dropna()
-            if not series.empty:
-                stats_list.append(
-                    html.Div(
-                        [
-                            html.H4(metric, style={"color": "#E0E0E0"}),
-                            html.P(f"Mean: ${series.mean():,.2f}", style={"color": "#B0B0B0"}),
-                            html.P(f"Std Dev: ${series.std():,.2f}", style={"color": "#B0B0B0"}),
-                            html.P(f"Min: ${series.min():,.2f}", style={"color": "#B0B0B0"}),
-                            html.P(f"Max: ${series.max():,.2f}", style={"color": "#B0B0B0"}),
-                        ],
-                        style={"margin": "10px", "padding": "10px", "border": "1px solid #555555"},
-                    )
-                )
-
-    if not stats_list:
-        return html.Div("No statistics available for selected metrics.", style={"color": "#B0B0B0"})
-
-    return html.Div(stats_list)
 
 
 # --- Callback to handle Excel export ---
