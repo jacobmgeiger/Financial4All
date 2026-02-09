@@ -92,14 +92,14 @@ class IncomeStatement:
         """Get standard mapping (backward compatibility)."""
         return self._get_standard_mapping()
 
-    # Standard order for income statement metrics (matching user's reference)
+    # Standard order for income statement metrics (matching user's reference).
+    # Operating Expenses omitted: it is R&D + SG&A and redundant for display.
     METRIC_ORDER = [
         "Revenue",  # Primary revenue metric (no duplicates)
         "Cost of Revenue",
         "Gross Profit",
         "R&D Expenses",
         "SG&A Expenses",
-        "Operating Expenses",
         "Operating Income",
         "Interest Income",
         "Interest Expense",
@@ -1295,6 +1295,14 @@ class IncomeStatement:
                     "Removed 'Interest Income (Net)' - separate components and calculated 'Other income (expense), net' exist"
                 )
 
+        # Remove "Operating Expenses" when R&D and SG&A are present (redundant: Operating Expenses = R&D + SG&A)
+        if "Operating Expenses" in df_cleaned.columns:
+            if "R&D Expenses" in df_cleaned.columns and "SG&A Expenses" in df_cleaned.columns:
+                df_cleaned = df_cleaned.drop(columns=["Operating Expenses"])
+                log.debug(
+                    "Removed 'Operating Expenses' - redundant with R&D Expenses + SG&A Expenses"
+                )
+
         return df_cleaned
 
     def _reorder_dataframe_columns(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -1345,17 +1353,20 @@ class IncomeStatement:
                     df_calc.loc[mask, "Revenue"] - df_calc.loc[mask, "Cost of Revenue"]
                 )
 
-        # Operating Income = Gross Profit - Operating Expenses
-        if "Operating Income" in df_calc.columns:
+        # Operating Income = Gross Profit - Operating Expenses (or R&D + SG&A when OpEx column not shown)
+        if "Operating Income" in df_calc.columns and "Gross Profit" in df_calc.columns:
             mask = df_calc["Operating Income"].isna()
-            if (
-                "Gross Profit" in df_calc.columns
-                and "Operating Expenses" in df_calc.columns
-            ):
-                df_calc.loc[mask, "Operating Income"] = (
-                    df_calc.loc[mask, "Gross Profit"]
-                    - df_calc.loc[mask, "Operating Expenses"]
-                )
+            if mask.any():
+                if "Operating Expenses" in df_calc.columns:
+                    df_calc.loc[mask, "Operating Income"] = (
+                        df_calc.loc[mask, "Gross Profit"]
+                        - df_calc.loc[mask, "Operating Expenses"]
+                    )
+                elif "R&D Expenses" in df_calc.columns and "SG&A Expenses" in df_calc.columns:
+                    df_calc.loc[mask, "Operating Income"] = (
+                        df_calc.loc[mask, "Gross Profit"]
+                        - (df_calc.loc[mask, "R&D Expenses"] + df_calc.loc[mask, "SG&A Expenses"])
+                    )
 
         # PRIORITY 1: If Income Before Taxes was extracted directly, use it and calculate backwards
         # Income Before Taxes (extracted) -> Other income (expense), net = Income Before Taxes - Operating Income

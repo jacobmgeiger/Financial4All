@@ -846,12 +846,7 @@ class ExcelExporter:
                 col_letter,
                 metric_to_row,
                 ["Gross Profit"],
-                [
-                    "Operating Expenses",
-                    "R&D Expenses",
-                    "SG&A Expenses",
-                    "Other Operating Expenses",
-                ],
+                ["R&D Expenses", "SG&A Expenses"],
                 "-",
             ),
             "Other income (expense), net": lambda: self._build_formula(
