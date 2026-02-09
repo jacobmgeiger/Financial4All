@@ -51,6 +51,8 @@ class IncomeStatement:
         "Income Before Taxes": "income_before_tax",  # Try to extract first, calculate if not available
         "Taxes": "income_tax_expense",
         "Net Income": "net_income",
+        "Outstanding Shares Basic": "weighted_average_shares_outstanding_basic",
+        "Outstanding Shares Diluted": "weighted_average_shares_outstanding_diluted",
         "Basic EPS": "earnings_per_share_basic",
         "Diluted EPS": "earnings_per_share_diluted",
     }
@@ -107,6 +109,8 @@ class IncomeStatement:
         "Income Before Taxes",  # Extract first, calculate if not available: Operating Income + Other income (expense), net
         "Taxes",
         "Net Income",
+        "Outstanding Shares Basic",
+        "Outstanding Shares Diluted",
         "Basic EPS",
         "Diluted EPS",
     ]
@@ -641,6 +645,23 @@ class IncomeStatement:
 
         return all_facts_by_concept
 
+    def _is_valid_unit_for_metric(self, unit: str, std_name: str) -> bool:
+        """
+        Check if a unit is valid for a given metric.
+        
+        Args:
+            unit: Unit string (e.g., "USD", "shares")
+            std_name: Standardized metric name
+            
+        Returns:
+            True if the unit is valid for this metric
+        """
+        # Outstanding shares metrics use "shares" units, not "USD"
+        if std_name in ("Outstanding Shares Basic", "Outstanding Shares Diluted"):
+            return unit == "shares" or unit.startswith("shares")
+        # All other metrics use USD units
+        return unit == "USD" or unit.startswith("USD")
+
     def _resolve_concepts_by_period(
         self,
         std_name: str,
@@ -657,7 +678,7 @@ class IncomeStatement:
         4. For each period, select best fact based on priority:
            - Concept priority (earlier in list = higher priority)
            - Form type (10-K preferred over 10-Q)
-           - Unit (USD preferred)
+           - Unit (USD for most metrics, shares for outstanding shares)
            - Filing date (more recent preferred)
         5. Cross-validate with other metrics to prevent misclassification
 
@@ -682,34 +703,34 @@ class IncomeStatement:
             non_dimensional_facts = [f for f in facts if not f.dimensions]
             dimensional_facts = [f for f in facts if f.dimensions]
 
-            # Tier 1: Strict filter (annual 10-K, USD, no dimensions) - PREFERRED
+            # Tier 1: Strict filter (annual 10-K, valid unit, no dimensions) - PREFERRED
             tier1_facts = [
                 f
                 for f in non_dimensional_facts
-                if f.is_annual_10k() and (f.unit == "USD" or f.unit.startswith("USD"))
+                if f.is_annual_10k() and self._is_valid_unit_for_metric(f.unit, std_name)
             ]
 
-            # Tier 2: Lenient filter (annual, USD, no dimensions, any form)
+            # Tier 2: Lenient filter (annual, valid unit, no dimensions, any form)
             if not tier1_facts:
                 tier2_facts = [
                     f
                     for f in non_dimensional_facts
                     if f.period.period_type == PeriodType.DURATION
                     and f.period.is_annual()
-                    and (f.unit == "USD" or f.unit.startswith("USD"))
+                    and self._is_valid_unit_for_metric(f.unit, std_name)
                 ]
                 filtered_facts_by_concept[concept] = tier2_facts
             else:
                 filtered_facts_by_concept[concept] = tier1_facts
 
-            # Tier 3: Very lenient (any annual period, USD, no dimensions) - fallback
+            # Tier 3: Very lenient (any annual period, valid unit, no dimensions) - fallback
             if not filtered_facts_by_concept[concept]:
                 tier3_facts = [
                     f
                     for f in non_dimensional_facts
                     if f.period.period_type == PeriodType.DURATION
                     and f.period.is_annual()
-                    and (f.unit == "USD" or f.unit.startswith("USD"))
+                    and self._is_valid_unit_for_metric(f.unit, std_name)
                 ]
                 filtered_facts_by_concept[concept] = tier3_facts
 
@@ -721,7 +742,7 @@ class IncomeStatement:
                     for f in dimensional_facts
                     if f.period.period_type == PeriodType.DURATION
                     and f.period.is_annual()
-                    and (f.unit == "USD" or f.unit.startswith("USD"))
+                    and self._is_valid_unit_for_metric(f.unit, std_name)
                 ]
                 if tier4_facts:
                     # For dimensional facts, prefer those with common total/consolidated dimensions
@@ -770,9 +791,7 @@ class IncomeStatement:
                     x[0],  # Concept priority (lower = higher priority)
                     0 if not x[1].dimensions else 1,  # Prefer non-dimensional facts
                     0 if x[1].form == "10-K" else 1,  # Prefer 10-K
-                    0
-                    if (x[1].unit == "USD" or x[1].unit.startswith("USD"))
-                    else 1,  # Prefer USD
+                    0 if self._is_valid_unit_for_metric(x[1].unit, std_name) else 1,  # Prefer valid unit
                     -(
                         x[1].filed.timestamp() if x[1].filed else float("-inf")
                     ),  # Prefer more recent (negated for descending)

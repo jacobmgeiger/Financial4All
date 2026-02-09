@@ -36,6 +36,8 @@ METRIC_DEFINITIONS = {
     "Income Before Taxes": "A company's total profit before any income taxes are deducted. It is a measure of a company's profitability.",
     "Taxes": "The amount of money a company pays to the government as income tax.",
     "Net Income": "The company's total profit after all expenses, including taxes, have been deducted from revenue. Also known as the 'bottom line'.",
+    "Outstanding Shares Basic": "The weighted average number of common shares outstanding during the period, used to calculate basic earnings per share.",
+    "Outstanding Shares Diluted": "The weighted average number of common shares outstanding during the period, adjusted for all dilutive potential common shares, used to calculate diluted earnings per share.",
     "Basic EPS": "Basic Earnings Per Share. A company's net income divided by the number of its outstanding common shares. It shows how much profit is available to each shareholder.",
     "Diluted EPS": "Diluted Earnings Per Share. A more conservative measure of earnings per share that includes the impact of all potential shares that could be created, such as from stock options and convertible bonds.",
 }
@@ -863,7 +865,7 @@ def display_standard_is(
                         else:
                             display_value = f"{eps_value:.2f}"
                     else:
-                        # Scale the value by the detected scale factor
+                        # Scale the value by the detected scale factor (includes shares)
                         scaled_value = float(value) / scale_factor
                         
                         # Round to whole numbers (no decimals) for all non-EPS values

@@ -391,6 +391,24 @@ def _get_builtin_groups_cached() -> List[SynonymGroup]:
             category='income_statement'
         ),
         SynonymGroup(
+            name='weighted_average_shares_outstanding_basic',
+            synonyms=[
+                'WeightedAverageNumberOfSharesOutstandingBasic',
+                'WeightedAverageNumberOfSharesOutstanding',
+            ],
+            description='Weighted average number of shares outstanding, basic',
+            category='income_statement'
+        ),
+        SynonymGroup(
+            name='weighted_average_shares_outstanding_diluted',
+            synonyms=[
+                'WeightedAverageNumberOfDilutedSharesOutstanding',
+                'WeightedAverageNumberDilutedSharesOutstanding',
+            ],
+            description='Weighted average number of shares outstanding, diluted',
+            category='income_statement'
+        ),
+        SynonymGroup(
             name='depreciation_and_amortization',
             synonyms=[
                 'DepreciationAndAmortization',

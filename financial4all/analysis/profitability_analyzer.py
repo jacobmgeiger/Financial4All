@@ -53,9 +53,21 @@ class ProfitabilityAnalyzer:
             revenue_growth = ProfitabilityAnalyzer._calculate_yoy_growth(
                 is_df["Revenue"], date_columns
             )
-            ordered_metrics.append(("Revenue", revenue_growth))
+            ordered_metrics.append(("Revenue Y/Y % Change", revenue_growth))
             # Store growth rates for Trends section calculation
             revenue_growth_rates = revenue_growth
+        
+        # Add Y/Y % change for Outstanding Shares Basic and Diluted (alongside Revenue)
+        shares_growth_rates = {}  # Store growth rates for Trends section calculation
+        shares_metrics = ["Outstanding Shares Basic", "Outstanding Shares Diluted"]
+        for shares_metric in shares_metrics:
+            if shares_metric in is_df.columns:
+                shares_growth = ProfitabilityAnalyzer._calculate_yoy_growth(
+                    is_df[shares_metric], date_columns
+                )
+                ordered_metrics.append((f"{shares_metric} Y/Y % Change", shares_growth))
+                # Store growth rates for Trends section calculation
+                shares_growth_rates[shares_metric] = shares_growth
         
         # 2. Expenses as % of Revenue section
         # Add section header row (empty values)
@@ -131,7 +143,35 @@ class ProfitabilityAnalyzer:
                     # No older period to compare to (oldest period)
                     revenue_trend_diff[date_col] = np.nan
             
-            ordered_metrics.append(("Revenue", revenue_trend_diff))
+            ordered_metrics.append(("Revenue Y/Y % Change", revenue_trend_diff))
+        
+        # Add "Change of Y/Y % Change" for Outstanding Shares Basic and Diluted
+        # This calculates the difference between consecutive Y/Y % change values
+        for shares_metric, shares_growth_rates_dict in shares_growth_rates.items():
+            # Calculate the difference between consecutive growth rates (trend difference)
+            shares_trend_diff = {}
+            for i, date_col in enumerate(date_columns):
+                current_growth = shares_growth_rates_dict.get(date_col)
+                # Check if there's a next (older) period to compare to
+                if i + 1 < len(date_columns):
+                    next_date_col = date_columns[i + 1]
+                    next_growth = shares_growth_rates_dict.get(next_date_col)
+                    
+                    if current_growth is not None and next_growth is not None and not pd.isna(current_growth) and not pd.isna(next_growth):
+                        try:
+                            # Difference = current growth rate - previous growth rate
+                            # Both are already decimals (e.g., 0.10 for 10%)
+                            diff = float(current_growth) - float(next_growth)
+                            shares_trend_diff[date_col] = diff
+                        except (ValueError, TypeError):
+                            shares_trend_diff[date_col] = np.nan
+                    else:
+                        shares_trend_diff[date_col] = np.nan
+                else:
+                    # No older period to compare to (oldest period)
+                    shares_trend_diff[date_col] = np.nan
+            
+            ordered_metrics.append((f"{shares_metric} Change of Y/Y % Change", shares_trend_diff))
         
         # Calculate Y/Y change for percentage metrics (absolute difference: this year's % - last year's %)
         # These are calculated from the percentage values stored above
