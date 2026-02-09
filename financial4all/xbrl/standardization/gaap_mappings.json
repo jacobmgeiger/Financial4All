@@ -34,19 +34,8 @@
   "Capital Expenditures": [
     "CapitalExpenditures",
     "PaymentsToAcquireProductiveAssets",
-    "PaymentsToAcquireOtherProductiveAssets",
-    "PaymentsToAcquireOtherPropertyPlantAndEquipment",
     "PaymentsToAcquirePropertyPlantAndEquipment",
-    "PurchaseOfPropertyPlantAndEquipment",
-    "PaymentsToAcquireMachineryAndEquipment",
-    "PaymentsToAcquireBuildings",
-    "PaymentsToAcquireFurnitureAndFixtures",
-    "PaymentsToAcquireRealEstate",
-    "PaymentsToAcquireLand",
-    "PaymentsToAcquireLandHeldForUse",
-    "PaymentsToAcquireOilAndGasPropertyAndEquipment",
-    "PaymentsToAcquireIntangibleAssets",
-    "PaymentsToAcquireSoftware"
+    "PurchaseOfPropertyPlantAndEquipment"
   ],
   "Cash and Cash Equivalents": [
     "Cash",

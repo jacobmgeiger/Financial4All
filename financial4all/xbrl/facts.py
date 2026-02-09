@@ -70,20 +70,15 @@ class FactSet:
     Uses indexes for efficient O(1) lookups by concept, period, or concept-period combination.
     """
     
-    def __init__(self, facts: Optional[List[Fact]] = None, entity_info: Optional[EntityInfo] = None, normalize_units: bool = True):
+    def __init__(self, facts: Optional[List[Fact]] = None, entity_info: Optional[EntityInfo] = None):
         """
         Initialize FactSet.
         
         Args:
             facts: Optional list of facts to initialize with
             entity_info: Optional entity information extracted from DEI facts
-            normalize_units: Whether to normalize units (default: True)
         """
-        # Normalize units before storing facts
-        if facts and normalize_units:
-            self.facts: List[Fact] = self.normalize_units(facts)
-        else:
-            self.facts: List[Fact] = facts or []
+        self.facts: List[Fact] = facts or []
         self._entity_info: Optional[EntityInfo] = entity_info
         
         # Indexes for O(1) lookups
@@ -147,25 +142,25 @@ class FactSet:
     def filter_by_form(self, form: str) -> "FactSet":
         """Filter facts by form type."""
         if not form:
-            return FactSet([], entity_info=self._entity_info, normalize_units=False)
+            return FactSet([], entity_info=self._entity_info)
         filtered = [f for f in self.facts if f.form == form]
-        return FactSet(filtered, entity_info=self._entity_info, normalize_units=False)
+        return FactSet(filtered, entity_info=self._entity_info)
     
     def filter_by_concept(self, concept: str) -> "FactSet":
         """Filter facts by concept name."""
         if not concept:
-            return FactSet([], entity_info=self._entity_info, normalize_units=False)
+            return FactSet([], entity_info=self._entity_info)
         # Use index for O(1) lookup if available
         if concept in self._concept_index:
             filtered = self._concept_index[concept]
         else:
             filtered = [f for f in self.facts if f.concept == concept]
-        return FactSet(filtered, entity_info=self._entity_info, normalize_units=False)
+        return FactSet(filtered, entity_info=self._entity_info)
     
     def filter_annual_10k(self) -> "FactSet":
         """Filter to only annual 10-K facts."""
         filtered = [f for f in self.facts if f.is_annual_10k()]
-        return FactSet(filtered, entity_info=self._entity_info, normalize_units=False)
+        return FactSet(filtered, entity_info=self._entity_info)
     
     def filter_annual(self) -> "FactSet":
         """
@@ -180,7 +175,7 @@ class FactSet:
             and f.period.is_annual()
             and (not f.frame or "Q" not in str(f.frame))  # Exclude quarterly frames
         ]
-        return FactSet(filtered, entity_info=self._entity_info, normalize_units=False)
+        return FactSet(filtered, entity_info=self._entity_info)
     
     def get_unique_concepts(self) -> Set[str]:
         """Get set of unique concept names."""
@@ -487,7 +482,7 @@ class FactSet:
                 log.debug(f"Error filtering fact by period range: {e}")
                 continue
         
-        return FactSet(filtered, entity_info=self._entity_info, normalize_units=False)
+        return FactSet(filtered, entity_info=self._entity_info)
     
     def get_facts_by_period(self, period_end: Union[datetime, date, str]) -> List[Fact]:
         """
@@ -605,8 +600,8 @@ class FactSet:
         Normalize units in facts by converting to base units.
         
         Handles unit multipliers (thousands, millions, billions) and converts
-        all values to base unit (USD, shares, etc.). Also handles unit scale
-        patterns like "USD (thousands)", "USD (millions)", etc.
+        all values to base unit (USD, shares, etc.). Preserves original unit
+        information in fact metadata.
         
         Args:
             facts: List of facts to normalize
@@ -614,22 +609,11 @@ class FactSet:
         Returns:
             List of facts with normalized units and values
         """
-        # Detect multipliers from unit strings - expanded patterns
+        # Detect multipliers from unit strings
         multiplier_patterns = {
-            # Explicit scale indicators
-            "(thousands)": 1e3,
-            "(millions)": 1e6,
-            "(billions)": 1e9,
-            # Text patterns
             "thousands": 1e3,
             "millions": 1e6,
             "billions": 1e9,
-            # Abbreviations
-            "thousand": 1e3,
-            "million": 1e6,
-            "billion": 1e9,
-            # Common XBRL unit patterns
-            "usd/pure": 1.0,  # Pure USD, no multiplier
         }
         
         normalized_facts = []
@@ -637,56 +621,25 @@ class FactSet:
             normalized_fact = fact  # Start with original
             
             # Check if unit contains multiplier information
-            unit_lower = fact.unit.lower().strip()
+            unit_lower = fact.unit.lower()
             multiplier = 1.0
-            matched_pattern = None
             
-            # Try patterns in order (longer patterns first to avoid partial matches)
-            for pattern, mult in sorted(multiplier_patterns.items(), key=lambda x: -len(x[0])):
+            for pattern, mult in multiplier_patterns.items():
                 if pattern in unit_lower:
                     multiplier = mult
-                    matched_pattern = pattern
                     break
             
             # If multiplier found and value is numeric, apply it
             if multiplier != 1.0 and isinstance(fact.value, (int, float)):
                 # Extract base unit (remove multiplier text)
                 base_unit = fact.unit
-                if matched_pattern:
-                    # Remove the matched pattern and clean up
-                    base_unit = base_unit.replace(matched_pattern, "", 1)
-                    # Clean up parentheses and extra spaces
-                    base_unit = base_unit.replace("()", "").strip()
-                    base_unit = base_unit.replace("  ", " ").strip()
-                    # Remove leading/trailing parentheses if they're now empty
-                    if base_unit.startswith("(") and base_unit.endswith(")"):
-                        base_unit = base_unit[1:-1].strip()
-                
-                # Ensure we have a valid base unit
-                if not base_unit or base_unit == "":
-                    # Default to USD if unit was something like "(millions)"
-                    base_unit = "USD"
-                elif "usd" not in base_unit.lower() and "share" not in base_unit.lower():
-                    # If base unit doesn't contain USD or share, prepend USD
-                    base_unit = f"USD/{base_unit}" if "/" not in base_unit else base_unit
-                
-                original_value = fact.value
-                normalized_value = float(fact.value) * multiplier
-                
-                # Log normalization for CapEx-related concepts (for debugging)
-                if "capex" in fact.concept.lower() or "capital" in fact.concept.lower() or "property" in fact.concept.lower():
-                    from financial4all.core import log
-                    log.debug(
-                        f"Unit normalization: {fact.concept} - "
-                        f"original: {original_value} ({fact.unit}) -> "
-                        f"normalized: {normalized_value} ({base_unit}), "
-                        f"multiplier: {multiplier}"
-                    )
+                for pattern in multiplier_patterns.keys():
+                    base_unit = base_unit.replace(pattern, "").replace(" ", "").strip()
                 
                 normalized_fact = Fact(
                     concept=fact.concept,
-                    value=normalized_value,
-                    unit=base_unit,
+                    value=float(fact.value) * multiplier,
+                    unit=base_unit if base_unit else fact.unit,
                     period=fact.period,
                     dimensions=fact.dimensions,
                     form=fact.form,
@@ -697,76 +650,6 @@ class FactSet:
             normalized_facts.append(normalized_fact)
         
         return normalized_facts
-    
-    def validate_unit_consistency(self, concept: str) -> Tuple[bool, Optional[str], Dict[str, int]]:
-        """
-        Validate that all facts for a concept use consistent units.
-        
-        Args:
-            concept: XBRL concept name to validate
-            
-        Returns:
-            Tuple of (is_consistent, warning_message, unit_counts)
-            - is_consistent: True if all facts use same base unit
-            - warning_message: Warning message if inconsistent, None otherwise
-            - unit_counts: Dictionary mapping unit -> count of facts using that unit
-        """
-        facts = self.get_by_concept(concept)
-        if not facts:
-            return True, None, {}
-        
-        # Group facts by normalized unit (base unit without scale)
-        unit_counts = {}
-        for fact in facts:
-            base_unit = self._extract_base_unit(fact.unit)
-            unit_counts[base_unit] = unit_counts.get(base_unit, 0) + 1
-        
-        # Check if more than one base unit is used
-        if len(unit_counts) > 1:
-            warning = (
-                f"Concept '{concept}' has inconsistent units: {unit_counts}. "
-                f"This may indicate data quality issues."
-            )
-            return False, warning, unit_counts
-        
-        return True, None, unit_counts
-    
-    def _extract_base_unit(self, unit: str) -> str:
-        """
-        Extract base unit from unit string, removing scale indicators.
-        
-        Args:
-            unit: Unit string (e.g., "USD (millions)", "USD", "shares")
-            
-        Returns:
-            Base unit string (e.g., "USD", "shares")
-        """
-        unit_lower = unit.lower().strip()
-        
-        # Remove scale indicators
-        scale_patterns = ["(thousands)", "(millions)", "(billions)", "thousands", "millions", "billions"]
-        base_unit = unit
-        for pattern in scale_patterns:
-            base_unit = base_unit.replace(pattern, "").replace(pattern.lower(), "")
-        
-        # Clean up
-        base_unit = base_unit.replace("()", "").strip()
-        base_unit = base_unit.replace("  ", " ").strip()
-        if base_unit.startswith("(") and base_unit.endswith(")"):
-            base_unit = base_unit[1:-1].strip()
-        
-        # Extract just the currency/measure part
-        if "/" in base_unit:
-            # For units like "USD/Pure" or "USD/Share", take the first part
-            base_unit = base_unit.split("/")[0].strip()
-        
-        # Normalize common variations
-        if "usd" in base_unit.lower() or "dollar" in base_unit.lower():
-            return "USD"
-        elif "share" in base_unit.lower():
-            return "shares"
-        
-        return base_unit if base_unit else "USD"
     
     def to_dict(self) -> Dict[str, List[Dict[str, Any]]]:
         """

@@ -131,7 +131,10 @@ app.layout = html.Div(
                     # --- Unit Scale Selection ---
                     html.Div(
                         [
-                            html.Label("Display Units:", style={"color": "#B0B0B0", "marginRight": "10px"}),
+                            html.Label(
+                                "Display Units:",
+                                style={"color": "#B0B0B0", "marginRight": "10px"},
+                            ),
                             dcc.Dropdown(
                                 id="unit-scale-dropdown",
                                 options=[
@@ -246,45 +249,44 @@ def on_ticker_change(ticker_upper):
         # Use the new Company API directly
         company = Company(ticker_upper)
         financials = company.get_financials()
-        
+
         income_statement = financials["income_statement"]
         balance_sheet = financials["balance_sheet"]
         cash_flow = financials["cash_flow"]
-        
+
         # Get income statement DataFrame
         standard_is_df = income_statement.to_dataframe()
-        
+
         if standard_is_df is None or standard_is_df.empty:
             status_message = html.P(
                 f"No data retrieved for {ticker_upper}.", style={"color": "orange"}
             )
             return status_message, None, [], None, None, {}, [], None
-        
+
         # For backward compatibility, create df_merged (all metrics)
         # This combines income statement with other available metrics
         df_merged = standard_is_df.copy()
-        
+
         # Add balance sheet and cash flow metrics if available
         if balance_sheet:
             bs_df = balance_sheet.to_dataframe()
             if not bs_df.empty:
-                df_merged = df_merged.join(bs_df, how='outer', rsuffix='_bs')
-        
+                df_merged = df_merged.join(bs_df, how="outer", rsuffix="_bs")
+
         if cash_flow:
-            # Pass balance sheet and income statement for CapEx fallback calculation and validation
-            bs_df_for_capex = balance_sheet.to_dataframe() if balance_sheet else None
-            is_df_for_capex = standard_is_df if income_statement else None
-            cf_df = cash_flow.to_dataframe(bs_df=bs_df_for_capex, is_df=is_df_for_capex)
+            cf_df = cash_flow.to_dataframe()
             if not cf_df.empty:
-                df_merged = df_merged.join(cf_df, how='outer', rsuffix='_cf')
-        
+                df_merged = df_merged.join(cf_df, how="outer", rsuffix="_cf")
+
         # Calculate ratios
         ratios = FinancialRatios(income_statement, balance_sheet, cash_flow)
         key_ratios_df = ratios.calculate_all_ratios()
-        
+
         # Create alternatives dict (empty for now - could be enhanced)
         alternatives = {}
-        standard_metrics = list(standard_is_df.columns) if not standard_is_df.empty else []
+        standard_metrics = (
+            list(standard_is_df.columns) if not standard_is_df.empty else []
+        )
 
         # --- Logic to determine best default formula based on non-zero count ---
         default_selections = {}
@@ -336,20 +338,32 @@ def on_ticker_change(ticker_upper):
         # Safely convert DataFrames to JSON
         # Empty DataFrames can still be converted to JSON (they'll just have empty data arrays)
         try:
-            df_merged_json = df_merged.to_json(date_format="iso", orient="split") if not df_merged.empty else None
+            df_merged_json = (
+                df_merged.to_json(date_format="iso", orient="split")
+                if not df_merged.empty
+                else None
+            )
         except Exception:
             df_merged_json = None
-        
+
         try:
-            transposed_df_json = transposed_df.to_json(date_format="iso", orient="split") if not transposed_df.empty else None
+            transposed_df_json = (
+                transposed_df.to_json(date_format="iso", orient="split")
+                if not transposed_df.empty
+                else None
+            )
         except Exception:
             transposed_df_json = None
-        
+
         try:
-            key_ratios_json = key_ratios_df.to_json(date_format="iso", orient="split") if not key_ratios_df.empty else None
+            key_ratios_json = (
+                key_ratios_df.to_json(date_format="iso", orient="split")
+                if not key_ratios_df.empty
+                else None
+            )
         except Exception:
             key_ratios_json = None
-        
+
         return (
             status_message,
             df_merged_json,
@@ -365,6 +379,7 @@ def on_ticker_change(ticker_upper):
             f"Error loading data for {ticker_upper}: {e}", style={"color": "red"}
         )
         import traceback
+
         traceback.print_exc()  # Print full traceback for debugging
         return status_message, None, [], None, None, {}, [], None
 
@@ -389,13 +404,15 @@ def update_key_ratios_display(ratios_json, ticker):
                 # If it's a string, parse it first, then use StringIO to avoid file path interpretation
                 ratios_data = json.loads(ratios_json)
                 # Use StringIO to make pandas treat it as a string, not a file path
-                ratios_df = pd.read_json(io.StringIO(json.dumps(ratios_data)), orient="split")
+                ratios_df = pd.read_json(
+                    io.StringIO(json.dumps(ratios_data)), orient="split"
+                )
             elif isinstance(ratios_json, dict):
                 # Already parsed - construct DataFrame directly
                 ratios_df = pd.DataFrame(
                     data=ratios_json.get("data", []),
                     columns=ratios_json.get("columns", []),
-                    index=ratios_json.get("index", [])
+                    index=ratios_json.get("index", []),
                 )
             else:
                 return []
@@ -418,7 +435,7 @@ def update_key_ratios_display(ratios_json, ticker):
                 # Try to parse index as dates for proper sorting
                 try:
                     # Convert index to datetime if possible
-                    date_index = pd.to_datetime(series.index, errors='coerce')
+                    date_index = pd.to_datetime(series.index, errors="coerce")
                     if not date_index.isna().all():
                         # Sort by date ascending (oldest first, newest last)
                         sorted_indices = date_index.sort_values().index
@@ -430,14 +447,14 @@ def update_key_ratios_display(ratios_json, ticker):
                 except (ValueError, TypeError, AttributeError):
                     # Fallback: sort index ascending
                     sorted_series = series.sort_index(ascending=True)
-                
+
                 # After sorting, the series is now oldest to newest
                 # Get the latest value (last item = newest)
                 latest_value = float(sorted_series.iloc[-1])
-                
+
                 # Get values in chronological order (oldest to newest) for sparkline
                 sparkline_values = sorted_series.values.tolist()
-                
+
                 if len(sparkline_values) == 0:
                     continue
 
@@ -464,7 +481,10 @@ def update_key_ratios_display(ratios_json, ticker):
                     margin=dict(l=0, r=0, t=0, b=0),
                     xaxis=dict(
                         visible=False,
-                        range=[0, len(sparkline_values) - 1],  # Explicitly set range: 0 (left) = oldest, max (right) = newest
+                        range=[
+                            0,
+                            len(sparkline_values) - 1,
+                        ],  # Explicitly set range: 0 (left) = oldest, max (right) = newest
                         autorange=False,
                     ),
                     yaxis=dict(visible=False),
@@ -482,16 +502,18 @@ def update_key_ratios_display(ratios_json, ticker):
                     dbc.CardBody(
                         [
                             html.H4(value_display, className="card-title"),
-                            dcc.Graph(figure=sparkline, config={'displayModeBar': False})
+                            dcc.Graph(
+                                figure=sparkline, config={"displayModeBar": False}
+                            ),
                         ]
                     ),
                 ]
                 # Add vertical margin to cards for spacing between rows
                 cards.append(
                     dbc.Col(
-                        dbc.Card(card_content, color="dark", outline=True), 
+                        dbc.Card(card_content, color="dark", outline=True),
                         width=4,
-                        style={"marginBottom": "10px"}
+                        style={"marginBottom": "10px"},
                     )
                 )
             except Exception:
@@ -499,15 +521,18 @@ def update_key_ratios_display(ratios_json, ticker):
                 continue
 
         if not cards:
-            return html.Div("No ratio data available.", style={"color": "#B0B0B0", "textAlign": "center"})
-        
+            return html.Div(
+                "No ratio data available.",
+                style={"color": "#B0B0B0", "textAlign": "center"},
+            )
+
         # Return Row with proper spacing between cards
         return dbc.Row(cards, style={"marginBottom": "10px"})
     except Exception as e:
         # Catch any unexpected errors and return empty list
         return html.Div(
             f"Error displaying ratios: {str(e)}",
-            style={"color": "#FF6B6B", "textAlign": "center"}
+            style={"color": "#FF6B6B", "textAlign": "center"},
         )
 
 
@@ -551,17 +576,17 @@ def _apply_user_selections_to_is(standard_is_json, alternatives_json, selections
             df = pd.DataFrame(
                 data=standard_is_json.get("data", []),
                 columns=standard_is_json.get("columns", []),
-                index=standard_is_json.get("index", [])
+                index=standard_is_json.get("index", []),
             )
         else:
             df = pd.DataFrame()
     except (ValueError, TypeError, KeyError, json.JSONDecodeError):
         # Invalid JSON
         return None
-    
+
     if df.empty:
         return None
-    
+
     alternatives = alternatives_json or {}
     selections = selections or {}
 
@@ -597,15 +622,15 @@ def _apply_user_selections_to_is(standard_is_json, alternatives_json, selections
 def _detect_unit_scale(df: pd.DataFrame, user_preference: Optional[str] = None):
     """
     Detect appropriate unit scale for financial data.
-    
+
     Analyzes numeric values to determine if they should be displayed
     in billions, millions, thousands, hundreds, or raw values.
     If user_preference is provided and not "auto", uses that instead.
-    
+
     Args:
         df: DataFrame with financial data (first column is "Metric", rest are numeric)
         user_preference: Optional user preference ("auto", "millions", "billions", "thousands", "raw")
-        
+
     Returns:
         Tuple of (scale_factor, unit_label)
         e.g., (1e6, "millions") means divide by 1e6 and show "(millions)"
@@ -619,18 +644,18 @@ def _detect_unit_scale(df: pd.DataFrame, user_preference: Optional[str] = None):
             "raw": (1.0, ""),
         }
         return scale_map.get(user_preference, (1e6, "millions"))  # Default to millions
-    
+
     # Auto-detect based on median value
     # Get all numeric values (skip "Metric" column)
     numeric_values = []
     for col in df.columns[1:]:
         numeric_values.extend(df[col].dropna().abs().tolist())
-    
+
     if not numeric_values:
         return (1e6, "millions")  # Default to millions if no data
-    
+
     median_value = pd.Series(numeric_values).median()
-    
+
     if median_value >= 1e9:
         return (1e9, "billions")
     elif median_value >= 1e6:
@@ -675,25 +700,31 @@ def display_standard_is(
     It now includes dropdowns for metrics with alternative calculation paths.
     """
     if not standard_is_json:
-        return html.Div("No income statement data available.", style={"color": "#B0B0B0"})
-    
+        return html.Div(
+            "No income statement data available.", style={"color": "#B0B0B0"}
+        )
+
     # Use the new helper function to get the correct DataFrame
     try:
         df_standard = _apply_user_selections_to_is(
             standard_is_json, alternatives_json, selections
         )
     except Exception:
-        return html.Div("Error processing income statement.", style={"color": "#FF6B6B"})
+        return html.Div(
+            "Error processing income statement.", style={"color": "#FF6B6B"}
+        )
 
     if df_standard is None or df_standard.empty:
-        return html.Div("No income statement data available.", style={"color": "#B0B0B0"})
+        return html.Div(
+            "No income statement data available.", style={"color": "#B0B0B0"}
+        )
 
     # --- Calculate profitability ratios using library ---
     # Convert transposed format back to periods-as-index for analyzer
     try:
         # Use original df_standard before date formatting for analysis
         df_for_analysis = df_standard.set_index("Metric").T
-        
+
         # Fetch balance sheet and cash flow DataFrames from Company API
         bs_df = pd.DataFrame()
         cf_df = pd.DataFrame()
@@ -701,54 +732,36 @@ def display_standard_is(
             try:
                 company = Company(ticker.strip().upper())
                 financials = company.get_financials()
-                bs_df = financials["balance_sheet"].to_dataframe() if financials["balance_sheet"] else pd.DataFrame()
-                # Pass balance sheet and income statement for CapEx fallback calculation and validation
-                is_df_for_capex = df_for_analysis if "Revenue" in df_for_analysis.columns else None
-                cf_df = financials["cash_flow"].to_dataframe(bs_df=bs_df, is_df=is_df_for_capex) if financials["cash_flow"] else pd.DataFrame()
+                bs_df = (
+                    financials["balance_sheet"].to_dataframe()
+                    if financials["balance_sheet"]
+                    else pd.DataFrame()
+                )
+                cf_df = (
+                    financials["cash_flow"].to_dataframe()
+                    if financials["cash_flow"]
+                    else pd.DataFrame()
+                )
             except Exception:
                 # If fetching fails, continue with empty DataFrames
                 pass
-        
+
         analyzer = ProfitabilityAnalyzer()
         profitability_df = analyzer.calculate_ratios(df_for_analysis, bs_df, cf_df)
-        
-        # Run validation and log issues
-        try:
-            from financial4all.analysis.validators import FinancialStatementValidator
-            from financial4all.core import log as financial_log
-            validator = FinancialStatementValidator()
-            validation_issues = validator.validate_all(
-                is_df=df_for_analysis,
-                bs_df=bs_df,
-                cf_df=cf_df
-            )
-            
-            # Log validation issues
-            for issue in validation_issues:
-                if issue.severity.value == "error":
-                    financial_log.error(f"Validation ERROR - {issue.metric} ({issue.period}): {issue.message}")
-                elif issue.severity.value == "warning":
-                    financial_log.warning(f"Validation WARNING - {issue.metric} ({issue.period}): {issue.message}")
-                else:
-                    financial_log.info(f"Validation INFO - {issue.metric} ({issue.period}): {issue.message}")
-        except Exception as e:
-            try:
-                from financial4all.core import log as financial_log
-                financial_log.debug(f"Validation failed: {e}")
-            except Exception:
-                pass
-        
+
         # Store original revenue values for converting Revenue absolute difference to percentage
         # This will be used when displaying Revenue Y/Y change
         if "Revenue" in df_for_analysis.columns:
-            profitability_df.attrs = {"original_revenue": df_for_analysis["Revenue"].to_dict()}
-        
+            profitability_df.attrs = {
+                "original_revenue": df_for_analysis["Revenue"].to_dict()
+            }
+
         # Format date columns in profitability_df to match df_display format
         if not profitability_df.empty:
             formatted_profitability_cols = ["Metric"]
             for col in profitability_df.columns[1:]:
                 try:
-                    formatted_col = pd.to_datetime(col).strftime('%Y-%m-%d')
+                    formatted_col = pd.to_datetime(col).strftime("%Y-%m-%d")
                     formatted_profitability_cols.append(formatted_col)
                 except (ValueError, TypeError):
                     formatted_profitability_cols.append(str(col))
@@ -756,21 +769,25 @@ def display_standard_is(
     except Exception:
         # If profitability calculation fails, continue without it
         profitability_df = pd.DataFrame()
-    
+
     # --- Build the interactive table ---
     # Convert numeric column names to string for display, and format dates correctly.
     df_display = df_standard.copy()
-    alternatives = alternatives_json or {}  # FIX: Define alternatives from the JSON data
+    alternatives = (
+        alternatives_json or {}
+    )  # FIX: Define alternatives from the JSON data
 
     # Detect unit scale for the data (use user preference if provided)
-    scale_factor, unit_label = _detect_unit_scale(df_display, user_preference=unit_scale_preference)
-    
+    scale_factor, unit_label = _detect_unit_scale(
+        df_display, user_preference=unit_scale_preference
+    )
+
     # Format date columns (unit indicator will go in top-left cell)
     formatted_columns = ["Metric"]
     for col in df_standard.columns[1:]:
         try:
             # Attempt to convert column to datetime and format it
-            formatted_columns.append(pd.to_datetime(col).strftime('%Y-%m-%d'))
+            formatted_columns.append(pd.to_datetime(col).strftime("%Y-%m-%d"))
         except (ValueError, TypeError):
             # If it's not a date-like string, keep it as is
             formatted_columns.append(str(col))
@@ -788,7 +805,11 @@ def display_standard_is(
                 header_content.append(
                     html.Div(
                         f"({unit_label})",
-                        style={"fontSize": "0.85em", "color": "#B0B0B0", "marginTop": "2px"},
+                        style={
+                            "fontSize": "0.85em",
+                            "color": "#B0B0B0",
+                            "marginTop": "2px",
+                        },
                     )
                 )
             header_cells.append(
@@ -820,7 +841,7 @@ def display_standard_is(
                     },
                 )
             )
-    
+
     table_header = [html.Tr(header_cells)]
 
     table_rows = []
@@ -829,7 +850,9 @@ def display_standard_is(
         metric_def = METRIC_DEFINITIONS.get(metric_name, "")
 
         # Check if this metric has alternatives
-        has_alternatives = metric_name in alternatives and len(alternatives[metric_name]) > 0
+        has_alternatives = (
+            metric_name in alternatives and len(alternatives[metric_name]) > 0
+        )
 
         # Determine if this is a final calculated value (bold) or component (non-bold)
         final_calculations = [
@@ -840,7 +863,7 @@ def display_standard_is(
             "Net Income",
         ]
         is_final_calculation = metric_name in final_calculations
-        
+
         # Metric name cell with tooltip
         metric_cell_content = [
             html.Div(
@@ -852,7 +875,7 @@ def display_standard_is(
                 title=metric_def if metric_def else None,  # Tooltip on hover
             ),
         ]
-        
+
         # Add dropdown if alternatives exist
         if has_alternatives:
             metric_cell_content.append(
@@ -879,7 +902,7 @@ def display_standard_is(
                     style={"marginTop": "4px"},
                 )
             )
-        
+
         cells = [
             html.Td(
                 metric_cell_content,
@@ -896,7 +919,7 @@ def display_standard_is(
         # Add data cells with scaled values
         # EPS values should not be scaled (they're already per-share)
         is_eps_metric = "EPS" in metric_name
-        
+
         for col in df_display.columns[1:]:
             value = row[col]
             if pd.isna(value):
@@ -913,10 +936,10 @@ def display_standard_is(
                     else:
                         # Scale the value by the detected scale factor (includes shares)
                         scaled_value = float(value) / scale_factor
-                        
+
                         # Round to whole numbers (no decimals) for all non-EPS values
                         rounded_value = round(scaled_value)
-                        
+
                         # Format: negative values in parentheses, no $ sign (standard financial format)
                         if rounded_value < 0:
                             display_value = f"({abs(rounded_value):,})"
@@ -941,7 +964,7 @@ def display_standard_is(
             )
 
         table_rows.append(html.Tr(cells))
-        
+
         # Add blank spacer rows after key section dividers
         spacer_metrics = [
             "Gross Profit",
@@ -950,24 +973,40 @@ def display_standard_is(
             "Income Before Taxes",
             "Net Income",
         ]
-        
+
         if metric_name in spacer_metrics:
             # Create a blank row with increased height for visual separation
             spacer_cells = [
-                html.Td("", style={"padding": "8px 8px", "border": "1px solid #444", "height": "16px", "backgroundColor": "#2C2C2C"})
+                html.Td(
+                    "",
+                    style={
+                        "padding": "8px 8px",
+                        "border": "1px solid #444",
+                        "height": "16px",
+                        "backgroundColor": "#2C2C2C",
+                    },
+                )
                 for _ in range(len(df_display.columns))
             ]
             table_rows.append(html.Tr(spacer_cells))
-    
+
     # --- Add calculated metrics section using library ---
     if not profitability_df.empty:
         # Add a blank spacer row before calculated metrics
         spacer_cells = [
-            html.Td("", style={"padding": "8px 8px", "border": "1px solid #444", "height": "16px", "backgroundColor": "#2C2C2C"})
+            html.Td(
+                "",
+                style={
+                    "padding": "8px 8px",
+                    "border": "1px solid #444",
+                    "height": "16px",
+                    "backgroundColor": "#2C2C2C",
+                },
+            )
             for _ in range(len(df_display.columns))
         ]
         table_rows.append(html.Tr(spacer_cells))
-        
+
         # Helper function to format percentage for display
         def format_percentage_display(value):
             """Format a decimal value (0.50) as a percentage string (50.00%)."""
@@ -981,7 +1020,7 @@ def display_standard_is(
                     return f"{pct_value:.2f}%"
             except (ValueError, TypeError):
                 return "—"
-        
+
         # Helper function to format currency for display
         def format_currency_display(value, scale_factor):
             """Format a raw dollar value as scaled currency string with commas."""
@@ -997,7 +1036,7 @@ def display_standard_is(
                     return f"{rounded_value:,}"
             except (ValueError, TypeError):
                 return "—"
-        
+
         # Identify dollar amount metrics (not percentages)
         dollar_amount_metrics = {
             "Depreciation & Amortization",
@@ -1005,7 +1044,7 @@ def display_standard_is(
             "Receivables",
             "Inventory",
             "Payables",
-            "Change in WC"
+            "Change in WC",
         }
         # Identify "% of Sales" metrics from Capital & Working Capital section
         # These should NOT be conditionally formatted (they're not in trends section)
@@ -1014,19 +1053,19 @@ def display_standard_is(
             "CapEx % of Sales",
             "Receivables % of Sales",
             "Inventory % of Sales",
-            "Payables % of Sales"
+            "Payables % of Sales",
         }
-        
+
         # Metrics that should be bold
         bold_metrics = ["Operating Margin"]
-        
+
         # Metrics that should have a spacer row after them
         # Note: "Revenue" removed - no spacer between Revenue growth and Expenses section
         spacer_after_metrics = ["Operating Margin"]
-        
+
         # Check if we're in the Y/Y change section (for conditional formatting)
         in_yoy_section = False
-        
+
         # Iterate through profitability DataFrame and add rows
         for idx, row in profitability_df.iterrows():
             metric_name = row["Metric"]
@@ -1035,11 +1074,11 @@ def display_standard_is(
             is_yoy_header = metric_name == "**%Change y/y Change (Trends)**"
             is_dollar_amount = metric_name in dollar_amount_metrics
             is_capital_wc_percentage = metric_name in capital_wc_percentage_metrics
-            
+
             # Track when we enter the Y/Y change section
             if is_yoy_header:
                 in_yoy_section = True
-            
+
             # Build metric name cell
             metric_cell = html.Td(
                 metric_name.replace("**", ""),  # Remove markdown bold markers
@@ -1049,16 +1088,18 @@ def display_standard_is(
                     "minWidth": "220px",
                     "border": "1px solid #444",
                     "fontSize": "1em",
-                    "fontWeight": "bold" if (is_bold or is_header or is_yoy_header) else "normal",
+                    "fontWeight": "bold"
+                    if (is_bold or is_header or is_yoy_header)
+                    else "normal",
                 },
             )
-            
+
             cells = [metric_cell]
-            
+
             # Add data cells for each date column
             for col in df_display.columns[1:]:
                 value = row.get(col)
-                
+
                 # Header rows (like "Expenses as % of Revenue" or Y/Y header) should have blank cells, not dashes
                 if is_header or is_yoy_header:
                     display_value = ""
@@ -1079,7 +1120,7 @@ def display_standard_is(
                     else:
                         # Percentages: format as percentage
                         display_value = format_percentage_display(value)
-                    
+
                     # Conditional formatting for Y/Y change section
                     cell_style = {
                         "padding": "10px 12px",
@@ -1090,22 +1131,36 @@ def display_standard_is(
                         "fontFamily": "monospace",
                         "fontWeight": "bold" if is_bold else "normal",
                     }
-                    
+
                     # Apply conditional formatting for Y/Y change values ONLY
                     # Exclude dollar amount metrics and Capital & Working Capital % metrics
-                    if in_yoy_section and not is_yoy_header and not is_dollar_amount and not is_capital_wc_percentage and value is not None:
+                    if (
+                        in_yoy_section
+                        and not is_yoy_header
+                        and not is_dollar_amount
+                        and not is_capital_wc_percentage
+                        and value is not None
+                    ):
                         try:
                             # Parse the percentage value
                             if isinstance(value, (int, float)) and not pd.isna(value):
                                 pct_value = float(value)
                                 if pct_value > 0:
                                     # Positive change - green background with better contrast
-                                    cell_style["backgroundColor"] = "#4CAF50"  # Darker green for better contrast
-                                    cell_style["color"] = "#FFFFFF"  # White text for readability
+                                    cell_style["backgroundColor"] = (
+                                        "#4CAF50"  # Darker green for better contrast
+                                    )
+                                    cell_style["color"] = (
+                                        "#FFFFFF"  # White text for readability
+                                    )
                                 elif pct_value < 0:
                                     # Negative change - red background with better contrast
-                                    cell_style["backgroundColor"] = "#F44336"  # Darker red for better contrast
-                                    cell_style["color"] = "#FFFFFF"  # White text for readability
+                                    cell_style["backgroundColor"] = (
+                                        "#F44336"  # Darker red for better contrast
+                                    )
+                                    cell_style["color"] = (
+                                        "#FFFFFF"  # White text for readability
+                                    )
                                 else:
                                     # Zero - no special background, ensure text is visible
                                     cell_style["color"] = "#E0E0E0"
@@ -1115,20 +1170,28 @@ def display_standard_is(
                     else:
                         # For non-Y/Y section cells, ensure text color is visible
                         cell_style["color"] = "#E0E0E0"
-                
+
                 cells.append(
                     html.Td(
                         display_value,
                         style=cell_style,
                     )
                 )
-            
+
             table_rows.append(html.Tr(cells))
-            
+
             # Add spacer row after specific metrics
             if metric_name in spacer_after_metrics:
                 spacer_cells = [
-                    html.Td("", style={"padding": "8px 8px", "border": "1px solid #444", "height": "16px", "backgroundColor": "#2C2C2C"})
+                    html.Td(
+                        "",
+                        style={
+                            "padding": "8px 8px",
+                            "border": "1px solid #444",
+                            "height": "16px",
+                            "backgroundColor": "#2C2C2C",
+                        },
+                    )
                     for _ in range(len(df_display.columns))
                 ]
                 table_rows.append(html.Tr(spacer_cells))
@@ -1157,7 +1220,7 @@ def display_standard_is(
                     "textAlign": "center",
                     "marginBottom": "10px",
                     "fontSize": "1.2em",
-                }
+                },
             ),
             table,
         ],
@@ -1187,11 +1250,11 @@ def export_to_excel(n_clicks, current_df_json, ticker):
             df = pd.DataFrame(
                 data=current_df_json.get("data", []),
                 columns=current_df_json.get("columns", []),
-                index=current_df_json.get("index", [])
+                index=current_df_json.get("index", []),
             )
         else:
             df = pd.DataFrame()
-        
+
         if df.empty:
             return None
 
@@ -1245,20 +1308,20 @@ def download_all_10ks(n_clicks, ticker):
         # Fetch filings using Company API
         company = Company(ticker_upper)
         filings = company.get_filings(form="10-K")
-        
+
         if not filings:
             return None
-        
+
         # Create zip file in memory
         client = SECClient()
         zip_buffer = io.BytesIO()
         files_added = []
-        
+
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_f:
             for filing in filings:
                 accession_number = filing.accession_number.replace("-", "")
                 report_url = f"https://www.sec.gov/Archives/edgar/data/{filing.cik}/{accession_number}/Financial_Report.xlsx"
-                
+
                 try:
                     response = client.get(report_url)
                     if response.status_code == 200:
@@ -1267,7 +1330,7 @@ def download_all_10ks(n_clicks, ticker):
                         files_added.append(file_name)
                 except Exception:
                     continue
-        
+
         if files_added:
             zip_buffer.seek(0)
             # Send the zip file to the browser for download.
@@ -1284,8 +1347,6 @@ def download_all_10ks(n_clicks, ticker):
         return None
 
 
-
-
 # --- NEW: Comprehensive Analysis Generation Callback ---
 @app.callback(
     Output("download-analysis-excel", "data"),
@@ -1299,13 +1360,20 @@ def download_all_10ks(n_clicks, ticker):
     ],
     prevent_initial_call=True,
 )
-def generate_analysis_report(n_clicks, ticker, standard_is_json, selections, unit_scale_preference, alternatives_json):
+def generate_analysis_report(
+    n_clicks,
+    ticker,
+    standard_is_json,
+    selections,
+    unit_scale_preference,
+    alternatives_json,
+):
     """
     Generate and download comprehensive financial analysis report.
-    
+
     This callback creates an Excel analysis report with the Income Statement
     formatted exactly as shown on the web page, including profitability calculations.
-    
+
     Args:
         n_clicks: Number of times the button was clicked
         ticker: Ticker symbol from input field
@@ -1313,94 +1381,74 @@ def generate_analysis_report(n_clicks, ticker, standard_is_json, selections, uni
         selections: User selections from is-selections-store
         unit_scale_preference: User's unit scale preference from unit-scale-store
         alternatives_json: Alternative calculations from alternatives-store
-        
+
     Returns:
         Dash send_bytes object for Excel file download, or None
     """
     if n_clicks == 0 or not ticker:
         return None
-    
+
     if not standard_is_json:
         return None
-    
+
     ticker_upper = ticker.strip().upper()
-    
+
     try:
         # Apply user selections to get the correct DataFrame
         df_standard = _apply_user_selections_to_is(
             standard_is_json, alternatives_json or {}, selections or {}
         )
-        
+
         if df_standard is None or df_standard.empty:
             return None
-        
+
         # Detect unit scale for the data
         scale_factor, unit_label = _detect_unit_scale(
             df_standard, user_preference=unit_scale_preference or "millions"
         )
-        
+
         # Format date columns - helper function to format dates consistently
         def format_date_column(col):
             """Format a date column to YYYY-MM-DD format."""
             try:
-                return pd.to_datetime(col).strftime('%Y-%m-%d')
+                return pd.to_datetime(col).strftime("%Y-%m-%d")
             except (ValueError, TypeError):
                 return str(col)
-        
+
         formatted_columns = ["Metric"]
         for col in df_standard.columns[1:]:
             formatted_columns.append(format_date_column(col))
         df_display = df_standard.copy()
         df_display.columns = formatted_columns
-        
+
         # Calculate profitability ratios using library
         try:
             # Convert transposed format back to periods-as-index for analyzer
             df_for_analysis = df_standard.set_index("Metric").T
-            
+
             # Fetch balance sheet and cash flow DataFrames from Company API
             bs_df = pd.DataFrame()
             cf_df = pd.DataFrame()
             try:
                 company = Company(ticker_upper)
                 financials = company.get_financials()
-                bs_df = financials["balance_sheet"].to_dataframe() if financials["balance_sheet"] else pd.DataFrame()
-                # Pass balance sheet and income statement for CapEx fallback calculation and validation
-                is_df_for_capex = df_for_analysis if "Revenue" in df_for_analysis.columns else None
-                cf_df = financials["cash_flow"].to_dataframe(bs_df=bs_df, is_df=is_df_for_capex) if financials["cash_flow"] else pd.DataFrame()
+                bs_df = (
+                    financials["balance_sheet"].to_dataframe()
+                    if financials["balance_sheet"]
+                    else pd.DataFrame()
+                )
+                cf_df = (
+                    financials["cash_flow"].to_dataframe()
+                    if financials["cash_flow"]
+                    else pd.DataFrame()
+                )
             except Exception:
                 # If fetching fails, continue with empty DataFrames
                 pass
-            
+
             analyzer = ProfitabilityAnalyzer()
             profitability_df = analyzer.calculate_ratios(df_for_analysis, bs_df, cf_df)
-            
-            # Run validation and log issues
-            try:
-                from financial4all.analysis.validators import FinancialStatementValidator
-                from financial4all.core import log as financial_log
-                validator = FinancialStatementValidator()
-                validation_issues = validator.validate_all(
-                    is_df=df_for_analysis,
-                    bs_df=bs_df,
-                    cf_df=cf_df
-                )
-                
-                # Log validation issues
-                for issue in validation_issues:
-                    if issue.severity.value == "error":
-                        financial_log.error(f"Validation ERROR - {issue.metric} ({issue.period}): {issue.message}")
-                    elif issue.severity.value == "warning":
-                        financial_log.warning(f"Validation WARNING - {issue.metric} ({issue.period}): {issue.message}")
-                    else:
-                        financial_log.info(f"Validation INFO - {issue.metric} ({issue.period}): {issue.message}")
-            except Exception as e:
-                try:
-                    from financial4all.core import log as financial_log
-                    financial_log.debug(f"Validation failed: {e}")
-                except Exception:
-                    pass
-            
+
             # Format date columns in profitability_df to match df_display format exactly
             if not profitability_df.empty:
                 formatted_profitability_cols = ["Metric"]
@@ -1410,29 +1458,25 @@ def generate_analysis_report(n_clicks, ticker, standard_is_json, selections, uni
         except Exception:
             # If profitability calculation fails, continue without it
             profitability_df = pd.DataFrame()
-        
+
         # Create Excel buffer and export using ExcelExporter
         buffer = io.BytesIO()
         exporter = ExcelExporter()
         exporter.export_income_statement_analysis(
-            df_display,
-            profitability_df,
-            scale_factor,
-            unit_label,
-            buffer
+            df_display, profitability_df, scale_factor, unit_label, buffer
         )
-        
+
         buffer.seek(0)
-        
+
         # Send to browser for download
         return dcc.send_bytes(
-            buffer.getvalue(),
-            f"{ticker_upper}_Income_Statement_Analysis.xlsx"
+            buffer.getvalue(), f"{ticker_upper}_Income_Statement_Analysis.xlsx"
         )
     except Exception as e:
         # Log error but don't crash the app
         print(f"Error generating analysis report for {ticker_upper}: {e}")
         import traceback
+
         traceback.print_exc()
         return None
 
