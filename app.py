@@ -10,6 +10,7 @@ import zipfile
 from typing import Optional
 from financial4all import Company
 from financial4all.analysis import ProfitabilityAnalyzer
+from financial4all.analysis.excel_exporter import ExcelExporter
 from financial4all.financials import FinancialRatios
 from financial4all.sec.client import SECClient
 
@@ -1195,27 +1196,35 @@ def download_all_10ks(n_clicks, ticker):
         return None
 
 
+
+
 # --- NEW: Comprehensive Analysis Generation Callback ---
 @app.callback(
     Output("download-analysis-excel", "data"),
     [Input("generate-analysis-btn", "n_clicks")],
-    [State("ticker-input", "value")],
+    [
+        State("ticker-input", "value"),
+        State("standard-is-store", "data"),
+        State("is-selections-store", "data"),
+        State("unit-scale-store", "data"),
+        State("alternatives-store", "data"),
+    ],
     prevent_initial_call=True,
 )
-def generate_analysis_report(n_clicks, ticker):
+def generate_analysis_report(n_clicks, ticker, standard_is_json, selections, unit_scale_preference, alternatives_json):
     """
     Generate and download comprehensive financial analysis report.
     
-    This callback creates a comprehensive Excel analysis report including:
-    - Multi-year financial statements
-    - Financial ratios
-    - Trend analysis
-    - Common-size statements
-    - Summary metrics
+    This callback creates an Excel analysis report with the Income Statement
+    formatted exactly as shown on the web page, including profitability calculations.
     
     Args:
         n_clicks: Number of times the button was clicked
         ticker: Ticker symbol from input field
+        standard_is_json: Income Statement data from standard-is-store
+        selections: User selections from is-selections-store
+        unit_scale_preference: User's unit scale preference from unit-scale-store
+        alternatives_json: Alternative calculations from alternatives-store
         
     Returns:
         Dash send_bytes object for Excel file download, or None
@@ -1223,28 +1232,73 @@ def generate_analysis_report(n_clicks, ticker):
     if n_clicks == 0 or not ticker:
         return None
     
+    if not standard_is_json:
+        return None
+    
     ticker_upper = ticker.strip().upper()
     
     try:
-        from financial4all import Company
-        from financial4all.analysis import FinancialAnalysisReport
-        import io
+        # Apply user selections to get the correct DataFrame
+        df_standard = _apply_user_selections_to_is(
+            standard_is_json, alternatives_json or {}, selections or {}
+        )
         
-        # Create company instance
-        company = Company(ticker_upper)
+        if df_standard is None or df_standard.empty:
+            return None
         
-        # Generate report
-        report = FinancialAnalysisReport(company)
+        # Detect unit scale for the data
+        scale_factor, unit_label = _detect_unit_scale(
+            df_standard, user_preference=unit_scale_preference or "millions"
+        )
         
-        # Create Excel in memory
+        # Format date columns - helper function to format dates consistently
+        def format_date_column(col):
+            """Format a date column to YYYY-MM-DD format."""
+            try:
+                return pd.to_datetime(col).strftime('%Y-%m-%d')
+            except (ValueError, TypeError):
+                return str(col)
+        
+        formatted_columns = ["Metric"]
+        for col in df_standard.columns[1:]:
+            formatted_columns.append(format_date_column(col))
+        df_display = df_standard.copy()
+        df_display.columns = formatted_columns
+        
+        # Calculate profitability ratios using library
+        try:
+            # Convert transposed format back to periods-as-index for analyzer
+            df_for_analysis = df_standard.set_index("Metric").T
+            analyzer = ProfitabilityAnalyzer()
+            profitability_df = analyzer.calculate_ratios(df_for_analysis)
+            
+            # Format date columns in profitability_df to match df_display format exactly
+            if not profitability_df.empty:
+                formatted_profitability_cols = ["Metric"]
+                for col in profitability_df.columns[1:]:
+                    formatted_profitability_cols.append(format_date_column(col))
+                profitability_df.columns = formatted_profitability_cols
+        except Exception:
+            # If profitability calculation fails, continue without it
+            profitability_df = pd.DataFrame()
+        
+        # Create Excel buffer and export using ExcelExporter
         buffer = io.BytesIO()
-        report.export_to_excel(buffer)
+        exporter = ExcelExporter()
+        exporter.export_income_statement_analysis(
+            df_display,
+            profitability_df,
+            scale_factor,
+            unit_label,
+            buffer
+        )
+        
         buffer.seek(0)
         
         # Send to browser for download
         return dcc.send_bytes(
             buffer.getvalue(),
-            f"{ticker_upper}_Financial_Analysis.xlsx"
+            f"{ticker_upper}_Income_Statement_Analysis.xlsx"
         )
     except Exception as e:
         # Log error but don't crash the app

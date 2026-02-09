@@ -7,13 +7,12 @@ analysis reports to Excel with professional formatting.
 """
 
 import pandas as pd
-import numpy as np
 from typing import Union, Optional
 from io import BytesIO
 
 try:
     import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.styles import Font, PatternFill, Alignment
     from openpyxl.utils import get_column_letter
     OPENPYXL_AVAILABLE = True
 except ImportError:
@@ -227,7 +226,7 @@ class ExcelExporter:
                 if cell.value:
                     try:
                         cell.number_format = "YYYY-MM-DD"
-                    except:
+                    except Exception:
                         pass
         
         # Auto-adjust column widths
@@ -398,3 +397,470 @@ class ExcelExporter:
         # Auto-adjust column widths
         for col_idx in range(1, 10):
             ws.column_dimensions[get_column_letter(col_idx)].width = 20
+    
+    def export_income_statement_analysis(
+        self,
+        income_statement_df: pd.DataFrame,
+        profitability_df: pd.DataFrame,
+        scale_factor: float,
+        unit_label: str,
+        file_path_or_buffer: Union[str, BytesIO]
+    ) -> None:
+        """
+        Export Income Statement with profitability calculations to Excel format.
+        
+        This method creates an Excel workbook with the Income Statement formatted
+        exactly as shown on the web page, including profitability calculations below.
+        
+        Args:
+            income_statement_df: Income Statement DataFrame with "Metric" column and date columns
+            profitability_df: Profitability calculations DataFrame with "Metric" column and date columns
+            scale_factor: Scale factor to apply to values (e.g., 1e6 for millions)
+            unit_label: Unit label to display (e.g., "millions")
+            file_path_or_buffer: File path (string) or BytesIO buffer
+        """
+        if not OPENPYXL_AVAILABLE:
+            raise ImportError("openpyxl is required for Excel export. Install it with: pip install openpyxl")
+        
+        if income_statement_df.empty:
+            raise ValueError("Income statement DataFrame is empty")
+        
+        # Create workbook and worksheet
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Income Statement Analysis"
+        
+        # Define styles
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=11)
+        bold_font = Font(bold=True, size=10)
+        normal_font = Font(size=10)
+        center_align = Alignment(horizontal="center")
+        right_align = Alignment(horizontal="right")
+        left_align = Alignment(horizontal="left")
+        
+        # Final calculations that should be bold
+        final_calculations = [
+            "Gross Profit",
+            "Operating Income",
+            "Other income (expense), net",
+            "Income Before Taxes",
+            "Net Income",
+        ]
+        
+        # Metrics that should have spacer rows after them
+        spacer_metrics = [
+            "Gross Profit",
+            "Operating Income",
+            "Other income (expense), net",
+            "Income Before Taxes",
+            "Net Income",
+        ]
+        
+        # Bold metrics in profitability section
+        bold_profitability_metrics = ["Operating Margin"]
+        
+        # Metrics that should have spacer rows after them in profitability section
+        spacer_after_profitability_metrics = ["Operating Margin"]
+        
+        # Write header row
+        row_num = 1
+        for col_idx, col_name in enumerate(income_statement_df.columns, start=1):
+            cell = ws.cell(row=row_num, column=col_idx)
+            if col_idx == 1:
+                # Top-left cell: "Metric" with unit below
+                cell.value = f"Metric\n({unit_label})" if unit_label else "Metric"
+                cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+            else:
+                cell.value = col_name
+                cell.alignment = center_align
+            cell.font = header_font
+            cell.fill = header_fill
+        
+        row_num += 1
+        
+        # Track row numbers for each metric (for formula references)
+        metric_to_row = {}
+        
+        # Write Income Statement rows
+        for idx, row_data in income_statement_df.iterrows():
+            metric_name = row_data["Metric"]
+            is_final_calculation = metric_name in final_calculations
+            
+            # Store row number for this metric
+            metric_to_row[metric_name] = row_num
+            
+            # Write metric name
+            cell = ws.cell(row=row_num, column=1)
+            cell.value = metric_name
+            cell.font = bold_font if is_final_calculation else normal_font
+            cell.alignment = left_align
+            
+            # Write data cells
+            is_eps_metric = "EPS" in metric_name
+            
+            # Determine if this is a calculated metric that should have formulas
+            is_calculated_metric = metric_name in final_calculations
+            
+            for col_idx, col_name in enumerate(income_statement_df.columns[1:], start=2):
+                value = row_data[col_name]
+                cell = ws.cell(row=row_num, column=col_idx)
+                
+                if pd.isna(value):
+                    cell.value = "—"
+                elif is_calculated_metric:
+                    # Write Excel formula instead of hardcoded value
+                    formula = self._get_calculation_formula(
+                        metric_name, col_idx, metric_to_row, income_statement_df
+                    )
+                    if formula:
+                        cell.value = formula
+                    else:
+                        # Fallback to value if formula can't be determined
+                        try:
+                            if is_eps_metric:
+                                eps_value = float(value)
+                                cell.value = eps_value
+                                cell.number_format = '#,##0.00'
+                            else:
+                                scaled_value = float(value) / scale_factor
+                                rounded_value = round(scaled_value)
+                                cell.value = rounded_value
+                                if rounded_value < 0:
+                                    cell.number_format = '#,##0_);(#,##0)'
+                                else:
+                                    cell.number_format = '#,##0'
+                        except (ValueError, TypeError):
+                            cell.value = str(value)
+                else:
+                    # Non-calculated metrics: write values
+                    try:
+                        if is_eps_metric:
+                            # EPS values are not scaled - display with 2 decimal places
+                            eps_value = float(value)
+                            cell.value = eps_value
+                            cell.number_format = '#,##0.00'
+                        else:
+                            # Scale the value by the detected scale factor
+                            scaled_value = float(value) / scale_factor
+                            rounded_value = round(scaled_value)
+                            cell.value = rounded_value
+                            # Format: negative values in parentheses (Excel custom format)
+                            if rounded_value < 0:
+                                cell.number_format = '#,##0_);(#,##0)'
+                            else:
+                                cell.number_format = '#,##0'
+                    except (ValueError, TypeError):
+                        cell.value = str(value)
+                
+                cell.font = bold_font if is_final_calculation else normal_font
+                cell.alignment = right_align
+            
+            row_num += 1
+            
+            # Add blank spacer row after key metrics
+            if metric_name in spacer_metrics:
+                for col_idx in range(1, len(income_statement_df.columns) + 1):
+                    cell = ws.cell(row=row_num, column=col_idx)
+                    cell.value = ""
+                row_num += 1
+        
+        # Add profitability calculations section
+        if not profitability_df.empty:
+            # Add a blank spacer row before calculated metrics
+            for col_idx in range(1, len(income_statement_df.columns) + 1):
+                cell = ws.cell(row=row_num, column=col_idx)
+                cell.value = ""
+            row_num += 1
+            
+            # Track if we're in Y/Y change section for conditional formatting
+            in_yoy_section = False
+            
+            # Iterate through profitability DataFrame and add rows
+            for idx, row_data in profitability_df.iterrows():
+                metric_name = row_data["Metric"]
+                is_bold = metric_name in bold_profitability_metrics
+                is_header = metric_name == "Expenses as % of Revenue"
+                is_yoy_header = metric_name == "**%Change y/y Change (Trends)**"
+                
+                # Track when we enter the Y/Y change section
+                if is_yoy_header:
+                    in_yoy_section = True
+                
+                # Write metric name (remove markdown bold markers)
+                cell = ws.cell(row=row_num, column=1)
+                cell.value = metric_name.replace("**", "")
+                cell.font = bold_font if (is_bold or is_header or is_yoy_header) else normal_font
+                cell.alignment = left_align
+                
+                # Write data cells for each date column
+                for col_idx, col_name in enumerate(income_statement_df.columns[1:], start=2):
+                    value = row_data.get(col_name)
+                    cell = ws.cell(row=row_num, column=col_idx)
+                    
+                    # Header rows should have blank cells
+                    if is_header or is_yoy_header:
+                        cell.value = ""
+                    else:
+                        # Try to write formula instead of hardcoded value
+                        formula = self._get_profitability_formula(
+                            metric_name, col_idx, col_name, metric_to_row, 
+                            income_statement_df, in_yoy_section, is_yoy_header
+                        )
+                        
+                        if formula:
+                            cell.value = formula
+                            cell.number_format = '0.00%'
+                            cell.font = bold_font if is_bold else normal_font
+                            # Note: Conditional formatting for Y/Y changes would need Excel conditional formatting rules
+                            # For now, we'll apply it based on the formula result when Excel calculates it
+                        else:
+                            # Fallback to value if formula can't be determined
+                            if pd.isna(value) or value is None:
+                                cell.value = "—"
+                            else:
+                                try:
+                                    pct_value = float(value)
+                                    cell.value = pct_value  # Store as decimal (0.50 for 50%)
+                                    cell.number_format = '0.00%'
+                                    
+                                    # Conditional formatting for Y/Y change section
+                                    if in_yoy_section and not is_yoy_header:
+                                        if pct_value > 0:
+                                            # Positive change - green background
+                                            cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+                                            cell.font = Font(bold=True, color="006100", size=10)
+                                        elif pct_value < 0:
+                                            # Negative change - red background
+                                            cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+                                            cell.font = Font(bold=True, color="9C0006", size=10)
+                                        else:
+                                            cell.font = normal_font
+                                    else:
+                                        cell.font = bold_font if is_bold else normal_font
+                                except (ValueError, TypeError):
+                                    cell.value = "—"
+                                    cell.font = normal_font
+                    
+                    cell.alignment = right_align
+                
+                row_num += 1
+                
+                # Add spacer row after specific metrics
+                if metric_name in spacer_after_profitability_metrics:
+                    for col_idx in range(1, len(income_statement_df.columns) + 1):
+                        cell = ws.cell(row=row_num, column=col_idx)
+                        cell.value = ""
+                    row_num += 1
+        
+        # Format column widths
+        ws.column_dimensions["A"].width = 35  # Metric column
+        for col_idx in range(2, len(income_statement_df.columns) + 1):
+            col_letter = get_column_letter(col_idx)
+            ws.column_dimensions[col_letter].width = 15
+        
+        # Freeze first row and first column
+        ws.freeze_panes = "B2"
+        
+        # Save workbook
+        wb.save(file_path_or_buffer)
+    
+    def _get_calculation_formula(
+        self,
+        metric_name: str,
+        col_idx: int,
+        metric_to_row: dict,
+        income_statement_df: pd.DataFrame
+    ) -> Optional[str]:
+        """
+        Generate Excel formula for calculated Income Statement metrics.
+        
+        Args:
+            metric_name: Name of the metric (e.g., "Gross Profit")
+            col_idx: Column index (Excel column number, 2-based)
+            metric_to_row: Dictionary mapping metric names to row numbers
+            income_statement_df: Income Statement DataFrame
+            
+        Returns:
+            Excel formula string or None if formula can't be determined
+        """
+        from openpyxl.utils import get_column_letter
+        
+        col_letter = get_column_letter(col_idx)
+        
+        # Define calculation formulas
+        formulas = {
+            "Gross Profit": lambda: self._build_formula(
+                col_letter, metric_to_row, ["Revenue"], ["Cost of Revenue"], "-"
+            ),
+            "Operating Income": lambda: self._build_formula(
+                col_letter, metric_to_row, ["Gross Profit"], 
+                ["Operating Expenses", "R&D Expenses", "SG&A Expenses", "Other Operating Expenses"], "-"
+            ),
+            "Other income (expense), net": lambda: self._build_formula(
+                col_letter, metric_to_row, ["Interest Income"], 
+                ["Interest Expense", "Other, net"], "-+"
+            ),
+            "Income Before Taxes": lambda: self._build_formula(
+                col_letter, metric_to_row, ["Operating Income", "Other income (expense), net"], [], "+"
+            ),
+            "Net Income": lambda: self._build_formula(
+                col_letter, metric_to_row, ["Income Before Taxes"], ["Taxes"], "-"
+            ),
+        }
+        
+        if metric_name in formulas:
+            return formulas[metric_name]()
+        return None
+    
+    def _build_formula(
+        self,
+        col_letter: str,
+        metric_to_row: dict,
+        positive_metrics: list,
+        negative_metrics: list,
+        operation: str
+    ) -> Optional[str]:
+        """
+        Build an Excel formula from metric references.
+        
+        Args:
+            col_letter: Excel column letter (e.g., "B")
+            metric_to_row: Dictionary mapping metric names to row numbers
+            positive_metrics: List of metrics to add/subtract positively
+            negative_metrics: List of metrics to subtract/add
+            operation: Operation type ("-", "+", "-+")
+        
+        Returns:
+            Excel formula string or None if any metric is missing
+        """
+        parts = []
+        
+        # Add positive metrics
+        for metric in positive_metrics:
+            if metric in metric_to_row:
+                row_num = metric_to_row[metric]
+                parts.append(f"{col_letter}{row_num}")
+            else:
+                return None  # Can't build formula if metric is missing
+        
+        # Add negative metrics based on operation
+        if operation == "-":
+            for metric in negative_metrics:
+                if metric in metric_to_row:
+                    row_num = metric_to_row[metric]
+                    parts.append(f"-{col_letter}{row_num}")
+        elif operation == "-+":
+            # For "Other income (expense), net": Interest Income - Interest Expense + Other, net
+            if len(negative_metrics) >= 1 and negative_metrics[0] in metric_to_row:
+                row_num = metric_to_row[negative_metrics[0]]
+                parts.append(f"-{col_letter}{row_num}")
+            if len(negative_metrics) >= 2 and negative_metrics[1] in metric_to_row:
+                row_num = metric_to_row[negative_metrics[1]]
+                parts.append(f"+{col_letter}{row_num}")
+        elif operation == "+":
+            for metric in negative_metrics:
+                if metric in metric_to_row:
+                    row_num = metric_to_row[metric]
+                    parts.append(f"+{col_letter}{row_num}")
+        
+        if parts:
+            return "=" + "+".join(parts).replace("+-", "-")
+        return None
+    
+    def _get_profitability_formula(
+        self,
+        metric_name: str,
+        col_idx: int,
+        col_name: str,
+        metric_to_row: dict,
+        income_statement_df: pd.DataFrame,
+        in_yoy_section: bool,
+        is_yoy_header: bool
+    ) -> Optional[str]:
+        """
+        Generate Excel formula for profitability calculations.
+        
+        Args:
+            metric_name: Name of the profitability metric
+            col_idx: Column index (Excel column number, 2-based)
+            col_name: Column name (date)
+            metric_to_row: Dictionary mapping metric names to row numbers
+            income_statement_df: Income Statement DataFrame
+            in_yoy_section: Whether we're in the Y/Y change section
+            is_yoy_header: Whether this is a Y/Y header row
+            
+        Returns:
+            Excel formula string or None if formula can't be determined
+        """
+        from openpyxl.utils import get_column_letter
+        
+        col_letter = get_column_letter(col_idx)
+        
+        # Get column index in DataFrame for finding previous period
+        date_columns = list(income_statement_df.columns[1:])
+        try:
+            current_col_idx = date_columns.index(col_name)
+        except ValueError:
+            return None
+        
+        # Y/Y Growth formulas
+        if "Y/Y % Change" in metric_name and not in_yoy_section:
+            # Find the metric being compared (e.g., "Revenue Y/Y % Change" -> "Revenue")
+            base_metric = metric_name.replace(" Y/Y % Change", "")
+            if base_metric in metric_to_row:
+                row_num = metric_to_row[base_metric]
+                # Compare to previous period (next column)
+                if current_col_idx + 1 < len(date_columns):
+                    prev_col_letter = get_column_letter(col_idx + 1)
+                    # Formula: (Current - Previous) / Previous
+                    return f"=IF({prev_col_letter}{row_num}<>0,({col_letter}{row_num}-{prev_col_letter}{row_num})/{prev_col_letter}{row_num},0)"
+            return None
+        
+        # Y/Y Change Trends (difference between consecutive growth rates)
+        if in_yoy_section and not is_yoy_header:
+            # Find the base metric
+            base_metric = metric_name.replace(" Change of Y/Y % Change", "").replace(" Y/Y % Change", "")
+            if base_metric in metric_to_row:
+                row_num = metric_to_row[base_metric]
+                # Current period growth - previous period growth
+                if current_col_idx + 1 < len(date_columns):
+                    prev_col_letter = get_column_letter(col_idx + 1)
+                    # Need to reference the Y/Y % Change row, not the base metric row
+                    # This is complex - for now, return None and use calculated value
+                    return None
+            return None
+        
+        # Percentage of Revenue formulas
+        if "Expenses as % of Revenue" not in metric_name and "%" not in metric_name:
+            # Map metric names to their numerator/denominator
+            percentage_formulas = {
+                "Gross Margin": ("Gross Profit", "Revenue"),
+                "Research and development": ("R&D Expenses", "Revenue"),
+                "Sales, general and administrative": ("SG&A Expenses", "Revenue"),
+                "Restructuring and other charges": ("Restructuring and other charges", "Revenue"),
+                "Acquisition termination cost": ("Acquisition termination cost", "Revenue"),
+                "Interest income": ("Interest Income", "Revenue"),
+                "Interest expense": ("Interest Expense", "Revenue"),
+                "Other, net": ("Other, net", "Revenue"),
+                "Operating Margin": ("Operating Income", "Revenue"),
+                "Tax rate": ("Taxes", "Income Before Taxes"),
+            }
+            
+            for key, (numerator, denominator) in percentage_formulas.items():
+                if key.lower() in metric_name.lower():
+                    if numerator in metric_to_row and denominator in metric_to_row:
+                        num_row = metric_to_row[numerator]
+                        denom_row = metric_to_row[denominator]
+                        # Formula: Numerator / Denominator
+                        return f"=IF({col_letter}{denom_row}<>0,{col_letter}{num_row}/{col_letter}{denom_row},0)"
+            return None
+        
+        # Y/Y Absolute Difference for percentages
+        if in_yoy_section and not is_yoy_header and "%" not in metric_name:
+            # This is the change in percentage points: current % - previous %
+            # We need to find the percentage row for this metric
+            # This is complex - for now, return None and use calculated value
+            return None
+        
+        return None
