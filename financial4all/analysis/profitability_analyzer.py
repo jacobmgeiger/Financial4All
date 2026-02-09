@@ -571,6 +571,24 @@ class ProfitabilityAnalyzer:
         return pct_data
 
     @staticmethod
+    def _normalize_period_key(period_value) -> str:
+        """
+        Normalize period to YYYY-MM-DD string for consistent alignment.
+
+        Args:
+            period_value: Period (date, datetime, or str)
+
+        Returns:
+            String in YYYY-MM-DD format
+        """
+        try:
+            if hasattr(period_value, "strftime"):
+                return period_value.strftime("%Y-%m-%d")
+            return pd.to_datetime(period_value).strftime("%Y-%m-%d")
+        except (ValueError, TypeError):
+            return str(period_value)
+
+    @staticmethod
     def _get_aligned_value(
         series: pd.Series, target_date: str, available_periods: list
     ) -> Optional[float]:
@@ -579,6 +597,8 @@ class ProfitabilityAnalyzer:
 
         Handles period alignment between balance sheet (instant periods) and
         income statement (period-end dates). Finds the closest matching period.
+        Normalizes target_date and available_periods to YYYY-MM-DD to avoid
+        type/format mismatches.
 
         Args:
             series: Series with values indexed by period
@@ -591,34 +611,43 @@ class ProfitabilityAnalyzer:
         if series.empty or not available_periods:
             return None
 
+        target_norm = ProfitabilityAnalyzer._normalize_period_key(target_date)
+        periods_norm = [
+            ProfitabilityAnalyzer._normalize_period_key(p) for p in available_periods
+        ]
+        # Build period -> original key for series lookup (series index may be date or str)
+        period_to_original = dict(zip(periods_norm, available_periods))
+
         # Try exact match first
-        if target_date in available_periods:
-            value = series.get(target_date)
+        if target_norm in period_to_original:
+            original_key = period_to_original[target_norm]
+            value = series.get(original_key)
             return ProfitabilityAnalyzer._parse_numeric_value(value)
 
         # Try to parse target_date and find closest period
         try:
-            target_dt = pd.to_datetime(target_date)
+            target_dt = pd.to_datetime(target_norm)
 
-            # Find closest period by comparing dates
-            closest_period = None
+            closest_period_original = None
             min_diff = None
 
-            for period in available_periods:
+            for i, period_norm in enumerate(periods_norm):
                 try:
-                    period_dt = pd.to_datetime(period)
+                    period_dt = pd.to_datetime(period_norm)
                     diff = abs((target_dt - period_dt).days)
 
                     if min_diff is None or diff < min_diff:
                         min_diff = diff
-                        closest_period = period
+                        closest_period_original = available_periods[i]
                 except (ValueError, TypeError):
                     continue
 
             if (
-                closest_period and min_diff is not None and min_diff <= 365
+                closest_period_original is not None
+                and min_diff is not None
+                and min_diff <= 365
             ):  # Within a year
-                value = series.get(closest_period)
+                value = series.get(closest_period_original)
                 return ProfitabilityAnalyzer._parse_numeric_value(value)
         except (ValueError, TypeError):
             pass

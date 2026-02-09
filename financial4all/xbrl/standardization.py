@@ -768,18 +768,19 @@ def _get_builtin_groups_cached() -> List[SynonymGroup]:
         SynonymGroup(
             name="capex",
             synonyms=[
+                # Core PP&E-only (investing activities); edgartools-aligned; CFI: common labels
                 "PaymentsToAcquirePropertyPlantAndEquipment",
                 "CapitalExpenditures",
                 "PurchaseOfPropertyPlantAndEquipment",
                 "PaymentsToAcquireProductiveAssets",
+                "CapitalExpendituresInitiated",  # CFI: sometimes used instead of PaymentsToAcquirePP&E
+                # Combined line "Purchases related to property and equipment and intangible assets" (NVDA face)
                 "PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets",
-                "CapitalExpendituresIncurredButNotYetPaid",
+                "PaymentsForPropertyPlantAndEquipmentAndIntangibleAssets",
+                "PaymentsToAcquireOtherPropertyPlantAndEquipment",
+                "PaymentsToAcquireOtherProductiveAssets",
                 "PaymentsForPropertyPlantAndEquipment",
                 "CapitalExpendituresDiscontinuedOperations",
-                "PaymentsToAcquireBusinessesNetOfCashAcquired",
-                "PaymentsToAcquireIntangibleAssets",
-                "PaymentsForSoftwareAndWebSiteDevelopmentCosts",
-                "PaymentsForDevelopmentOfRealEstate",
                 "PaymentsToAcquirePropertyPlantAndEquipmentNet",
                 "CapitalExpendituresNet",
                 "PaymentsForCapitalExpenditures",
@@ -789,12 +790,15 @@ def _get_builtin_groups_cached() -> List[SynonymGroup]:
                 "PaymentsToAcquireAssets",
                 "PaymentsForAcquisitionOfPropertyPlantAndEquipment",
                 "PaymentsToAcquirePropertyPlantAndEquipmentAndOtherAssets",
-                "CapitalExpendituresIncludingSoftware",
-                "PaymentsForPropertyPlantAndEquipmentAndIntangibleAssets",
+                # Intangibles / software (lower priority; many filers report separately)
+                "PaymentsToAcquireIntangibleAssets",
+                "PaymentsForSoftwareAndWebSiteDevelopmentCosts",
+                "PaymentsForDevelopmentOfRealEstate",
                 "InvestmentsInPropertyPlantAndEquipmentAndIntangibleAssets",
                 "PaymentsForAcquisitionOfPropertyPlantAndEquipmentAndIntangibleAssets",
+                "CapitalExpendituresIncludingSoftware",
             ],
-            description="Capital expenditures",
+            description="Capital expenditures (PP&E / investing activities; M&A excluded)",
             category="cash_flow",
         ),
         SynonymGroup(
