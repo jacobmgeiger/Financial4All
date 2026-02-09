@@ -393,7 +393,8 @@ class FactSet:
         
         Searches for concept with all namespace variations and returns ALL facts
         regardless of form/frame initially. This is more comprehensive than
-        get_by_concept() which stops after first match.
+        get_by_concept() which stops after first match. Includes custom extension
+        taxonomies (e.g. nvda_PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets).
         
         Uses indexes for efficient lookup when possible.
         
@@ -410,13 +411,31 @@ class FactSet:
         all_facts = []
         seen_facts = set()  # Track by normalized key to avoid duplicates
         
-        # Generate all possible variations
+        # Generate all possible variations: exact, us-gaap, bare, and extension prefixes
         variations = [concept]
         if include_variants:
             if not concept.startswith("us-gaap_"):
                 variations.append(f"us-gaap_{concept}")
             if concept.startswith("us-gaap_"):
                 variations.append(concept.replace("us-gaap_", "", 1))
+            # Local name for extension lookups (e.g. PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets)
+            if concept.startswith("us-gaap_"):
+                local_name = concept.replace("us-gaap_", "", 1)
+            elif "_" in concept:
+                local_name = concept.split("_", 1)[1]
+            else:
+                local_name = concept
+            # Custom extension taxonomies: try prefix_localName for every prefix present in this FactSet
+            extension_prefixes = set()
+            for f in self.facts:
+                if "_" in f.concept:
+                    p = f.concept.split("_", 1)[0]
+                    if p and p != "us-gaap":
+                        extension_prefixes.add(p)
+            for prefix in extension_prefixes:
+                variant = f"{prefix}_{local_name}"
+                if variant not in variations:
+                    variations.append(variant)
         
         # Collect facts from all variations using indexes
         # Use local function references for performance
@@ -696,8 +715,11 @@ class FactSet:
         """
         Create FactSet from SEC company facts API response.
         
-        Extracts both US-GAAP facts and DEI (Document and Entity Information) facts.
-        DEI facts are used to build entity information including fiscal year end dates.
+        Extracts US-GAAP facts, custom/extension taxonomy facts, and DEI facts.
+        DEI facts are used to build entity information. Custom extension taxonomies
+        (e.g. nvda for NVIDIA) are stored with a prefix so concepts like
+        nvda:PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets are
+        findable when resolving by local name (see get_all_facts_for_concept).
         
         Args:
             company_facts: Dictionary from SEC company facts API
@@ -707,47 +729,66 @@ class FactSet:
             FactSet object with facts and entity information
         """
         facts = []
-        us_gaap = company_facts.get("facts", {}).get("us-gaap", {})
+        facts_by_taxonomy = company_facts.get("facts", {})
         
-        for concept, concept_data in us_gaap.items():
-            units = concept_data.get("units", {})
+        # Iterate all taxonomies: us-gaap plus custom extensions (e.g. nvda, aapl)
+        for taxonomy_key, taxonomy_data in facts_by_taxonomy.items():
+            if not isinstance(taxonomy_data, dict):
+                continue
+            # DEI is used only for entity info extraction, not for financial facts
+            if taxonomy_key.lower() == "dei":
+                continue
             
-            for unit, entries in units.items():
-                for entry in entries:
-                    # Extract period information
-                    period_dict = {}
-                    if "end" in entry:
-                        period_dict["end"] = entry["end"]
-                    if "start" in entry:
-                        period_dict["start"] = entry["start"]
-                    
-                    if not period_dict:
+            # Store us-gaap concepts as bare names; others as prefix_localname (e.g. nvda_ConceptName)
+            concept_prefix = "" if taxonomy_key == "us-gaap" else (taxonomy_key.rstrip("_-") + "_")
+            
+            for concept, concept_data in taxonomy_data.items():
+                if not isinstance(concept_data, dict):
+                    continue
+                units = concept_data.get("units", {})
+                
+                for unit, entries in units.items():
+                    if not isinstance(entries, list):
                         continue
-                    
-                    try:
-                        period = Period.from_xbrl_dict(period_dict)
-                    except (ValueError, TypeError) as e:
-                        log.debug(f"Skipping fact with invalid period: {e}")
-                        continue
-                    
-                    try:
-                        filed_date = None
-                        if entry.get("filed"):
-                            filed_date = datetime.fromisoformat(entry["filed"].replace('Z', '+00:00'))
-                    except (ValueError, AttributeError):
-                        filed_date = None
-                    
-                    fact = Fact(
-                        concept=concept,
-                        value=entry.get("val"),
-                        unit=unit,
-                        period=period,
-                        form=entry.get("form"),
-                        frame=entry.get("frame"),
-                        filed=filed_date,
-                        dimensions=entry.get("dimensions", {}),
-                    )
-                    facts.append(fact)
+                    for entry in entries:
+                        if not isinstance(entry, dict):
+                            continue
+                        # Extract period information
+                        period_dict = {}
+                        if "end" in entry:
+                            period_dict["end"] = entry["end"]
+                        if "start" in entry:
+                            period_dict["start"] = entry["start"]
+                        
+                        if not period_dict:
+                            continue
+                        
+                        try:
+                            period = Period.from_xbrl_dict(period_dict)
+                        except (ValueError, TypeError) as e:
+                            log.debug(f"Skipping fact with invalid period: {e}")
+                            continue
+                        
+                        try:
+                            filed_date = None
+                            if entry.get("filed"):
+                                filed_date = datetime.fromisoformat(entry["filed"].replace('Z', '+00:00'))
+                        except (ValueError, AttributeError):
+                            filed_date = None
+                        
+                        # Concept name: bare for us-gaap, taxonomy_ConceptName for extensions
+                        concept_name = concept if not concept_prefix else (concept_prefix + concept)
+                        fact = Fact(
+                            concept=concept_name,
+                            value=entry.get("val"),
+                            unit=unit,
+                            period=period,
+                            form=entry.get("form"),
+                            frame=entry.get("frame"),
+                            filed=filed_date,
+                            dimensions=entry.get("dimensions", {}),
+                        )
+                        facts.append(fact)
         
         # Extract DEI facts and build entity info
         dei_facts = extract_dei_facts(company_facts)

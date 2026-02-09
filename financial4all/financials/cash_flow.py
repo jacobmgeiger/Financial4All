@@ -11,6 +11,8 @@ import numpy as np
 from typing import Dict, List, Optional, Any, Set
 from collections import defaultdict
 
+from datetime import date as date_type
+
 from financial4all.xbrl.facts import FactSet
 from financial4all.xbrl.periods import PeriodType
 from financial4all.xbrl.standardization import get_synonym_groups, get_default_store
@@ -344,6 +346,89 @@ class CashFlowStatement:
 
         return fallback_concepts
 
+    def _aggregate_quarterly_capex_to_annual(self) -> Dict[str, float]:
+        """
+        Sum quarterly CapEx facts into annual values for fiscal years that lack 10-K annual facts.
+
+        Many filers (e.g. NVIDIA 2013–2020) report CapEx only in 10-Q with no 10-K annual
+        fact; the SEC API may provide single-quarter (90d) and cumulative (181d, 272d) facts.
+        We sum four single quarters when available, or derive Q1+Q2+Q3 from cumulative and
+        add Q4 when present.
+
+        Returns:
+            Dict mapping period_key (YYYY-MM-DD) to annual CapEx from summed quarters.
+        """
+        out: Dict[str, float] = {}
+        capex_concepts = self.STANDARD_MAPPING.get("CapEx", [])
+        if not capex_concepts:
+            return out
+        # Collect duration USD facts by inferred fiscal year end
+        by_fy: Dict[str, List[tuple]] = defaultdict(list)  # fy_key -> [(end_date, days, value)]
+        for concept in capex_concepts:
+            facts = self._original_fact_set.get_all_facts_for_concept(concept, include_variants=True)
+            for fact in facts:
+                if fact.period.period_type != PeriodType.DURATION or not fact.period.start:
+                    continue
+                if fact.unit != "USD" and not (fact.unit and str(fact.unit).startswith("USD")):
+                    continue
+                try:
+                    val = abs(float(fact.value))
+                except (ValueError, TypeError):
+                    continue
+                s, e = fact.period.start, fact.period.end
+                start_d = s if isinstance(s, date_type) else date_type.fromisoformat(str(s)[:10])
+                end_d = e if isinstance(e, date_type) else date_type.fromisoformat(str(e)[:10])
+                days = (end_d - start_d).days
+                y, m = end_d.year, end_d.month
+                fy_key = self._normalize_period_key(end_d) if m <= 3 else f"{y + 1}-01-31"
+                by_fy[fy_key].append((end_d, days, val))
+        for fy_key, candidates in by_fy.items():
+            # Dedupe by (end_date, days): keep one value per period
+            seen: Set[tuple] = set()
+            unique: List[tuple] = []
+            for end_d, days, val in sorted(candidates, key=lambda x: (x[0], x[1])):
+                key = (end_d, days)
+                if key in seen:
+                    continue
+                seen.add(key)
+                unique.append((end_d, days, val))
+            if not unique:
+                continue
+            # Prefer single annual fact
+            annual = next((v for end_d, d, v in unique if 330 <= d <= 400), None)
+            if annual is not None:
+                out[fy_key] = annual
+                continue
+            # Four single quarters (each ~90 days)
+            quarters = [(end_d, d, v) for end_d, d, v in unique if 80 <= d <= 100]
+            if len(quarters) >= 4:
+                # One value per quarter end (same end can appear with different durations in API)
+                by_end: Dict[date_type, float] = {}
+                for end_d, _d, v in sorted(quarters, key=lambda x: x[0]):
+                    by_end[end_d] = v
+                if len(by_end) >= 4:
+                    out[fy_key] = sum(by_end.values())
+                continue
+            # Cumulative (e.g. 90, 181, 272 days): Q1 = v1, Q2 = v2-v1, Q3 = v3-v2; need Q4
+            sorted_by_end = sorted(unique, key=lambda x: x[0])
+            if len(sorted_by_end) >= 3:
+                ends = [x[0] for x in sorted_by_end]
+                days_list = [x[1] for x in sorted_by_end]
+                vals = [x[2] for x in sorted_by_end]
+                if 80 <= days_list[0] <= 100 and 175 <= days_list[1] <= 190 and 265 <= days_list[2] <= 280:
+                    q1, q2, q3 = vals[0], vals[1] - vals[0], vals[2] - vals[1]
+                    # Q4: fact ending in Jan with ~90 days in same FY
+                    fy_year = date_type.fromisoformat(fy_key[:10]).year
+                    q4_candidates = [(e, d, v) for e, d, v in unique if e.month <= 3 and 80 <= d <= 100 and e.year == fy_year]
+                    if q4_candidates:
+                        q4 = max(q4_candidates, key=lambda x: x[0])[2]
+                        out[fy_key] = q1 + q2 + q3 + q4
+                    else:
+                        # SEC API often has no Q4 for these years (e.g. NVDA 2013–2020). Skip 9-month proxy
+                        # so we don't show understated "annual" figures; leave period unfilled (—).
+                        pass
+        return out
+
     def to_dataframe(self) -> pd.DataFrame:
         """
         Convert cash flow statement to pandas DataFrame.
@@ -414,6 +499,30 @@ class CashFlowStatement:
                             "(no PP&E concept had data)",
                             period_key,
                         )
+            # CapEx from summed quarters when no 10-K annual fact (e.g. NVDA 2013–2020 in SEC API).
+            # Reuse existing period key for that fiscal year when present (avoids duplicate FY columns).
+            def _fiscal_year_key(pk: str) -> str:
+                try:
+                    y, m = int(pk[:4]), int(pk[5:7])
+                    return f"{y}-01" if m <= 3 else f"{y + 1}-01"
+                except (ValueError, IndexError):
+                    return pk
+            aggregated = self._aggregate_quarterly_capex_to_annual()
+            for period_key, value in aggregated.items():
+                if period_key in metrics_data["CapEx"]:
+                    continue
+                fy_key = _fiscal_year_key(period_key)
+                # Prefer putting value on an existing period for this FY (e.g. 2013-01-27 from other metrics)
+                existing_for_fy = [p for p in all_periods if _fiscal_year_key(p) == fy_key]
+                target = existing_for_fy[0] if existing_for_fy else period_key
+                if target not in metrics_data["CapEx"]:
+                    metrics_data["CapEx"][target] = value
+                    if target == period_key:
+                        all_periods.add(period_key)
+                    log.debug(
+                        "CashFlowStatement: CapEx period %s filled from summed quarterly facts",
+                        target,
+                    )
 
         # Convert to DataFrame
         if not metrics_data or not reported_metrics:

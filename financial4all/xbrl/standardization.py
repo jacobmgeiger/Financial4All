@@ -765,19 +765,32 @@ def _get_builtin_groups_cached() -> List[SynonymGroup]:
             description="Net change in cash and cash equivalents",
             category="cash_flow",
         ),
+        # Capital expenditures: INVESTING CASH OUTFLOWS (Statement of Cash Flows) only. Do NOT
+        # use for segment-note CapEx: per DQC 0164 (2022), segment disclosure must use
+        # SegmentExpenditureAdditionToLongLivedAssets (accrual-based); PaymentsToAcquire... in
+        # segment tables is flagged. Related: CapitalExpendituresIncurredButNotYetPaid = liability
+        # balance (not period change); do not use for supplemental "change in liabilities" line.
         SynonymGroup(
             name="capex",
             synonyms=[
-                # Core PP&E-only (investing activities); edgartools-aligned; CFI: common labels
+                # US GAAP Taxonomy: balance type Credit, period Duration; investing cash outflows
+                # for PP&E and intangible assets (Calcbench, Deloitte, xbrl.us/data-rule/dqc_0015-lepr/).
+                # Primary us-gaap tags (DQC_0015 / Calcbench); SCF only—segment note uses
+                # SegmentExpenditureAdditionToLongLivedAssets per DQC 0164.
                 "PaymentsToAcquirePropertyPlantAndEquipment",
+                "PaymentsToAcquireIntangibleAssets",
+                "PaymentsToAcquireProductiveAssets",
+                "PaymentsToAcquireOtherPropertyPlantAndEquipment",
+                # Common labels / synonyms
                 "CapitalExpenditures",
                 "PurchaseOfPropertyPlantAndEquipment",
-                "PaymentsToAcquireProductiveAssets",
                 "CapitalExpendituresInitiated",  # CFI: sometimes used instead of PaymentsToAcquirePP&E
                 # Combined line "Purchases related to property and equipment and intangible assets" (NVDA face)
                 "PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets",
                 "PaymentsForPropertyPlantAndEquipmentAndIntangibleAssets",
-                "PaymentsToAcquireOtherPropertyPlantAndEquipment",
+                # Custom extension tags when filers combine PPE + intangibles (e.g. NVDA 2013–2021);
+                # local name matches regardless of namespace (e.g. nvda:...).
+                "PurchasesOfPropertyAndEquipmentAndIntangibleAssets",
                 "PaymentsToAcquireOtherProductiveAssets",
                 "PaymentsForPropertyPlantAndEquipment",
                 "CapitalExpendituresDiscontinuedOperations",
@@ -790,8 +803,7 @@ def _get_builtin_groups_cached() -> List[SynonymGroup]:
                 "PaymentsToAcquireAssets",
                 "PaymentsForAcquisitionOfPropertyPlantAndEquipment",
                 "PaymentsToAcquirePropertyPlantAndEquipmentAndOtherAssets",
-                # Intangibles / software (lower priority; many filers report separately)
-                "PaymentsToAcquireIntangibleAssets",
+                # Intangibles / software (many filers report separately)
                 "PaymentsForSoftwareAndWebSiteDevelopmentCosts",
                 "PaymentsForDevelopmentOfRealEstate",
                 "InvestmentsInPropertyPlantAndEquipmentAndIntangibleAssets",

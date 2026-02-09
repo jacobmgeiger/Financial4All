@@ -92,3 +92,60 @@ An audit report must also contain a section communicating key audit matters (int
 
 
 To keep up to date on the evolving standards, an analyst can monitor professional journals and other sources, such as the IASB (www.ifrs.org) and FASB (www.fasb.org) websites. CFA Institute produces position papers on financial reporting issues through the CFA Institute Centre for Financial Market Integrity.
+
+---
+
+## XBRL US GAAP Taxonomy: CapEx and 2021 vs 2022
+
+Changes in how Capital Expenditures (CapEx) and related items are reported in XBRL between 2021 and 2022 were driven by annual US GAAP Taxonomy updates, SEC disclosure requirements, and **stricter enforcement of element selection** for segment reporting versus the statement of cash flows (see [SEC.gov](https://www.sec.gov), [FASB](https://www.fasb.org), [xbrl.us](https://xbrl.us) resources).
+
+**2022 taxonomy and SEC cutoff**
+
+- The SEC required use of the **2022 US GAAP Taxonomy** for reporting periods ending on or after **March 21, 2022**; 2022 taxonomies are not compatible with 2021 versions.
+- The 2022 taxonomy included element additions and deprecations to improve consistency and reflect new accounting standards. Dimensional modeling and disclosureRef roles were tightened (e.g., Topic 842 leasehold improvements vs. Topic 360 PPE).
+
+### 1. Segment reporting: use of a dedicated "expenditure" element (DQC Rule 0164)
+
+The most significant practical change was the **enforcement of a distinction between cash payments for CapEx and accrual-based additions to long-lived assets in segment reporting**.
+
+- **DQC Rule 0164** (2022 taxonomy cycle): Flags errors when filers use **cash flow** elements in segment disclosure tables—in particular `PaymentsToAcquirePropertyPlantAndEquipment` or `PropertyPlantAndEquipmentAdditions` inside segment notes.
+- **Requirement**: Within the **segment note**, filers must use **`SegmentExpenditureAdditionToLongLivedAssets`** for CapEx-related disclosures.
+- **Rationale**: `PaymentsToAcquire...` = cash outflow (Statement of Cash Flows); `SegmentExpenditureAdditionToLongLivedAssets` = accrual-based addition (Segment Note per FASB ASC 280), which may include non-cash items (e.g., assets acquired on credit). Previously, many companies used these tags interchangeably; the 2022 taxonomy and validation rules correct that.
+
+**Implication for standardization**: The "capex" concept in this project is defined for **investing cash outflows** (Statement of Cash Flows) only. Segment-note CapEx must be mapped separately using `SegmentExpenditureAdditionToLongLivedAssets` and must not be conflated with cash CapEx.
+
+### 2. Cash flow statement: core elements unchanged
+
+- **Investing cash outflows**: `PaymentsToAcquirePropertyPlantAndEquipment`, `PaymentsToAcquireIntangibleAssets`, and related tags remained the correct elements for the Statement of Cash Flows; strict validation ensures they are **not** used in segment tables.
+
+### 3. Supplemental cash flow: "Incurred but not yet paid" clarification
+
+- **Clarification**: Filers were advised **not** to use `CapitalExpendituresIncurredButNotYetPaid` for the line "Change in liabilities attributable to capital expenditures" in the **supplemental** (reconciliation) cash flow section.
+- **Reason**: `CapitalExpendituresIncurredButNotYetPaid` represents the **liability balance** (credit), not the **period change** or non-cash adjustment. The supplemental disclosure requires the change or specific non-cash impact for the period.
+- **Usage**: The element is appropriate for the liability itself in noncash investing/financing disclosures, not for the reconciliation line.
+
+### 4. Summary of key changes
+
+| Reporting area        | 2021 practice (common errors)                                      | 2022 requirement / best practice                                                                 |
+|-----------------------|---------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| Segment reporting     | Used `PaymentsToAcquirePropertyPlantAndEquipment` in segment tables | Use **`SegmentExpenditureAdditionToLongLivedAssets`** in segment notes (DQC 0164).               |
+| Cash flow statement   | Standard use of `PaymentsToAcquire...`                              | No change to core element; validation against using it in segment notes.                         |
+| Supplemental data     | Inconsistent use of "Incurred but not yet paid" tags                | `CapitalExpendituresIncurredButNotYetPaid` = liability balance, not the cash flow adjustment.   |
+
+### 5. Other context
+
+- **Liquidity and capital resources (Item 5.B)**: For Form 20-F filers, 2022 guidance revised requirements for material cash commitments, including capital expenditures.
+- **R&E capitalization (effective 2022)**: For tax years beginning after December 31, 2021, Research & Experimental expenditures must be capitalized rather than expensed; this affects “capitalized costs” in tax-related XBRL footnotes and can affect investing cash flows when reported gross.
+
+### 6. Filer-specific CapEx: custom extensions when PPE + intangibles are combined
+
+When a filer combines "Purchases of property and equipment and intangible assets" into a single line and no single us-gaap tag fits, the SEC Edgar Filer Manual may require a **custom extension** element. Example: **NVIDIA (NVDA)** used custom tags for 2013–2021 (e.g. `nvda:PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets`, `nvda:PurchasesOfPropertyAndEquipmentAndIntangibleAssets`); from 2022 they use the standard `PaymentsToAcquireProductiveAssets`. To capture such periods, the parser must recognize extension elements by **local name** (so the same concept name in any namespace maps to Capital Expenditures) and include the alternate tag `PurchasesOfPropertyAndEquipmentAndIntangibleAssets` in the capex synonym set. 2008–2009 and other pre-mandate periods may remain missing due to early taxonomy versions.
+
+### 7. SEC Company Facts API (recommended for changing/custom tags)
+
+The **Company Facts** endpoint is the right choice when you need to handle changing tags and custom extensions (e.g. `nvda:PaymentsToAcquire...`) without guessing tag names up front.
+
+- **URL**: `https://data.sec.gov/api/xbrl/companyfacts/CIK##########.json` (CIK padded to 10 digits; include a `User-Agent` header).
+- **Structure**: The response has `facts` with keys by taxonomy: `us-gaap`, `dei`, and often **custom namespaces** such as `[ticker]` (e.g. `nvda`, `aapl`) for extension elements. Each taxonomy is an object of concept names to `{ "label", "units": { "USD": [ { "val", "fy", "fp", "end", "start", "form", ... } ] } }`.
+- **Parser logic**: (1) Iterate over every key under `facts` (not only `us-gaap`). (2) For each concept, read `units.USD` (or other units) and build a time series. (3) Map concepts to your standard “Capital Expenditures” (and other metrics) via synonym groups and company mappings. (4) Merge series from different tags/namespaces into one dataset per metric.
+- **NVDA note**: Many guides state that `facts["nvda"]` exists for NVIDIA’s custom CapEx tag. For CIK 0001045810, the live API has been observed to return only `us-gaap`, `invest`, `srt`, `dei`—no `nvda` key. The app iterates all taxonomy keys and would consume `facts["nvda"]` if present; for 2013–2020, CapEx is only available from us-gaap quarterly facts (no 10-K annual in the API).

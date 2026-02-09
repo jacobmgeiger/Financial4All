@@ -70,6 +70,11 @@ Each company mapping file follows this structure:
   - Revenue concept changed from "Revenues" (2007-2017) to "RevenueFromContractWithCustomer" (2018+)
   - Reports "OtherIncomeExpense" without "Net" suffix (handled in standardization.py)
 
+### NVDA (NVIDIA Corporation)
+- **CIK**: 0001045810
+- **Mappings**: Capital Expenditures (custom extension tags for 2013–2021)
+- **CapEx tagging**: 2013–2021 NVDA combined PPE + Intangible Assets into one SCF line; in filings they may have used custom extension elements (e.g. `nvda:PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets`). Many guides state that the **Company Facts** endpoint (`https://data.sec.gov/api/xbrl/companyfacts/CIK##########.json`) returns `facts["nvda"]` for custom tags; in practice, the live API for this CIK returns only `facts["us-gaap"]`, `facts["invest"]`, `facts["srt"]`, `facts["dei"]`—no `facts["nvda"]`. The app **does** iterate all taxonomy keys and would use `facts["nvda"]` if present; for 2013–2020, `PaymentsToAcquirePropertyPlantAndEquipment` in us-gaap appears only as 10-Q (no 10-K annual), so we do not fill those years with partial data. 2022+ uses us-gaap:PaymentsToAcquireProductiveAssets.
+
 ## Priority System
 
 Mappings are resolved with the following priority (higher priority wins):

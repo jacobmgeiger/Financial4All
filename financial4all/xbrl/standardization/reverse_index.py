@@ -204,6 +204,16 @@ class ReverseIndex:
         if cache_key in self._normalized_cache:
             return self._normalized_cache[cache_key]
         
+        # Extension/custom elements (e.g. nvda:PaymentsToAcquire...): match by local name
+        # so company-specific tags resolve when the same name exists in the index.
+        if ":" in tag:
+            local_name = tag.split(":", 1)[1]
+            if local_name in self._index:
+                return local_name
+            local_key = local_name.lower()
+            if local_key in self._normalized_cache:
+                return self._normalized_cache[local_key]
+        
         return None
     
     def lookup(self, xbrl_tag: str) -> Optional[MappingResult]:

@@ -84,5 +84,7 @@
   "Total Current Liabilities": "Total Current Liabilities",
   "Total Liabilities": "Total Liabilities",
   "Total Stockholders' Equity": "Total Stockholders' Equity",
-  "Treasury Stock": "Treasury Stock"
+  "Treasury Stock": "Treasury Stock",
+  "Weighted Average Shares Outstanding Basic": "Weighted Average Shares Outstanding Basic",
+  "Weighted Average Shares Outstanding Diluted": "Weighted Average Shares Outstanding Diluted"
 }

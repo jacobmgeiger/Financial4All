@@ -33,9 +33,32 @@
   ],
   "Capital Expenditures": [
     "CapitalExpenditures",
+    "CapitalExpendituresDiscontinuedOperations",
+    "CapitalExpendituresForPropertyPlantAndEquipment",
+    "CapitalExpendituresIncludingSoftware",
+    "CapitalExpendituresInitiated",
+    "CapitalExpendituresNet",
+    "InvestmentsInPropertyPlantAndEquipment",
+    "InvestmentsInPropertyPlantAndEquipmentAndIntangibleAssets",
+    "PaymentsForAcquisitionOfPropertyPlantAndEquipment",
+    "PaymentsForAcquisitionOfPropertyPlantAndEquipmentAndIntangibleAssets",
+    "PaymentsForCapitalExpenditures",
+    "PaymentsForDevelopmentOfRealEstate",
+    "PaymentsForPropertyPlantAndEquipment",
+    "PaymentsForPropertyPlantAndEquipmentAndIntangibleAssets",
+    "PaymentsForPurchaseOfPropertyPlantAndEquipment",
+    "PaymentsForSoftwareAndWebSiteDevelopmentCosts",
+    "PaymentsToAcquireAssets",
+    "PaymentsToAcquireIntangibleAssets",
+    "PaymentsToAcquireOtherProductiveAssets",
+    "PaymentsToAcquireOtherPropertyPlantAndEquipment",
     "PaymentsToAcquireProductiveAssets",
     "PaymentsToAcquirePropertyPlantAndEquipment",
-    "PurchaseOfPropertyPlantAndEquipment"
+    "PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets",
+    "PaymentsToAcquirePropertyPlantAndEquipmentAndOtherAssets",
+    "PaymentsToAcquirePropertyPlantAndEquipmentNet",
+    "PurchaseOfPropertyPlantAndEquipment",
+    "PurchasesOfPropertyAndEquipmentAndIntangibleAssets"
   ],
   "Cash and Cash Equivalents": [
     "Cash",
@@ -89,8 +112,19 @@
   ],
   "Depreciation and Amortization": [
     "AmortizationOfIntangibleAssets",
+    "CostDepreciationAmortizationAndDepletion",
     "Depreciation",
+    "DepreciationAmortizationAndAccretion",
+    "DepreciationAmortizationAndAccretionExpense",
+    "DepreciationAmortizationAndAccretionNet",
+    "DepreciationAmortizationAndAccretionNetOfAmortizationOfDeferredFinancingCosts",
+    "DepreciationAmortizationAndDepletion",
+    "DepreciationAmortizationAndDepletionExpense",
+    "DepreciationAmortizationAndImpairment",
+    "DepreciationAmortizationDepletionAndImpairment",
     "DepreciationAndAmortization",
+    "DepreciationAndAmortizationExpense",
+    "DepreciationAndAmortizationNoncash",
     "DepreciationDepletionAndAmortization"
   ],
   "Diluted EPS": [
@@ -99,6 +133,7 @@
   ],
   "Dividends Paid": [
     "DividendsPaid",
+    "PaymentsForDividends",
     "PaymentsOfDividends",
     "PaymentsOfDividendsCommonStock"
   ],
@@ -160,6 +195,7 @@
   "Interest Income (Net)": [
     "InterestIncomeExpenseAfterProvisionForLoanLoss",
     "InterestIncomeExpenseNet",
+    "InterestIncomeExpenseNonoperatingNet",
     "NetInvestmentIncome"
   ],
   "Inventory": [
@@ -236,6 +272,7 @@
     "RightOfUseAssetObtainedInExchangeForOperatingLeaseLiability"
   ],
   "Other, net": [
+    "NonoperatingIncomeExpense",
     "OtherIncomeExpense",
     "OtherIncomeExpenseNet",
     "OtherNonoperatingIncomeExpense",
@@ -279,6 +316,7 @@
     "SalesRevenueGoodsNet",
     "SalesRevenueNet",
     "SalesRevenueNetOfReturnsAndAllowances",
+    "TotalRevenue",
     "TotalRevenues"
   ],
   "Selling, General and Administrative Expense": [
@@ -334,5 +372,13 @@
   "Treasury Stock": [
     "TreasuryStockCommonValue",
     "TreasuryStockValue"
+  ],
+  "Weighted Average Shares Outstanding Basic": [
+    "WeightedAverageNumberOfSharesOutstanding",
+    "WeightedAverageNumberOfSharesOutstandingBasic"
+  ],
+  "Weighted Average Shares Outstanding Diluted": [
+    "WeightedAverageNumberDilutedSharesOutstanding",
+    "WeightedAverageNumberOfDilutedSharesOutstanding"
   ]
 }

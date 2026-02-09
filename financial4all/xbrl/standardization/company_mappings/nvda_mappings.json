@@ -1,0 +1,25 @@
+{
+  "entity_info": {
+    "name": "NVIDIA Corporation",
+    "cik": "0001045810",
+    "ticker": "NVDA",
+    "description": "NVIDIA-specific concept mappings for custom XBRL extensions, including CapEx (2013–2021 combined PPE + intangibles line)."
+  },
+  "concept_mappings": {
+    "_comment_nvda_capex": "2013–2021: NVDA combined PPE and Intangible Assets into one SCF line and used custom extension elements. 2022+: uses us-gaap:PaymentsToAcquireProductiveAssets. 2010–2012: us-gaap:PaymentsToAcquirePropertyPlantAndEquipment. 2008–2009: pre-mandate/early XBRL.",
+    "Capital Expenditures": [
+      "PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets",
+      "PurchasesOfPropertyAndEquipmentAndIntangibleAssets"
+    ]
+  },
+  "hierarchy_rules": {},
+  "business_context": {
+    "entity_type": "operating_company",
+    "industry": "semiconductors_graphics",
+    "description": "NVIDIA Corporation designs and sells graphics processors and related software.",
+    "known_issues": [
+      "CapEx 2013–2021: combined PPE + intangibles line tagged with custom extension (nvda:PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets or similar); parser must accept extension elements by local name.",
+      "CapEx 2008–2009: XBRL not mandatory or early taxonomy; data may be missing."
+    ]
+  }
+}
