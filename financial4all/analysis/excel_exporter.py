@@ -565,6 +565,11 @@ class ExcelExporter:
                     cell.value = ""
                 row_num += 1
         
+        # Track profitability metric rows for formula references
+        # Only store FIRST occurrence (before trends section) to avoid circular references
+        profitability_to_row = {}
+        yoy_trend_rows = []  # Track rows in Y/Y trends section for conditional formatting
+        
         # Add profitability calculations section
         if not profitability_df.empty:
             # Add a blank spacer row before calculated metrics
@@ -587,6 +592,12 @@ class ExcelExporter:
                 if is_yoy_header:
                     in_yoy_section = True
                 
+                # Only store row number for FIRST occurrence (BEFORE trends section)
+                # This prevents circular references when the same metric appears in trends
+                # We explicitly check that we're NOT in the trends section yet
+                if metric_name not in profitability_to_row and not in_yoy_section:
+                    profitability_to_row[metric_name] = row_num
+                
                 # Write metric name (remove markdown bold markers)
                 cell = ws.cell(row=row_num, column=1)
                 cell.value = metric_name.replace("**", "")
@@ -605,15 +616,18 @@ class ExcelExporter:
                         # Try to write formula instead of hardcoded value
                         formula = self._get_profitability_formula(
                             metric_name, col_idx, col_name, metric_to_row, 
-                            income_statement_df, in_yoy_section, is_yoy_header
+                            income_statement_df, in_yoy_section, is_yoy_header,
+                            profitability_to_row, row_num
                         )
                         
                         if formula:
                             cell.value = formula
                             cell.number_format = '0.00%'
                             cell.font = bold_font if is_bold else normal_font
-                            # Note: Conditional formatting for Y/Y changes would need Excel conditional formatting rules
-                            # For now, we'll apply it based on the formula result when Excel calculates it
+                            
+                            # Track rows in Y/Y trends section for conditional formatting
+                            if in_yoy_section and not is_yoy_header:
+                                yoy_trend_rows.append((row_num, col_idx))
                         else:
                             # Fallback to value if formula can't be determined
                             if pd.isna(value) or value is None:
@@ -626,6 +640,7 @@ class ExcelExporter:
                                     
                                     # Conditional formatting for Y/Y change section
                                     if in_yoy_section and not is_yoy_header:
+                                        yoy_trend_rows.append((row_num, col_idx))
                                         if pct_value > 0:
                                             # Positive change - green background
                                             cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
@@ -652,6 +667,10 @@ class ExcelExporter:
                         cell = ws.cell(row=row_num, column=col_idx)
                         cell.value = ""
                     row_num += 1
+            
+            # Apply conditional formatting to Y/Y trends section using Excel conditional formatting rules
+            if yoy_trend_rows:
+                self._apply_conditional_formatting(ws, yoy_trend_rows)
         
         # Format column widths
         ws.column_dimensions["A"].width = 35  # Metric column
@@ -776,7 +795,9 @@ class ExcelExporter:
         metric_to_row: dict,
         income_statement_df: pd.DataFrame,
         in_yoy_section: bool,
-        is_yoy_header: bool
+        is_yoy_header: bool,
+        profitability_to_row: dict,
+        current_row: int
     ) -> Optional[str]:
         """
         Generate Excel formula for profitability calculations.
@@ -819,16 +840,46 @@ class ExcelExporter:
         
         # Y/Y Change Trends (difference between consecutive growth rates)
         if in_yoy_section and not is_yoy_header:
-            # Find the base metric
-            base_metric = metric_name.replace(" Change of Y/Y % Change", "").replace(" Y/Y % Change", "")
-            if base_metric in metric_to_row:
-                row_num = metric_to_row[base_metric]
-                # Current period growth - previous period growth
-                if current_col_idx + 1 < len(date_columns):
+            # Handle "Change of Y/Y % Change" metrics (e.g., "Outstanding Shares Basic Change of Y/Y % Change")
+            if "Change of Y/Y % Change" in metric_name:
+                # Extract base metric name (e.g., "Outstanding Shares Basic" from "Outstanding Shares Basic Change of Y/Y % Change")
+                base_metric_name = metric_name.replace(" Change of Y/Y % Change", "")
+                yoy_metric_name = f"{base_metric_name} Y/Y % Change"
+                
+                # Reference the Y/Y % Change row from the first section
+                if yoy_metric_name in profitability_to_row:
+                    yoy_row = profitability_to_row[yoy_metric_name]
+                    # CRITICAL: Make sure we're referencing a row from BEFORE the trends section
+                    if yoy_row != current_row and yoy_row < current_row and current_col_idx + 1 < len(date_columns):
+                        prev_col_letter = get_column_letter(col_idx + 1)
+                        # Formula: Current Y/Y % Change - Previous Y/Y % Change
+                        return f"={col_letter}{yoy_row}-{prev_col_letter}{yoy_row}"
+            
+            # Handle "Revenue Y/Y % Change" in trends section (references the first "Revenue Y/Y % Change" row)
+            elif metric_name == "Revenue Y/Y % Change" and "Revenue Y/Y % Change" in profitability_to_row:
+                yoy_row = profitability_to_row["Revenue Y/Y % Change"]
+                # CRITICAL: Make sure we're referencing a row from BEFORE the trends section
+                if yoy_row != current_row and yoy_row < current_row and current_col_idx + 1 < len(date_columns):
                     prev_col_letter = get_column_letter(col_idx + 1)
-                    # Need to reference the Y/Y % Change row, not the base metric row
-                    # This is complex - for now, return None and use calculated value
-                    return None
+                    # Formula: Current Y/Y % Change - Previous Y/Y % Change
+                    # Note: This references the first occurrence of "Revenue Y/Y % Change" from above
+                    return f"={col_letter}{yoy_row}-{prev_col_letter}{yoy_row}"
+            
+            # For percentage metrics in trends section (e.g., "Gross Margin", "Operating Margin")
+            # These are the Y/Y change in percentage points
+            # IMPORTANT: These must reference the ORIGINAL % of Revenue rows, not the trends rows
+            else:
+                # Check if this percentage metric exists in profitability rows (from the % of Revenue section)
+                if metric_name in profitability_to_row:
+                    pct_row = profitability_to_row[metric_name]
+                    # CRITICAL: Make absolutely sure we're not referencing the current row
+                    # The stored row should be from BEFORE the trends section
+                    if pct_row != current_row and pct_row < current_row and current_col_idx + 1 < len(date_columns):
+                        prev_col_letter = get_column_letter(col_idx + 1)
+                        # Formula: Current % - Previous % (from the original % of Revenue section)
+                        # This calculates the change in percentage points between periods
+                        return f"={col_letter}{pct_row}-{prev_col_letter}{pct_row}"
+            
             return None
         
         # Percentage of Revenue formulas
@@ -856,11 +907,55 @@ class ExcelExporter:
                         return f"=IF({col_letter}{denom_row}<>0,{col_letter}{num_row}/{col_letter}{denom_row},0)"
             return None
         
-        # Y/Y Absolute Difference for percentages
-        if in_yoy_section and not is_yoy_header and "%" not in metric_name:
-            # This is the change in percentage points: current % - previous %
-            # We need to find the percentage row for this metric
-            # This is complex - for now, return None and use calculated value
-            return None
-        
         return None
+    
+    def _apply_conditional_formatting(self, ws, yoy_trend_rows):
+        """
+        Apply conditional formatting to Y/Y trends section cells.
+        
+        Uses Excel's conditional formatting rules to color cells:
+        - Green background for positive values
+        - Red background for negative values
+        
+        Args:
+            ws: Worksheet object
+            yoy_trend_rows: List of (row_num, col_idx) tuples for cells to format
+        """
+        try:
+            from openpyxl.formatting.rule import CellIsRule
+            from openpyxl.styles import PatternFill, Font
+            
+            if not yoy_trend_rows:
+                return
+            
+            # Group cells by column for efficient formatting
+            from collections import defaultdict
+            cells_by_col = defaultdict(list)
+            
+            for row_num, col_idx in yoy_trend_rows:
+                cells_by_col[col_idx].append(row_num)
+            
+            # Apply conditional formatting to each column
+            for col_idx, row_nums in cells_by_col.items():
+                from openpyxl.utils import get_column_letter
+                col_letter = get_column_letter(col_idx)
+                
+                # Create range for this column
+                min_row = min(row_nums)
+                max_row = max(row_nums)
+                cell_range = f"{col_letter}{min_row}:{col_letter}{max_row}"
+                
+                # Green fill for positive values
+                green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+                green_font = Font(bold=True, color="006100", size=10)
+                positive_rule = CellIsRule(operator="greaterThan", formula=["0"], fill=green_fill, font=green_font)
+                ws.conditional_formatting.add(cell_range, positive_rule)
+                
+                # Red fill for negative values
+                red_fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+                red_font = Font(bold=True, color="9C0006", size=10)
+                negative_rule = CellIsRule(operator="lessThan", formula=["0"], fill=red_fill, font=red_font)
+                ws.conditional_formatting.add(cell_range, negative_rule)
+        except ImportError:
+            # If conditional formatting is not available, skip it
+            pass
