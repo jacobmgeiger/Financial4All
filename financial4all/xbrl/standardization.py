@@ -415,6 +415,18 @@ def _get_builtin_groups_cached() -> List[SynonymGroup]:
                 'DepreciationDepletionAndAmortization',
                 'Depreciation',
                 'AmortizationOfIntangibleAssets',
+                'DepreciationAmortizationAndAccretionNet',
+                'DepreciationAndAmortizationExpense',
+                'DepreciationAmortizationAndImpairment',
+                'DepreciationAmortizationAndAccretion',
+                'DepreciationAmortizationAndDepletion',
+                'DepreciationAndAmortizationNoncash',
+                'DepreciationAmortizationAndAccretionNetOfAmortizationOfDeferredFinancingCosts',
+                'CostDepreciationAmortizationAndDepletion',
+                'DepreciationAmortizationAndAccretionExpense',
+                'DepreciationAndAmortization',
+                'DepreciationAmortizationAndDepletionExpense',
+                'DepreciationAmortizationDepletionAndImpairment',
             ],
             description='Depreciation and amortization expense',
             category='income_statement'
@@ -758,12 +770,69 @@ def _get_builtin_groups_cached() -> List[SynonymGroup]:
         SynonymGroup(
             name='capex',
             synonyms=[
-                'PaymentsToAcquirePropertyPlantAndEquipment',
+                # Tier 1: Comprehensive tags (aggregate multiple categories) - HIGHEST PRIORITY
+                # These tags include both PP&E and intangible assets
+                'PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets',
+                'PaymentsToAcquirePropertyPlantAndEquipmentAndOtherAssets',
+                'PaymentsForPropertyPlantAndEquipmentAndIntangibleAssets',
+                'PaymentsForAcquisitionOfPropertyPlantAndEquipmentAndIntangibleAssets',
+                'InvestmentsInPropertyPlantAndEquipmentAndIntangibleAssets',
+                'PaymentsForPropertyPlantAndEquipmentAndOtherAssets',
+                'CapitalExpendituresIncludingIntangibleAssets',
+                
+                # Tier 2: General comprehensive tags (may include multiple categories)
                 'CapitalExpenditures',
+                'CapitalExpendituresNet',
+                'PaymentsForCapitalExpenditures',
+                # Note: CapitalExpendituresIncurredButNotYetPaid and CapitalExpendituresDiscontinuedOperations
+                # are excluded - they're not actual cash outflows
+                
+                # Tier 3: PP&E-specific comprehensive tags (edgartools-aligned)
+                'PaymentsToAcquirePropertyPlantAndEquipment',
+                'PaymentsForPropertyPlantAndEquipment',
+                'PaymentsForPurchaseOfPropertyPlantAndEquipment',
+                'InvestmentsInPropertyPlantAndEquipment',
+                'CapitalExpendituresForPropertyPlantAndEquipment',
+                'PaymentsForAcquisitionOfPropertyPlantAndEquipment',
+                'PaymentsToAcquirePropertyPlantAndEquipmentNet',
                 'PurchaseOfPropertyPlantAndEquipment',
                 'PaymentsToAcquireProductiveAssets',
+                'PaymentsToAcquireOtherProductiveAssets',
+                'PaymentsToAcquireOtherPropertyPlantAndEquipment',
+                'PaymentsToAcquireAssets',
+                
+                # Tier 4: Intangible assets and software (component tags)
+                'PaymentsToAcquireIntangibleAssets',
+                'PaymentsForSoftwareAndWebSiteDevelopmentCosts',
+                'PaymentsForDevelopmentOfRealEstate',
+                'CapitalExpendituresIncludingSoftware',
+                'PaymentsForIntangibleAssets',
+                'PaymentsToAcquireSoftware',
+                
+                # Tier 5: PP&E component tags (common in older filings; aggregate when no comprehensive tag)
+                'PaymentsToAcquireMachineryAndEquipment',
+                'PaymentsToAcquireBuildings',
+                'PaymentsToAcquireFurnitureAndFixtures',
+                'PaymentsToAcquireAndDevelopRealEstate',
+                'PaymentsToAcquireRealEstate',
+                'PaymentsToAcquireLand',
+                'PaymentsToAcquireLandHeldForUse',
+                'PaymentsToAcquireMiningAssets',
+                'PaymentsToAcquireOilAndGasPropertyAndEquipment',
+                'PaymentsToAcquireOilAndGasEquipment',
+                'PaymentsToAcquireOilAndGasProperty',
+                'PaymentsToAcquireTimberlands',
+                'PaymentsToAcquireWaterAndWasteWaterSystems',
+                'PaymentsToAcquireWaterSystems',
+                'PaymentsToAcquireWasteWaterSystems',
+                'PaymentsToAcquireMineralRights',
+                'PaymentsToAcquireEquipmentOnLease',
+                
+                # Note: Business acquisition tags are EXCLUDED from CapEx
+                # They are handled separately and should not be aggregated with CapEx
+                # Tags like 'PaymentsToAcquireBusinessesNetOfCashAcquired' are intentionally omitted
             ],
-            description='Capital expenditures',
+            description='Capital expenditures (excludes business acquisitions)',
             category='cash_flow'
         ),
         SynonymGroup(
@@ -812,6 +881,143 @@ def _get_builtin_groups_cached() -> List[SynonymGroup]:
                 'FreeCashFlow',
             ],
             description='Free cash flow (operating cash flow minus capex)',
+            category='cash_flow'
+        ),
+        
+        # ═══════════════════════════════════════════════════════════════════
+        # OPERATING ACTIVITIES DETAIL
+        # ═══════════════════════════════════════════════════════════════════
+        SynonymGroup(
+            name='stock_based_compensation',
+            synonyms=[
+                'ShareBasedCompensation',
+                'StockBasedCompensationExpense',
+                'ShareBasedCompensationExpense',
+                'StockBasedCompensation',
+                'ShareBasedCompensationRequisiteServicePeriodRecognitionValue',
+            ],
+            description='Stock-based compensation expense (non-cash)',
+            category='cash_flow'
+        ),
+        SynonymGroup(
+            name='change_in_accounts_receivable',
+            synonyms=[
+                'IncreaseDecreaseInAccountsReceivable',
+                'IncreaseDecreaseInAccountsReceivableAndUnbilledReceivables',
+                'IncreaseDecreaseInReceivables',
+            ],
+            description='Change in accounts receivable (operating activities)',
+            category='cash_flow'
+        ),
+        SynonymGroup(
+            name='change_in_inventory',
+            synonyms=[
+                'IncreaseDecreaseInInventories',
+                'IncreaseDecreaseInInventory',
+            ],
+            description='Change in inventory (operating activities)',
+            category='cash_flow'
+        ),
+        SynonymGroup(
+            name='change_in_accounts_payable',
+            synonyms=[
+                'IncreaseDecreaseInAccountsPayable',
+                'IncreaseDecreaseInAccountsPayableAndAccruedLiabilities',
+                'IncreaseDecreaseInPayables',
+            ],
+            description='Change in accounts payable (operating activities)',
+            category='cash_flow'
+        ),
+        SynonymGroup(
+            name='deferred_tax_expense',
+            synonyms=[
+                'DeferredIncomeTaxExpenseBenefit',
+                'DeferredTaxExpenseBenefit',
+                'ProvisionForDeferredIncomeTaxes',
+            ],
+            description='Deferred tax expense/benefit (non-cash)',
+            category='cash_flow'
+        ),
+        SynonymGroup(
+            name='gain_loss_on_asset_disposal',
+            synonyms=[
+                'GainLossOnSaleOfAssets',
+                'GainLossOnDisposalOfAssets',
+                'GainLossOnSaleOfPropertyPlantAndEquipment',
+            ],
+            description='Gain/loss on asset disposal (non-cash)',
+            category='cash_flow'
+        ),
+        
+        # ═══════════════════════════════════════════════════════════════════
+        # INVESTING ACTIVITIES DETAIL
+        # ═══════════════════════════════════════════════════════════════════
+        SynonymGroup(
+            name='proceeds_from_sale_of_assets',
+            synonyms=[
+                'ProceedsFromSaleOfPropertyPlantAndEquipment',
+                'ProceedsFromSaleOfAssets',
+                'ProceedsFromDisposalOfPropertyPlantAndEquipment',
+                'ProceedsFromSaleAndMaturityOfInvestments',
+            ],
+            description='Proceeds from sale of assets',
+            category='cash_flow'
+        ),
+        SynonymGroup(
+            name='business_acquisitions',
+            synonyms=[
+                'PaymentsToAcquireBusinessesNetOfCashAcquired',
+                'PaymentsToAcquireBusinesses',
+                'AcquisitionsNetOfCashAcquired',
+                'PaymentsToAcquireBusinessesAndIntangibleAssets',
+            ],
+            description='Business acquisitions (excluded from CapEx)',
+            category='cash_flow'
+        ),
+        SynonymGroup(
+            name='purchases_of_investments',
+            synonyms=[
+                'PaymentsToAcquireAvailableForSaleSecurities',
+                'PaymentsToAcquireDebtSecurities',
+                'PaymentsToAcquireEquitySecurities',
+                'PurchasesOfInvestments',
+            ],
+            description='Purchases of investments',
+            category='cash_flow'
+        ),
+        SynonymGroup(
+            name='proceeds_from_sale_of_investments',
+            synonyms=[
+                'ProceedsFromSaleOfAvailableForSaleSecurities',
+                'ProceedsFromSaleOfDebtSecurities',
+                'ProceedsFromSaleOfEquitySecurities',
+                'ProceedsFromSaleOfInvestments',
+            ],
+            description='Proceeds from sale of investments',
+            category='cash_flow'
+        ),
+        
+        # ═══════════════════════════════════════════════════════════════════
+        # FINANCING ACTIVITIES DETAIL
+        # ═══════════════════════════════════════════════════════════════════
+        SynonymGroup(
+            name='proceeds_from_stock_issuance',
+            synonyms=[
+                'ProceedsFromIssuanceOfCommonStock',
+                'ProceedsFromIssuanceOfStock',
+                'ProceedsFromIssuanceOfShares',
+                'ProceedsFromStockOptionsExercised',
+            ],
+            description='Proceeds from stock issuance',
+            category='cash_flow'
+        ),
+        SynonymGroup(
+            name='payments_for_debt_issuance_costs',
+            synonyms=[
+                'PaymentsOfDebtIssuanceCosts',
+                'DebtIssuanceCosts',
+            ],
+            description='Payments for debt issuance costs',
             category='cash_flow'
         ),
         

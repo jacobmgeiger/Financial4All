@@ -271,7 +271,10 @@ def on_ticker_change(ticker_upper):
                 df_merged = df_merged.join(bs_df, how='outer', rsuffix='_bs')
         
         if cash_flow:
-            cf_df = cash_flow.to_dataframe()
+            # Pass balance sheet and income statement for CapEx fallback calculation and validation
+            bs_df_for_capex = balance_sheet.to_dataframe() if balance_sheet else None
+            is_df_for_capex = standard_is_df if income_statement else None
+            cf_df = cash_flow.to_dataframe(bs_df=bs_df_for_capex, is_df=is_df_for_capex)
             if not cf_df.empty:
                 df_merged = df_merged.join(cf_df, how='outer', rsuffix='_cf')
         
@@ -690,8 +693,50 @@ def display_standard_is(
     try:
         # Use original df_standard before date formatting for analysis
         df_for_analysis = df_standard.set_index("Metric").T
+        
+        # Fetch balance sheet and cash flow DataFrames from Company API
+        bs_df = pd.DataFrame()
+        cf_df = pd.DataFrame()
+        if ticker:
+            try:
+                company = Company(ticker.strip().upper())
+                financials = company.get_financials()
+                bs_df = financials["balance_sheet"].to_dataframe() if financials["balance_sheet"] else pd.DataFrame()
+                # Pass balance sheet and income statement for CapEx fallback calculation and validation
+                is_df_for_capex = df_for_analysis if "Revenue" in df_for_analysis.columns else None
+                cf_df = financials["cash_flow"].to_dataframe(bs_df=bs_df, is_df=is_df_for_capex) if financials["cash_flow"] else pd.DataFrame()
+            except Exception:
+                # If fetching fails, continue with empty DataFrames
+                pass
+        
         analyzer = ProfitabilityAnalyzer()
-        profitability_df = analyzer.calculate_ratios(df_for_analysis)
+        profitability_df = analyzer.calculate_ratios(df_for_analysis, bs_df, cf_df)
+        
+        # Run validation and log issues
+        try:
+            from financial4all.analysis.validators import FinancialStatementValidator
+            from financial4all.core import log as financial_log
+            validator = FinancialStatementValidator()
+            validation_issues = validator.validate_all(
+                is_df=df_for_analysis,
+                bs_df=bs_df,
+                cf_df=cf_df
+            )
+            
+            # Log validation issues
+            for issue in validation_issues:
+                if issue.severity.value == "error":
+                    financial_log.error(f"Validation ERROR - {issue.metric} ({issue.period}): {issue.message}")
+                elif issue.severity.value == "warning":
+                    financial_log.warning(f"Validation WARNING - {issue.metric} ({issue.period}): {issue.message}")
+                else:
+                    financial_log.info(f"Validation INFO - {issue.metric} ({issue.period}): {issue.message}")
+        except Exception as e:
+            try:
+                from financial4all.core import log as financial_log
+                financial_log.debug(f"Validation failed: {e}")
+            except Exception:
+                pass
         
         # Store original revenue values for converting Revenue absolute difference to percentage
         # This will be used when displaying Revenue Y/Y change
@@ -937,6 +982,41 @@ def display_standard_is(
             except (ValueError, TypeError):
                 return "—"
         
+        # Helper function to format currency for display
+        def format_currency_display(value, scale_factor):
+            """Format a raw dollar value as scaled currency string with commas."""
+            if pd.isna(value) or value is None:
+                return "—"
+            try:
+                scaled_value = float(value) / scale_factor
+                rounded_value = round(scaled_value)
+                # Format with commas, negative values in parentheses
+                if rounded_value < 0:
+                    return f"({abs(rounded_value):,})"
+                else:
+                    return f"{rounded_value:,}"
+            except (ValueError, TypeError):
+                return "—"
+        
+        # Identify dollar amount metrics (not percentages)
+        dollar_amount_metrics = {
+            "Depreciation & Amortization",
+            "CapEx",
+            "Receivables",
+            "Inventory",
+            "Payables",
+            "Change in WC"
+        }
+        # Identify "% of Sales" metrics from Capital & Working Capital section
+        # These should NOT be conditionally formatted (they're not in trends section)
+        capital_wc_percentage_metrics = {
+            "D&A % of Sales",
+            "CapEx % of Sales",
+            "Receivables % of Sales",
+            "Inventory % of Sales",
+            "Payables % of Sales"
+        }
+        
         # Metrics that should be bold
         bold_metrics = ["Operating Margin"]
         
@@ -953,6 +1033,8 @@ def display_standard_is(
             is_bold = metric_name in bold_metrics
             is_header = metric_name == "Expenses as % of Revenue"
             is_yoy_header = metric_name == "**%Change y/y Change (Trends)**"
+            is_dollar_amount = metric_name in dollar_amount_metrics
+            is_capital_wc_percentage = metric_name in capital_wc_percentage_metrics
             
             # Track when we enter the Y/Y change section
             if is_yoy_header:
@@ -990,8 +1072,13 @@ def display_standard_is(
                         "fontWeight": "bold" if is_bold else "normal",
                     }
                 else:
-                    # Format display value - Revenue in Y/Y section is already a percentage difference
-                    display_value = format_percentage_display(value)
+                    # Format display value based on metric type
+                    if is_dollar_amount:
+                        # Dollar amounts: format as scaled currency
+                        display_value = format_currency_display(value, scale_factor)
+                    else:
+                        # Percentages: format as percentage
+                        display_value = format_percentage_display(value)
                     
                     # Conditional formatting for Y/Y change section
                     cell_style = {
@@ -1004,8 +1091,9 @@ def display_standard_is(
                         "fontWeight": "bold" if is_bold else "normal",
                     }
                     
-                    # Apply conditional formatting for Y/Y change values
-                    if in_yoy_section and not is_yoy_header and value is not None:
+                    # Apply conditional formatting for Y/Y change values ONLY
+                    # Exclude dollar amount metrics and Capital & Working Capital % metrics
+                    if in_yoy_section and not is_yoy_header and not is_dollar_amount and not is_capital_wc_percentage and value is not None:
                         try:
                             # Parse the percentage value
                             if isinstance(value, (int, float)) and not pd.isna(value):
@@ -1269,8 +1357,49 @@ def generate_analysis_report(n_clicks, ticker, standard_is_json, selections, uni
         try:
             # Convert transposed format back to periods-as-index for analyzer
             df_for_analysis = df_standard.set_index("Metric").T
+            
+            # Fetch balance sheet and cash flow DataFrames from Company API
+            bs_df = pd.DataFrame()
+            cf_df = pd.DataFrame()
+            try:
+                company = Company(ticker_upper)
+                financials = company.get_financials()
+                bs_df = financials["balance_sheet"].to_dataframe() if financials["balance_sheet"] else pd.DataFrame()
+                # Pass balance sheet and income statement for CapEx fallback calculation and validation
+                is_df_for_capex = df_for_analysis if "Revenue" in df_for_analysis.columns else None
+                cf_df = financials["cash_flow"].to_dataframe(bs_df=bs_df, is_df=is_df_for_capex) if financials["cash_flow"] else pd.DataFrame()
+            except Exception:
+                # If fetching fails, continue with empty DataFrames
+                pass
+            
             analyzer = ProfitabilityAnalyzer()
-            profitability_df = analyzer.calculate_ratios(df_for_analysis)
+            profitability_df = analyzer.calculate_ratios(df_for_analysis, bs_df, cf_df)
+            
+            # Run validation and log issues
+            try:
+                from financial4all.analysis.validators import FinancialStatementValidator
+                from financial4all.core import log as financial_log
+                validator = FinancialStatementValidator()
+                validation_issues = validator.validate_all(
+                    is_df=df_for_analysis,
+                    bs_df=bs_df,
+                    cf_df=cf_df
+                )
+                
+                # Log validation issues
+                for issue in validation_issues:
+                    if issue.severity.value == "error":
+                        financial_log.error(f"Validation ERROR - {issue.metric} ({issue.period}): {issue.message}")
+                    elif issue.severity.value == "warning":
+                        financial_log.warning(f"Validation WARNING - {issue.metric} ({issue.period}): {issue.message}")
+                    else:
+                        financial_log.info(f"Validation INFO - {issue.metric} ({issue.period}): {issue.message}")
+            except Exception as e:
+                try:
+                    from financial4all.core import log as financial_log
+                    financial_log.debug(f"Validation failed: {e}")
+                except Exception:
+                    pass
             
             # Format date columns in profitability_df to match df_display format exactly
             if not profitability_df.empty:

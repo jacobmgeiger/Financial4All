@@ -21,13 +21,19 @@ class ProfitabilityAnalyzer:
     """
     
     @staticmethod
-    def calculate_ratios(is_df: pd.DataFrame) -> pd.DataFrame:
+    def calculate_ratios(
+        is_df: pd.DataFrame,
+        bs_df: Optional[pd.DataFrame] = None,
+        cf_df: Optional[pd.DataFrame] = None
+    ) -> pd.DataFrame:
         """
         Calculate profitability ratios from an income statement DataFrame.
         
         Args:
             is_df: Income statement DataFrame with periods as index and metrics as columns.
                   This is the format returned by IncomeStatement.to_dataframe().
+            bs_df: Optional balance sheet DataFrame with periods as index and metrics as columns.
+            cf_df: Optional cash flow DataFrame with periods as index and metrics as columns.
         
         Returns:
             DataFrame in transposed format (Metric column + date columns) ready for display.
@@ -182,6 +188,147 @@ class ProfitabilityAnalyzer:
             )
             # Add Y/Y change values - these appear after the Y/Y header
             ordered_metrics.append((display_name, yoy_change))
+        
+        # 6. Capital & Working Capital section (after Trends section)
+        # Extract metrics from Cash Flow and Balance Sheet if available
+        if cf_df is not None and not cf_df.empty:
+            # Align periods between cf_df and is_df
+            cf_periods = cf_df.index.tolist()
+            
+            # Depreciation & Amortization
+            if "Depreciation & Amortization" in cf_df.columns:
+                da_data = {}
+                for date_col in date_columns:
+                    # Find closest matching period in cf_df
+                    cf_value = ProfitabilityAnalyzer._get_aligned_value(
+                        cf_df["Depreciation & Amortization"], date_col, cf_periods
+                    )
+                    da_data[date_col] = cf_value
+                ordered_metrics.append(("Depreciation & Amortization", da_data))
+                
+                # D&A % of Sales
+                if "Revenue" in is_df.columns:
+                    da_pct = ProfitabilityAnalyzer._calculate_percentage_from_dict(
+                        da_data, is_df["Revenue"], date_columns
+                    )
+                    ordered_metrics.append(("D&A % of Sales", da_pct))
+                    pct_values["D&A % of Sales"] = da_pct
+            
+            # CapEx
+            if "CapEx" in cf_df.columns:
+                capex_data = {}
+                for date_col in date_columns:
+                    # Find closest matching period in cf_df
+                    cf_value = ProfitabilityAnalyzer._get_aligned_value(
+                        cf_df["CapEx"], date_col, cf_periods
+                    )
+                    capex_data[date_col] = cf_value
+                ordered_metrics.append(("CapEx", capex_data))
+                
+                # CapEx % of Sales
+                if "Revenue" in is_df.columns:
+                    capex_pct = ProfitabilityAnalyzer._calculate_percentage_from_dict(
+                        capex_data, is_df["Revenue"], date_columns
+                    )
+                    ordered_metrics.append(("CapEx % of Sales", capex_pct))
+                    pct_values["CapEx % of Sales"] = capex_pct
+        
+        if bs_df is not None and not bs_df.empty:
+            # Align periods between bs_df and is_df
+            bs_periods = bs_df.index.tolist()
+            
+            # Receivables
+            receivables_data = {}
+            if "Receivables" in bs_df.columns:
+                for date_col in date_columns:
+                    bs_value = ProfitabilityAnalyzer._get_aligned_value(
+                        bs_df["Receivables"], date_col, bs_periods
+                    )
+                    receivables_data[date_col] = bs_value
+                ordered_metrics.append(("Receivables", receivables_data))
+                
+                # Receivables % of Sales
+                if "Revenue" in is_df.columns:
+                    receivables_pct = ProfitabilityAnalyzer._calculate_percentage_from_dict(
+                        receivables_data, is_df["Revenue"], date_columns
+                    )
+                    ordered_metrics.append(("Receivables % of Sales", receivables_pct))
+                    pct_values["Receivables % of Sales"] = receivables_pct
+            
+            # Inventory
+            inventory_data = {}
+            if "Inventory" in bs_df.columns:
+                for date_col in date_columns:
+                    bs_value = ProfitabilityAnalyzer._get_aligned_value(
+                        bs_df["Inventory"], date_col, bs_periods
+                    )
+                    inventory_data[date_col] = bs_value
+                ordered_metrics.append(("Inventory", inventory_data))
+                
+                # Inventory % of Sales
+                if "Revenue" in is_df.columns:
+                    inventory_pct = ProfitabilityAnalyzer._calculate_percentage_from_dict(
+                        inventory_data, is_df["Revenue"], date_columns
+                    )
+                    ordered_metrics.append(("Inventory % of Sales", inventory_pct))
+                    pct_values["Inventory % of Sales"] = inventory_pct
+            
+            # Payables
+            payables_data = {}
+            if "Payables" in bs_df.columns:
+                for date_col in date_columns:
+                    bs_value = ProfitabilityAnalyzer._get_aligned_value(
+                        bs_df["Payables"], date_col, bs_periods
+                    )
+                    payables_data[date_col] = bs_value
+                ordered_metrics.append(("Payables", payables_data))
+                
+                # Payables % of Sales
+                if "Revenue" in is_df.columns:
+                    payables_pct = ProfitabilityAnalyzer._calculate_percentage_from_dict(
+                        payables_data, is_df["Revenue"], date_columns
+                    )
+                    ordered_metrics.append(("Payables % of Sales", payables_pct))
+                    pct_values["Payables % of Sales"] = payables_pct
+            
+            # Change in WC = (Receivables + Inventory - Payables) current - (Receivables + Inventory - Payables) previous
+            if receivables_data and inventory_data and payables_data:
+                wc_change_data = {}
+                for i, date_col in enumerate(date_columns):
+                    # Calculate current period WC
+                    rec_current = receivables_data.get(date_col)
+                    inv_current = inventory_data.get(date_col)
+                    pay_current = payables_data.get(date_col)
+                    
+                    rec_float = ProfitabilityAnalyzer._parse_numeric_value(rec_current)
+                    inv_float = ProfitabilityAnalyzer._parse_numeric_value(inv_current)
+                    pay_float = ProfitabilityAnalyzer._parse_numeric_value(pay_current)
+                    
+                    if rec_float is not None and inv_float is not None and pay_float is not None:
+                        current_wc = rec_float + inv_float - pay_float
+                        
+                        # Calculate previous period WC if available
+                        if i + 1 < len(date_columns):
+                            prev_date_col = date_columns[i + 1]
+                            rec_prev = receivables_data.get(prev_date_col)
+                            inv_prev = inventory_data.get(prev_date_col)
+                            pay_prev = payables_data.get(prev_date_col)
+                            
+                            rec_prev_float = ProfitabilityAnalyzer._parse_numeric_value(rec_prev)
+                            inv_prev_float = ProfitabilityAnalyzer._parse_numeric_value(inv_prev)
+                            pay_prev_float = ProfitabilityAnalyzer._parse_numeric_value(pay_prev)
+                            
+                            if rec_prev_float is not None and inv_prev_float is not None and pay_prev_float is not None:
+                                prev_wc = rec_prev_float + inv_prev_float - pay_prev_float
+                                wc_change_data[date_col] = current_wc - prev_wc
+                            else:
+                                wc_change_data[date_col] = np.nan
+                        else:
+                            wc_change_data[date_col] = np.nan
+                    else:
+                        wc_change_data[date_col] = np.nan
+                
+                ordered_metrics.append(("Change in WC", wc_change_data))
         
         # Convert to DataFrame directly from ordered list to preserve order and handle duplicates
         if not ordered_metrics:
@@ -367,6 +514,101 @@ class ProfitabilityAnalyzer:
             
             # Parse values, handling parentheses notation for negatives
             num_float = ProfitabilityAnalyzer._parse_numeric_value(numerator_value)
+            denom_float = ProfitabilityAnalyzer._parse_numeric_value(denominator_value)
+            
+            if num_float is not None and denom_float is not None:
+                try:
+                    if denom_float != 0:
+                        pct = num_float / denom_float
+                        pct_data[date_col] = pct
+                    else:
+                        pct_data[date_col] = np.nan
+                except (ValueError, TypeError, ZeroDivisionError):
+                    pct_data[date_col] = np.nan
+            else:
+                pct_data[date_col] = np.nan
+        
+        return pct_data
+    
+    @staticmethod
+    def _get_aligned_value(
+        series: pd.Series,
+        target_date: str,
+        available_periods: list
+    ) -> Optional[float]:
+        """
+        Get value from series aligned to target date period.
+        
+        Handles period alignment between balance sheet (instant periods) and 
+        income statement (period-end dates). Finds the closest matching period.
+        
+        Args:
+            series: Series with values indexed by period
+            target_date: Target date string to align to
+            available_periods: List of available periods in the series
+            
+        Returns:
+            Aligned value or None if not found
+        """
+        if series.empty or not available_periods:
+            return None
+        
+        # Try exact match first
+        if target_date in available_periods:
+            value = series.get(target_date)
+            return ProfitabilityAnalyzer._parse_numeric_value(value)
+        
+        # Try to parse target_date and find closest period
+        try:
+            target_dt = pd.to_datetime(target_date)
+            
+            # Find closest period by comparing dates
+            closest_period = None
+            min_diff = None
+            
+            for period in available_periods:
+                try:
+                    period_dt = pd.to_datetime(period)
+                    diff = abs((target_dt - period_dt).days)
+                    
+                    if min_diff is None or diff < min_diff:
+                        min_diff = diff
+                        closest_period = period
+                except (ValueError, TypeError):
+                    continue
+            
+            if closest_period and min_diff is not None and min_diff <= 365:  # Within a year
+                value = series.get(closest_period)
+                return ProfitabilityAnalyzer._parse_numeric_value(value)
+        except (ValueError, TypeError):
+            pass
+        
+        return None
+    
+    @staticmethod
+    def _calculate_percentage_from_dict(
+        numerator_dict: Dict[str, Optional[float]],
+        denominator_series: pd.Series,
+        date_columns: list
+    ) -> Dict[str, float]:
+        """
+        Calculate percentage from dictionary of numerator values and denominator series.
+        
+        Args:
+            numerator_dict: Dictionary mapping date columns to numerator values
+            denominator_series: Series with denominator values indexed by period
+            date_columns: List of date column names (periods)
+        
+        Returns:
+            Dictionary mapping date columns to percentages (as decimals)
+        """
+        pct_data = {}
+        
+        for date_col in date_columns:
+            numerator_value = numerator_dict.get(date_col)
+            denominator_value = denominator_series.get(date_col)
+            
+            num_float = numerator_value if isinstance(numerator_value, (int, float)) else ProfitabilityAnalyzer._parse_numeric_value(numerator_value)
             denom_float = ProfitabilityAnalyzer._parse_numeric_value(denominator_value)
             
             if num_float is not None and denom_float is not None:

@@ -604,10 +604,41 @@ class ExcelExporter:
                 cell.font = bold_font if (is_bold or is_header or is_yoy_header) else normal_font
                 cell.alignment = left_align
                 
+                # Identify dollar amount metrics (not percentages)
+                # These should NOT be conditionally formatted and should use currency formatting
+                dollar_amount_metrics = {
+                    "Depreciation & Amortization",
+                    "CapEx",
+                    "Receivables",
+                    "Inventory",
+                    "Payables",
+                    "Change in WC"
+                }
+                # Identify "% of Sales" metrics from Capital & Working Capital section
+                # These should NOT be conditionally formatted (they're not in trends section)
+                capital_wc_percentage_metrics = {
+                    "D&A % of Sales",
+                    "CapEx % of Sales",
+                    "Receivables % of Sales",
+                    "Inventory % of Sales",
+                    "Payables % of Sales"
+                }
+                is_dollar_amount = metric_name in dollar_amount_metrics
+                is_capital_wc_percentage = metric_name in capital_wc_percentage_metrics
+                
                 # Write data cells for each date column
                 for col_idx, col_name in enumerate(income_statement_df.columns[1:], start=2):
                     value = row_data.get(col_name)
                     cell = ws.cell(row=row_num, column=col_idx)
+                    
+                    # Set format FIRST before assigning value/formula to ensure it's applied correctly
+                    # This prevents any default formats from being inherited
+                    if is_dollar_amount:
+                        # Dollar amounts: format like income statement values (handles both positive and negative)
+                        cell.number_format = '#,##0_);(#,##0)'
+                    elif not is_header and not is_yoy_header:
+                        # Percentages: format as percentage (only for non-header rows)
+                        cell.number_format = '0.00%'
                     
                     # Header rows should have blank cells
                     if is_header or is_yoy_header:
@@ -622,11 +653,11 @@ class ExcelExporter:
                         
                         if formula:
                             cell.value = formula
-                            cell.number_format = '0.00%'
                             cell.font = bold_font if is_bold else normal_font
                             
                             # Track rows in Y/Y trends section for conditional formatting
-                            if in_yoy_section and not is_yoy_header:
+                            # BUT exclude dollar amount metrics and Capital & Working Capital % metrics
+                            if in_yoy_section and not is_yoy_header and not is_dollar_amount and not is_capital_wc_percentage:
                                 yoy_trend_rows.append((row_num, col_idx))
                         else:
                             # Fallback to value if formula can't be determined
@@ -634,18 +665,31 @@ class ExcelExporter:
                                 cell.value = "—"
                             else:
                                 try:
-                                    pct_value = float(value)
-                                    cell.value = pct_value  # Store as decimal (0.50 for 50%)
-                                    cell.number_format = '0.00%'
+                                    num_value = float(value)
                                     
-                                    # Conditional formatting for Y/Y change section
-                                    if in_yoy_section and not is_yoy_header:
+                                    if is_dollar_amount:
+                                        # Dollar amounts: scale and format like income statement
+                                        # Values are already in raw dollars, so scale them
+                                        scaled_value = num_value / scale_factor
+                                        rounded_value = round(scaled_value)
+                                        cell.value = rounded_value
+                                        # Format already set above, but ensure it's correct
+                                        cell.number_format = '#,##0_);(#,##0)'
+                                    else:
+                                        # Percentages: format as percentage
+                                        cell.value = num_value  # Store as decimal (0.50 for 50%)
+                                        # Format already set above, but ensure it's correct
+                                        cell.number_format = '0.00%'
+                                    
+                                    # Conditional formatting for Y/Y change section ONLY
+                                    # Exclude dollar amount metrics and Capital & Working Capital % metrics
+                                    if in_yoy_section and not is_yoy_header and not is_dollar_amount and not is_capital_wc_percentage:
                                         yoy_trend_rows.append((row_num, col_idx))
-                                        if pct_value > 0:
+                                        if num_value > 0:
                                             # Positive change - green background
                                             cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
                                             cell.font = Font(bold=True, color="006100", size=10)
-                                        elif pct_value < 0:
+                                        elif num_value < 0:
                                             # Negative change - red background
                                             cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
                                             cell.font = Font(bold=True, color="9C0006", size=10)
@@ -906,6 +950,60 @@ class ExcelExporter:
                         # Formula: Numerator / Denominator
                         return f"=IF({col_letter}{denom_row}<>0,{col_letter}{num_row}/{col_letter}{denom_row},0)"
             return None
+        
+        # Handle percentage metrics from new Capital & Working Capital section
+        # These are calculated as: metric / Revenue
+        percentage_metrics = {
+            "D&A % of Sales": ("Depreciation & Amortization", "Revenue"),
+            "CapEx % of Sales": ("CapEx", "Revenue"),
+            "Receivables % of Sales": ("Receivables", "Revenue"),
+            "Inventory % of Sales": ("Inventory", "Revenue"),
+            "Payables % of Sales": ("Payables", "Revenue"),
+        }
+        
+        for pct_metric, (numerator, denominator) in percentage_metrics.items():
+            if metric_name == pct_metric:
+                # Find numerator row in profitability_to_row (from Capital & Working Capital section)
+                # Find denominator row in metric_to_row (from Income Statement)
+                if numerator in profitability_to_row and denominator in metric_to_row:
+                    num_row = profitability_to_row[numerator]
+                    denom_row = metric_to_row[denominator]
+                    # Formula: Numerator / Denominator
+                    return f"=IF({col_letter}{denom_row}<>0,{col_letter}{num_row}/{col_letter}{denom_row},0)"
+                return None
+        
+        # Handle Change in WC formula
+        # Change in WC = (Receivables + Inventory - Payables) current - (Receivables + Inventory - Payables) previous
+        if metric_name == "Change in WC":
+            receivables_row = profitability_to_row.get("Receivables")
+            inventory_row = profitability_to_row.get("Inventory")
+            payables_row = profitability_to_row.get("Payables")
+            
+            if receivables_row and inventory_row and payables_row:
+                # Check if there's a previous period
+                if current_col_idx + 1 < len(date_columns):
+                    prev_col_letter = get_column_letter(col_idx + 1)
+                    # Formula: (Receivables + Inventory - Payables) current - (Receivables + Inventory - Payables) previous
+                    current_wc = f"({col_letter}{receivables_row}+{col_letter}{inventory_row}-{col_letter}{payables_row})"
+                    prev_wc = f"({prev_col_letter}{receivables_row}+{prev_col_letter}{inventory_row}-{prev_col_letter}{payables_row})"
+                    return f"={current_wc}-{prev_wc}"
+                else:
+                    # No previous period, return empty
+                    return None
+        
+        # Handle Y/Y change for new percentage metrics in trends section
+        if in_yoy_section and not is_yoy_header:
+            for pct_metric in percentage_metrics.keys():
+                if metric_name == pct_metric:
+                    # Reference the original percentage row from Capital & Working Capital section
+                    if pct_metric in profitability_to_row:
+                        pct_row = profitability_to_row[pct_metric]
+                        # CRITICAL: Make sure we're referencing a row from BEFORE the trends section
+                        if pct_row != current_row and pct_row < current_row and current_col_idx + 1 < len(date_columns):
+                            prev_col_letter = get_column_letter(col_idx + 1)
+                            # Formula: Current % - Previous % (from the original % of Sales section)
+                            return f"={col_letter}{pct_row}-{prev_col_letter}{pct_row}"
+                    return None
         
         return None
     
