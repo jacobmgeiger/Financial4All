@@ -74,6 +74,10 @@ class Filing:
     
     # Cache for XBRL content (lazy-loaded)
     _xbrl_content: Optional[str] = field(default=None, repr=False)
+    # Cache for linkbase content (lazy-loaded when get_xbrl_content fetches index)
+    _linkbase_urls: Optional[Dict[str, str]] = field(default=None, repr=False)
+    _presentation_content: Optional[str] = field(default=None, repr=False)
+    _calculation_content: Optional[str] = field(default=None, repr=False)
     
     @property
     def filing_date_obj(self) -> datetime:
@@ -180,7 +184,104 @@ class Filing:
                     found.append(("10-K", to_full_url(href)))
         
         return found
-    
+
+    def _parse_index_for_linkbase_urls(
+        self, index_html: str
+    ) -> Dict[str, str]:
+        """
+        Parse the filing index to find XBRL linkbase document URLs.
+
+        SEC Data Files table lists EX-101.PRE (presentation), EX-101.CAL
+        (calculation), EX-101.DEF (definition). Returns dict mapping
+        'pre'|'cal'|'def' to full URL.
+
+        Returns:
+            Dict with keys 'pre', 'cal', 'def' mapping to URLs (or absent if not found)
+        """
+        base_url = self.document_index_url.rsplit("/", 1)[0] + "/"
+
+        def to_full_url(href: str) -> str:
+            href = href.strip()
+            if href.startswith("http"):
+                return href
+            if href.startswith("/"):
+                return SEC_ARCHIVE_URL + href
+            return base_url + href
+
+        result: Dict[str, str] = {}
+        # SEC index: Data Files table has rows with Document (link) and Type (EX-101.PRE etc)
+        # Split by <tr> and find rows containing the type, then extract href from that row
+        for lb_type, ext in [("pre", "EX-101.PRE"), ("cal", "EX-101.CAL"), ("def", "EX-101.DEF")]:
+            # Find table rows - look for tr that contains both href to .xml and the type
+            row_pattern = rf'<tr[^>]*>(.*?)</tr>'
+            for row_match in re.finditer(row_pattern, index_html, re.IGNORECASE | re.DOTALL):
+                row_content = row_match.group(1)
+                if ext not in row_content:
+                    continue
+                href_match = re.search(r'href=["\']([^"\']+\.xml)["\']', row_content, re.IGNORECASE)
+                if href_match:
+                    result[lb_type] = to_full_url(href_match.group(1))
+                    break
+        return result
+
+    def get_presentation_linkbase_content(
+        self, client: Optional[SECClient] = None
+    ) -> Optional[str]:
+        """
+        Fetch presentation linkbase (EX-101.PRE) from this filing.
+
+        Returns:
+            XML content of presentation linkbase, or None if not found
+        """
+        if self._presentation_content is not None:
+            return self._presentation_content
+        if client is None:
+            client = SECClient()
+        if self._linkbase_urls is None:
+            try:
+                index_html = client.get_filing_index(self.cik, self.accession_number)
+                self._linkbase_urls = self._parse_index_for_linkbase_urls(index_html)
+            except Exception:
+                self._linkbase_urls = {}
+        url = self._linkbase_urls.get("pre")
+        if not url:
+            return None
+        try:
+            resp = client.get_url(url)
+            self._presentation_content = resp.text
+            return self._presentation_content
+        except Exception:
+            return None
+
+    def get_calculation_linkbase_content(
+        self, client: Optional[SECClient] = None
+    ) -> Optional[str]:
+        """
+        Fetch calculation linkbase (EX-101.CAL) from this filing.
+
+        Returns:
+            XML content of calculation linkbase, or None if not found
+        """
+        if self._calculation_content is not None:
+            return self._calculation_content
+        if client is None:
+            client = SECClient()
+        if self._linkbase_urls is None:
+            try:
+                index_html = client.get_filing_index(self.cik, self.accession_number)
+                self._linkbase_urls = self._parse_index_for_linkbase_urls(index_html)
+            except Exception:
+                self._linkbase_urls = {}
+        url = self._linkbase_urls.get("cal")
+        if not url:
+            return None
+        try:
+            resp = client.get_url(url)
+            self._calculation_content = resp.text
+            return self._calculation_content
+        except Exception:
+            return None
+
     def get_xbrl_content(
         self, client: Optional[SECClient] = None
     ) -> Optional[str]:

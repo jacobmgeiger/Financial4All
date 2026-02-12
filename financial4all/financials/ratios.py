@@ -4,18 +4,20 @@ Financial ratio calculations from standardized statements.
 
 FinancialRatios takes IncomeStatement and optionally BalanceSheet and
 CashFlowStatement, and produces DataFrames of profitability (margins),
-liquidity (e.g. current ratio), and efficiency ratios. Period index
-aligns with the underlying statement DataFrames.
+liquidity (e.g. current ratio), efficiency, leverage, return, and cash ratios.
+Formulas align with standard practice and EdgarTools where applicable:
+  - Current Ratio = Current Assets / Current Liabilities (EdgarTools)
+  - Debt-to-Assets = Total Liabilities / Total Assets (EdgarTools)
+  - Free Cash Flow = Operating Cash Flow - |CapEx| (EdgarTools)
 """
 
 import pandas as pd
 import numpy as np
-from typing import Optional, Dict, Any
+from typing import Optional
 
 from financial4all.financials.income_statement import IncomeStatement
 from financial4all.financials.balance_sheet import BalanceSheet
 from financial4all.financials.cash_flow import CashFlowStatement
-from financial4all.core import log
 
 
 class FinancialRatios:
@@ -46,10 +48,15 @@ class FinancialRatios:
     
     def calculate_profitability_ratios(self) -> pd.DataFrame:
         """
-        Calculate profitability ratios.
-        
+        Calculate profitability ratios (margins as % of revenue).
+
+        Formulas:
+          - Gross Profit Margin = Gross Profit / Revenue × 100
+          - Operating Profit Margin = Operating Income / Revenue × 100
+          - Net Profit Margin = Net Income / Revenue × 100
+
         Returns:
-            DataFrame with profitability ratios
+            DataFrame with profitability ratios (percentages 0–100)
         """
         is_df = self.income_statement.to_dataframe()
         
@@ -87,7 +94,10 @@ class FinancialRatios:
     def calculate_liquidity_ratios(self) -> pd.DataFrame:
         """
         Calculate liquidity ratios.
-        
+
+        Current Ratio = Current Assets / Current Liabilities
+        (Matches EdgarTools get_financial_metrics current_ratio.)
+
         Returns:
             DataFrame with liquidity ratios
         """
@@ -113,8 +123,11 @@ class FinancialRatios:
     
     def calculate_efficiency_ratios(self) -> pd.DataFrame:
         """
-        Calculate efficiency ratios.
-        
+        Calculate efficiency ratios (period-aligned with income statement).
+
+        Asset Turnover = Revenue / Total Assets
+        Uses common_index between income statement and balance sheet periods.
+
         Returns:
             DataFrame with efficiency ratios
         """
@@ -143,7 +156,11 @@ class FinancialRatios:
     def calculate_leverage_ratios(self) -> pd.DataFrame:
         """
         Calculate leverage ratios.
-        
+
+        Formulas:
+          - Debt-to-Equity = Total Liabilities / Stockholders Equity
+          - Debt-to-Assets = Total Liabilities / Total Assets (matches EdgarTools)
+
         Returns:
             DataFrame with leverage ratios
         """
@@ -177,10 +194,14 @@ class FinancialRatios:
     
     def calculate_return_ratios(self) -> pd.DataFrame:
         """
-        Calculate return ratios (ROA, ROE, ROIC).
-        
+        Calculate return ratios (ROA, ROE as % of base).
+
+        Formulas (end-of-period balance sheet, period-aligned):
+          - ROA = Net Income / Total Assets × 100
+          - ROE = Net Income / Stockholders Equity × 100
+
         Returns:
-            DataFrame with return ratios
+            DataFrame with return ratios (percentages)
         """
         ratios = pd.DataFrame()
         
@@ -215,6 +236,38 @@ class FinancialRatios:
         
         return ratios.dropna(how='all')
     
+    def calculate_cash_ratios(self) -> pd.DataFrame:
+        """
+        Calculate cash-based metrics.
+
+        Free Cash Flow = Operating Cash Flow - |CapEx|
+        (Aligns with EdgarTools. CapEx is typically negative in XBRL; abs() ensures
+        correct subtraction regardless of sign convention.)
+
+        Returns:
+            DataFrame with Free Cash Flow and other cash metrics indexed by period
+        """
+        if self.cash_flow is None:
+            return pd.DataFrame()
+        
+        cf_df = self.cash_flow.to_dataframe()
+        if cf_df.empty:
+            return pd.DataFrame()
+        
+        ratios = pd.DataFrame(index=cf_df.index)
+        
+        # Free Cash Flow = OCF - |CapEx| (EdgarTools convention)
+        if "Operating Cash Flow" in cf_df.columns and "CapEx" in cf_df.columns:
+            ocf = cf_df["Operating Cash Flow"]
+            capex = cf_df["CapEx"]
+            # CapEx is usually negative (outflow); abs() ensures correct subtraction
+            fcf = ocf - np.abs(capex)
+            ratios["Free Cash Flow"] = (
+                fcf.replace([np.inf, -np.inf], np.nan)
+            )
+        
+        return ratios.dropna(how='all')
+    
     def calculate_all_ratios(self) -> pd.DataFrame:
         """
         Calculate all available ratios.
@@ -227,15 +280,16 @@ class FinancialRatios:
         efficiency = self.calculate_efficiency_ratios()
         leverage = self.calculate_leverage_ratios()
         returns = self.calculate_return_ratios()
+        cash = self.calculate_cash_ratios()
         
         # Combine all ratios
         all_indices = set()
-        for df in [profitability, liquidity, efficiency, leverage, returns]:
+        for df in [profitability, liquidity, efficiency, leverage, returns, cash]:
             all_indices.update(df.index)
         
         all_ratios = pd.DataFrame(index=sorted(all_indices))
         
-        for df in [profitability, liquidity, efficiency, leverage, returns]:
+        for df in [profitability, liquidity, efficiency, leverage, returns, cash]:
             for col in df.columns:
                 all_ratios[col] = df[col]
         

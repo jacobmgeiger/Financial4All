@@ -31,6 +31,7 @@ Example:
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Union
@@ -41,10 +42,67 @@ from financial4all.core import log
 _default_instance: Optional["SynonymGroups"] = None
 _builtin_groups_cache: Optional[List["SynonymGroup"]] = None
 
+# Map company mapping concept keys (from company_mappings JSON) to our display names.
+# Used when merging company-specific tags into STANDARD_MAPPING for extraction.
+# Keys must match DISPLAY_NAME_TO_CONCEPT keys in IncomeStatement/BalanceSheet/CashFlow.
+COMPANY_CONCEPT_TO_DISPLAY: Dict[str, str] = {
+    "Capital Expenditures": "CapEx",
+    "Depreciation and Amortization": "Depreciation & Amortization",
+    "Revenue": "Revenue",
+    "Cost of Revenue": "Cost of Revenue",
+    "Accounts Receivable": "Receivables",
+    "Receivables": "Receivables",
+    "Inventory": "Inventory",
+    "Accounts Payable": "Payables",
+    "Payables": "Payables",
+}
+
+
+def _load_company_tags_by_display() -> Dict[str, List[str]]:
+    """
+    Load all company concept_mappings and merge into display_name -> [tags].
+
+    Company mappings use keys like "Capital Expenditures", "Revenue"; we map
+    these to our display names (CapEx, Revenue) so statement classes can merge
+    company-specific tags (e.g. NVDA PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets)
+    into STANDARD_MAPPING for comprehensive extraction.
+    """
+    module_dir = os.path.dirname(os.path.abspath(__file__))
+    company_dir = os.path.join(module_dir, "standardization", "company_mappings")
+    if not os.path.exists(company_dir):
+        company_dir = os.path.join(module_dir, "company_mappings")
+    if not os.path.exists(company_dir):
+        return {}
+
+    out: Dict[str, List[str]] = {}
+    for file in os.listdir(company_dir):
+        if not file.endswith("_mappings.json"):
+            continue
+        try:
+            path = os.path.join(company_dir, file)
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            cm = data.get("concept_mappings", {})
+            for company_key, tags in cm.items():
+                if company_key.startswith("_"):
+                    continue
+                if not isinstance(tags, list):
+                    continue
+                our_display = COMPANY_CONCEPT_TO_DISPLAY.get(company_key)
+                if our_display:
+                    out.setdefault(our_display, []).extend(tags)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            log.debug("Could not load company mapping %s: %s", file, e)
+    for k in out:
+        out[k] = list(dict.fromkeys(out[k]))
+    return out
+
 
 def _normalize_name(name: str) -> str:
-    """Normalize a concept name to lowercase with underscores."""
-    return name.strip().lower().replace(" ", "_").replace("-", "_")
+    """Normalize a concept name to lowercase with underscores (EdgarTools convention)."""
+    s = name.strip().lower().replace(" ", "_").replace("-", "_").replace("/", "_")
+    s = s.replace(",", "").replace("(", "").replace(")", "").replace("'", "").replace("__", "_").strip("_")
+    return s
 
 
 @dataclass
@@ -185,770 +243,172 @@ class ConceptInfo:
         return self.group.category
 
 
+def _strip_tag_from_concept_mapping(tag: str) -> str:
+    """
+    Strip namespace prefix from concept_mappings tag format (us-gaap_Revenue -> Revenue).
+
+    EdgarTools concept_mappings uses 'us-gaap_TagName' or 'orcl_TagName' format.
+    """
+    if "_" in tag:
+        parts = tag.split("_", 1)
+        if parts[0].lower().replace("-", "") in ("usgaap", "dei", "srt", "ifrs", "orcl"):
+            return parts[1]
+    if ":" in tag:
+        return tag.split(":", 1)[1]
+    return tag
+
+
+def _get_synonym_groups_from_concept_mappings() -> List[SynonymGroup]:
+    """
+    Build SynonymGroups from EdgarTools concept_mappings.json (display_label -> [tags]).
+
+    This is EdgarTools' primary extraction source. Each display label maps to XBRL tags.
+    Concept names are normalized display labels (lowercase, underscores).
+    """
+    module_dir = os.path.dirname(os.path.abspath(__file__))
+    cm_path = os.path.join(module_dir, "standardization", "concept_mappings.json")
+    if not os.path.exists(cm_path):
+        cm_path = os.path.join(module_dir, "concept_mappings.json")
+    try:
+        with open(cm_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        log.warning("Could not load concept_mappings for SynonymGroups: %s", e)
+        return []
+
+    groups: List[SynonymGroup] = []
+    for display_label, tags in data.items():
+        if display_label.startswith("_") or not isinstance(tags, list):
+            continue
+        concept_name = _normalize_name(display_label)
+        stripped = [_strip_tag_from_concept_mapping(t) for t in tags]
+        cat = ""
+        if any(k in concept_name for k in ("revenue", "cost", "gross_profit", "operating", "income", "expense", "tax")):
+            cat = "income_statement"
+        elif any(k in concept_name for k in ("assets", "liabilities", "equity", "receivable", "payable", "inventory")):
+            cat = "balance_sheet"
+        elif any(k in concept_name for k in ("cash", "operating_activities", "investing", "financing", "dividends", "payments")):
+            cat = "cash_flow"
+        groups.append(
+            SynonymGroup(
+                name=concept_name,
+                synonyms=stripped,
+                description=display_label,
+                category=cat,
+            )
+        )
+    return groups
+
+
+def _get_synonym_groups_from_gaap() -> List[SynonymGroup]:
+    """
+    Build SynonymGroups by inverting gaap_mappings (tag -> standard_tags).
+
+    Provides ~3000-tag coverage. Used to supplement concept_mappings for
+    concepts present in gaap/display_names but not in concept_mappings.
+    """
+    module_dir = os.path.dirname(os.path.abspath(__file__))
+    gaap_path = os.path.join(module_dir, "standardization", "gaap_mappings.json")
+    if not os.path.exists(gaap_path):
+        gaap_path = os.path.join(module_dir, "gaap_mappings.json")
+    display_path = os.path.join(module_dir, "standardization", "display_names.json")
+    if not os.path.exists(display_path):
+        display_path = os.path.join(module_dir, "display_names.json")
+
+    try:
+        with open(gaap_path, "r", encoding="utf-8") as f:
+            gaap = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        log.warning("Could not load gaap_mappings for SynonymGroups: %s", e)
+        return []
+
+    try:
+        with open(display_path, "r", encoding="utf-8") as f:
+            display_names = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        log.warning("Could not load display_names for SynonymGroups: %s", e)
+        display_names = {}
+
+    first_val = next(iter(gaap.values()), None)
+    is_tag_centric = isinstance(first_val, dict) and "standard_tags" in first_val
+
+    concept_to_tags: Dict[str, List[str]] = {}
+    for key, val in gaap.items():
+        if is_tag_centric and isinstance(val, dict):
+            std_tags = val.get("standard_tags", val.get("standard_tag", []))
+            if isinstance(std_tags, str):
+                std_tags = [std_tags]
+            for std_tag in std_tags:
+                if std_tag not in concept_to_tags:
+                    concept_to_tags[std_tag] = []
+                if key not in concept_to_tags[std_tag]:
+                    concept_to_tags[std_tag].append(key)
+        else:
+            if isinstance(val, list):
+                for tag in val:
+                    if key not in concept_to_tags:
+                        concept_to_tags[key] = []
+                    if tag not in concept_to_tags[key]:
+                        concept_to_tags[key].append(tag)
+
+    concept_name_to_tags: Dict[str, Set[str]] = {}
+    for standard_tag, tags_list in concept_to_tags.items():
+        display_name = display_names.get(standard_tag, standard_tag)
+        concept_name = _normalize_name(display_name)
+        if concept_name not in concept_name_to_tags:
+            concept_name_to_tags[concept_name] = set()
+        concept_name_to_tags[concept_name].update(tags_list)
+
+    groups: List[SynonymGroup] = []
+    for concept_name, tags_set in concept_name_to_tags.items():
+        if any(k in concept_name for k in ("revenue", "cost", "gross_profit", "operating", "income", "expense")):
+            category = "income_statement"
+        elif any(k in concept_name for k in ("assets", "liabilities", "equity", "receivable", "payable")):
+            category = "balance_sheet"
+        elif "capital" in concept_name or "expense" in concept_name:
+            category = "cash_flow" if "capital" in concept_name or "payments" in concept_name else "income_statement"
+        else:
+            category = ""
+        groups.append(
+            SynonymGroup(
+                name=concept_name,
+                synonyms=list(tags_set),
+                description=concept_name.replace("_", " ").title(),
+                category=category,
+            )
+        )
+    return groups
+
+
 def _get_builtin_groups_cached() -> List[SynonymGroup]:
     """
-    Get the pre-built synonym groups (cached at module level).
+    Get synonym groups aligned with EdgarTools (cached at module level).
 
-    These groups are based on:
-    - Existing STANDARD_MAPPING dictionaries from financial statement classes
-    - Common XBRL concept variations
-    - Industry-standard financial reporting practices
-
-    The synonyms are ordered by priority (most common/specific first).
+    Primary: concept_mappings.json (EdgarTools extraction source, display_label -> tags).
+    Supplement: gaap_mappings inversion for concepts in gaap/display_names but not
+    in concept_mappings. No builtin overrides - tags and concepts match EdgarTools.
     """
     global _builtin_groups_cache
     if _builtin_groups_cache is not None:
         return _builtin_groups_cache
 
-    _builtin_groups_cache = [
-        # ═══════════════════════════════════════════════════════════════════
-        # INCOME STATEMENT CONCEPTS
-        # ═══════════════════════════════════════════════════════════════════
-        SynonymGroup(
-            name="revenue",
-            synonyms=[
-                "RevenueFromContractWithCustomerExcludingAssessedTax",
-                "RevenueFromContractWithCustomerIncludingAssessedTax",
-                "Revenues",
-                "Revenue",
-                "SalesRevenueNet",
-                "SalesRevenueGoodsNet",
-                "SalesRevenueNetOfReturnsAndAllowances",
-                "TotalRevenues",
-                "TotalRevenue",
-                "NetSales",
-                "OperatingRevenue",
-                "RevenuesNetOfInterestExpense",
-                # Additional synonyms for older filings (EdgarTools alignment, 139 Revenue tags)
-                "SalesRevenueServicesNet",
-                "ProductRevenue",
-                "ServiceRevenue",
-                "ContractRevenue",
-                "SubscriptionRevenue",
-                "PlatformRevenue",
-            ],
-            description="Total revenue/sales from operations",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="cost_of_revenue",
-            synonyms=[
-                "CostOfRevenue",
-                "CostOfGoodsAndServicesSold",
-                "CostOfGoodsSold",
-                "CostOfSales",
-                "CostOfGoodsAndServiceExcludingDepreciationDepletionAndAmortization",
-                "DirectOperatingCosts",
-                # Additional synonyms for older filings (EdgarTools alignment)
-                "CostOfGoodsAndServicesSoldExcludingDepreciationDepletionAndAmortization",
-                "CostOfProductAndServiceRevenue",
-                "CostOfServices",
-            ],
-            description="Cost of revenue/goods sold",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="gross_profit",
-            synonyms=[
-                "GrossProfit",
-            ],
-            description="Revenue minus cost of revenue",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="operating_expenses",
-            synonyms=[
-                "OperatingExpenses",
-                "OperatingCostsAndExpenses",
-                "NoninterestExpense",
-                "CostsAndExpenses",
-            ],
-            description="Total operating expenses",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="research_and_development",
-            synonyms=[
-                "ResearchAndDevelopmentExpense",
-                "ResearchAndDevelopment",
-                "ResearchAndDevelopmentCosts",
-            ],
-            description="Research and development expenses",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="sga_expense",
-            synonyms=[
-                "SellingGeneralAndAdministrativeExpense",
-                "GeneralAndAdministrativeExpense",
-                "SellingAndMarketingExpense",
-                "SellingExpense",
-                "AdministrativeExpense",
-            ],
-            description="Selling, general and administrative expenses",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="operating_income",
-            synonyms=[
-                "OperatingIncomeLoss",
-                "OperatingIncome",
-                "IncomeFromOperations",
-                "IncomeLossFromContinuingOperationsBeforeInterestAndTaxes",
-            ],
-            description="Operating income/loss",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="interest_expense",
-            synonyms=[
-                "InterestExpense",
-                "InterestAndDebtExpense",
-                "InterestExpenseOperating",
-                "InterestExpenseNonoperating",
-                "InterestAndFeeExpense",
-            ],
-            description="Interest expense",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="interest_income",
-            synonyms=[
-                "InterestIncome",
-                "InterestIncomeOperating",
-                "InterestIncomeNonoperating",
-                "InterestAndDividendIncome",
-                "InterestAndDividendIncomeSecurities",
-                "InterestAndFeeIncomeLoansAndLeases",
-                "InterestIncomeDebtSecuritiesOperating",
-                "InterestIncomeDepositsWithFinancialInstitutions",
-                "InterestIncomeFederalFundsSoldAndSecuritiesPurchasedUnderAgreementsToResell",
-                "InterestIncomePurchasedReceivables",
-                "InvestmentIncomeInterest",
-                "OtherInterestAndDividendIncome",
-            ],
-            description="Interest income",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="other_net",
-            synonyms=[
-                "OtherIncomeExpenseNet",
-                "OtherIncomeExpense",  # AAPL reports this without "Net"
-                "OtherNonoperatingIncomeExpense",
-                "OtherOperatingIncomeExpenseNet",
-            ],
-            description="Other income/expense, net",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="interest_income_net",
-            synonyms=[
-                "InterestIncomeExpenseNet",
-                "InterestIncomeExpenseAfterProvisionForLoanLoss",
-                "NetInvestmentIncome",
-            ],
-            description="Net interest income/expense (Income - Expense)",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="income_before_tax",
-            synonyms=[
-                "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
-                "IncomeLossFromContinuingOperationsBeforeIncomeTaxes",
-                "IncomeLossBeforeIncomeTaxes",
-            ],
-            description="Income before income taxes",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="income_tax_expense",
-            synonyms=[
-                "IncomeTaxExpenseBenefit",
-                "ProvisionForIncomeTaxes",
-                "IncomeTaxesPaidNet",
-            ],
-            description="Income tax expense/benefit",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="net_income",
-            synonyms=[
-                "NetIncomeLoss",
-                "ProfitLoss",
-                "NetIncome",
-                "NetEarnings",
-                "NetIncomeLossAttributableToParent",
-                "NetIncomeLossAvailableToCommonStockholdersBasic",
-                "NetIncomeLossAvailableToCommonStockholdersDiluted",
-                "IncomeLossFromContinuingOperations",
-            ],
-            description="Net income/loss",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="earnings_per_share_basic",
-            synonyms=[
-                "EarningsPerShareBasic",
-                "EarningsPerShare",
-            ],
-            description="Basic earnings per share",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="earnings_per_share_diluted",
-            synonyms=[
-                "EarningsPerShareDiluted",
-                "EarningsPerShareDilutedOne",
-            ],
-            description="Diluted earnings per share",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="weighted_average_shares_outstanding_basic",
-            synonyms=[
-                "WeightedAverageNumberOfSharesOutstandingBasic",
-                "WeightedAverageNumberOfSharesOutstanding",
-            ],
-            description="Weighted average number of shares outstanding, basic",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="weighted_average_shares_outstanding_diluted",
-            synonyms=[
-                "WeightedAverageNumberOfDilutedSharesOutstanding",
-                "WeightedAverageNumberDilutedSharesOutstanding",
-            ],
-            description="Weighted average number of shares outstanding, diluted",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="depreciation_and_amortization",
-            synonyms=[
-                "DepreciationAndAmortization",
-                "DepreciationDepletionAndAmortization",
-                "Depreciation",
-                "AmortizationOfIntangibleAssets",
-                "DepreciationAmortizationAndAccretionNet",
-                "DepreciationAndAmortizationExpense",
-                "DepreciationAmortizationAndImpairment",
-                "DepreciationAmortizationAndAccretion",
-                "DepreciationAmortizationAndDepletion",
-                "DepreciationAndAmortizationNoncash",
-                "DepreciationAmortizationAndAccretionNetOfAmortizationOfDeferredFinancingCosts",
-                "CostDepreciationAmortizationAndDepletion",
-                "DepreciationAmortizationAndAccretionExpense",
-                "DepreciationAndAmortization",
-                "DepreciationAmortizationAndDepletionExpense",
-                "DepreciationAmortizationDepletionAndImpairment",
-            ],
-            description="Depreciation and amortization expense",
-            category="income_statement",
-        ),
-        SynonymGroup(
-            name="ebitda",
-            synonyms=[
-                "EBITDA",
-                "EarningsBeforeInterestTaxesDepreciationAndAmortization",
-            ],
-            description="Earnings before interest, taxes, depreciation and amortization",
-            category="income_statement",
-        ),
-        # ═══════════════════════════════════════════════════════════════════
-        # BALANCE SHEET - ASSETS
-        # ═══════════════════════════════════════════════════════════════════
-        SynonymGroup(
-            name="cash_and_equivalents",
-            synonyms=[
-                "CashAndCashEquivalentsAtCarryingValue",
-                "CashCashEquivalentsAndShortTermInvestments",
-                "CashEquivalentsAtCarryingValue",
-                "Cash",
-            ],
-            description="Cash and cash equivalents",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="short_term_investments",
-            synonyms=[
-                "ShortTermInvestments",
-                "MarketableSecuritiesCurrent",
-                "AvailableForSaleSecuritiesDebtSecuritiesCurrent",
-            ],
-            description="Short-term investments and marketable securities",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="accounts_receivable",
-            synonyms=[
-                "AccountsReceivableNetCurrent",
-                "AccountsReceivableNet",
-                "ReceivablesNetCurrent",
-                "AccountsReceivableGross",
-            ],
-            description="Accounts receivable",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="inventory",
-            synonyms=[
-                "InventoryNet",
-                "InventoryGross",
-                "InventoryFinishedGoods",
-            ],
-            description="Inventory",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="prepaid_expenses",
-            synonyms=[
-                "PrepaidExpenseAndOtherAssetsCurrent",
-                "PrepaidExpenseCurrent",
-                "PrepaidExpense",
-            ],
-            description="Prepaid expenses",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="total_current_assets",
-            synonyms=[
-                "AssetsCurrent",
-                "CurrentAssets",
-            ],
-            description="Total current assets",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="property_plant_equipment",
-            synonyms=[
-                "PropertyPlantAndEquipmentNet",
-                "PropertyPlantAndEquipmentGross",
-                "FixedAssets",
-            ],
-            description="Property, plant and equipment",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="goodwill",
-            synonyms=[
-                "Goodwill",
-            ],
-            description="Goodwill",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="intangible_assets",
-            synonyms=[
-                "IntangibleAssetsNetExcludingGoodwill",
-                "IntangibleAssetsNetIncludingGoodwill",
-                "FiniteLivedIntangibleAssetsNet",
-            ],
-            description="Intangible assets",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="long_term_investments",
-            synonyms=[
-                "LongTermInvestments",
-                "MarketableSecuritiesNoncurrent",
-                "AvailableForSaleSecuritiesDebtSecuritiesNoncurrent",
-            ],
-            description="Long-term investments",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="deferred_tax_assets",
-            synonyms=[
-                "DeferredIncomeTaxAssetsNet",
-                "DeferredTaxAssetsNet",
-                "DeferredTaxAssetsNetCurrent",
-                "DeferredTaxAssetsNetNoncurrent",
-            ],
-            description="Deferred tax assets",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="total_assets",
-            synonyms=[
-                "Assets",
-                "AssetsTotal",
-            ],
-            description="Total assets",
-            category="balance_sheet",
-        ),
-        # ═══════════════════════════════════════════════════════════════════
-        # BALANCE SHEET - LIABILITIES
-        # ═══════════════════════════════════════════════════════════════════
-        SynonymGroup(
-            name="accounts_payable",
-            synonyms=[
-                "AccountsPayableCurrent",
-                "AccountsPayableTradeCurrent",
-                "AccountsPayable",
-            ],
-            description="Accounts payable",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="accrued_liabilities",
-            synonyms=[
-                "AccruedLiabilitiesCurrent",
-                "OtherAccruedLiabilitiesCurrent",
-                "EmployeeRelatedLiabilitiesCurrent",
-            ],
-            description="Accrued liabilities",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="short_term_debt",
-            synonyms=[
-                "DebtCurrent",
-                "ShortTermBorrowings",
-                "LongTermDebtCurrent",
-                "NotesPayableCurrent",
-            ],
-            description="Short-term debt",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="deferred_revenue",
-            synonyms=[
-                "DeferredRevenue",
-                "DeferredRevenueCurrent",
-                "DeferredRevenueNoncurrent",
-                "ContractWithCustomerLiability",
-                "ContractWithCustomerLiabilityCurrent",
-            ],
-            description="Deferred revenue / contract liabilities",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="total_current_liabilities",
-            synonyms=[
-                "LiabilitiesCurrent",
-                "CurrentLiabilities",
-            ],
-            description="Total current liabilities",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="long_term_debt",
-            synonyms=[
-                "LongTermDebtNoncurrent",
-                "LongTermDebt",
-                "LongTermDebtAndCapitalLeaseObligations",
-                "LongTermBorrowings",
-                "LongTermNotesAndLoans",
-            ],
-            description="Long-term debt",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="deferred_tax_liabilities",
-            synonyms=[
-                "DeferredIncomeTaxLiabilitiesNet",
-                "DeferredTaxLiabilitiesNoncurrent",
-            ],
-            description="Deferred tax liabilities",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="total_liabilities",
-            synonyms=[
-                "Liabilities",
-                "LiabilitiesTotal",
-            ],
-            description="Total liabilities",
-            category="balance_sheet",
-        ),
-        # ═══════════════════════════════════════════════════════════════════
-        # BALANCE SHEET - EQUITY
-        # ═══════════════════════════════════════════════════════════════════
-        SynonymGroup(
-            name="common_stock",
-            synonyms=[
-                "CommonStockValue",
-                "CommonStocksIncludingAdditionalPaidInCapital",
-                "StockholdersEquityCommonStock",
-            ],
-            description="Common stock value",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="additional_paid_in_capital",
-            synonyms=[
-                "AdditionalPaidInCapital",
-                "AdditionalPaidInCapitalCommonStock",
-            ],
-            description="Additional paid-in capital",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="retained_earnings",
-            synonyms=[
-                "RetainedEarningsAccumulatedDeficit",
-                "RetainedEarnings",
-            ],
-            description="Retained earnings",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="treasury_stock",
-            synonyms=[
-                "TreasuryStockValue",
-                "TreasuryStockCommonValue",
-            ],
-            description="Treasury stock",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="accumulated_other_comprehensive_income",
-            synonyms=[
-                "AccumulatedOtherComprehensiveIncomeLossNetOfTax",
-                "AccumulatedOtherComprehensiveIncomeLoss",
-            ],
-            description="Accumulated other comprehensive income/loss",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="stockholders_equity",
-            synonyms=[
-                "StockholdersEquity",
-                "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",
-                "StockholdersEquityAttributableToParent",
-                "EquityAttributableToParent",
-                "Equity",
-                "ShareholdersEquity",
-                "TotalEquity",
-                "PartnersCapital",
-                "MembersEquity",
-            ],
-            description="Total stockholders equity",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="common_shares_outstanding",
-            synonyms=[
-                "CommonStockSharesOutstanding",
-                "WeightedAverageNumberOfSharesOutstandingBasic",
-            ],
-            description="Common shares outstanding",
-            category="balance_sheet",
-        ),
-        # ═══════════════════════════════════════════════════════════════════
-        # CASH FLOW STATEMENT
-        # ═══════════════════════════════════════════════════════════════════
-        SynonymGroup(
-            name="operating_cash_flow",
-            synonyms=[
-                "NetCashProvidedByUsedInOperatingActivities",
-                "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations",
-                "CashFlowFromOperatingActivities",
-            ],
-            description="Net cash from operating activities",
-            category="cash_flow",
-        ),
-        SynonymGroup(
-            name="investing_cash_flow",
-            synonyms=[
-                "NetCashProvidedByUsedInInvestingActivities",
-                "NetCashProvidedByUsedInInvestingActivitiesContinuingOperations",
-                "CashFlowFromInvestingActivities",
-            ],
-            description="Net cash from investing activities",
-            category="cash_flow",
-        ),
-        SynonymGroup(
-            name="financing_cash_flow",
-            synonyms=[
-                "NetCashProvidedByUsedInFinancingActivities",
-                "NetCashProvidedByUsedInFinancingActivitiesContinuingOperations",
-                "CashFlowFromFinancingActivities",
-            ],
-            description="Net cash from financing activities",
-            category="cash_flow",
-        ),
-        SynonymGroup(
-            name="net_change_in_cash",
-            synonyms=[
-                "CashAndCashEquivalentsPeriodIncreaseDecrease",
-                "IncreaseDecreaseInCashAndCashEquivalents",
-            ],
-            description="Net change in cash and cash equivalents",
-            category="cash_flow",
-        ),
-        # Capital expenditures: INVESTING CASH OUTFLOWS (Statement of Cash Flows) only. Do NOT
-        # use for segment-note CapEx: per DQC 0164 (2022), segment disclosure must use
-        # SegmentExpenditureAdditionToLongLivedAssets (accrual-based); PaymentsToAcquire... in
-        # segment tables is flagged. Related: CapitalExpendituresIncurredButNotYetPaid = liability
-        # balance (not period change); do not use for supplemental "change in liabilities" line.
-        SynonymGroup(
-            name="capex",
-            synonyms=[
-                # US GAAP Taxonomy: balance type Credit, period Duration; investing cash outflows
-                # for PP&E and intangible assets (Calcbench, Deloitte, xbrl.us/data-rule/dqc_0015-lepr/).
-                # Primary us-gaap tags (DQC_0015 / Calcbench); SCF only—segment note uses
-                # SegmentExpenditureAdditionToLongLivedAssets per DQC 0164.
-                "PaymentsToAcquirePropertyPlantAndEquipment",
-                "PaymentsToAcquireIntangibleAssets",
-                "PaymentsToAcquireProductiveAssets",
-                "PaymentsToAcquireOtherPropertyPlantAndEquipment",
-                # Common labels / synonyms
-                "CapitalExpenditures",
-                "PurchaseOfPropertyPlantAndEquipment",
-                "CapitalExpendituresInitiated",  # CFI: sometimes used instead of PaymentsToAcquirePP&E
-                # Combined line "Purchases related to property and equipment and intangible assets" (NVDA face)
-                "PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets",
-                "PaymentsForPropertyPlantAndEquipmentAndIntangibleAssets",
-                # Custom extension tags when filers combine PPE + intangibles (e.g. NVDA 2013–2021);
-                # local name matches regardless of namespace (e.g. nvda:...).
-                "PurchasesOfPropertyAndEquipmentAndIntangibleAssets",
-                "PaymentsToAcquireOtherProductiveAssets",
-                "PaymentsForPropertyPlantAndEquipment",
-                "CapitalExpendituresDiscontinuedOperations",
-                "PaymentsToAcquirePropertyPlantAndEquipmentNet",
-                "CapitalExpendituresNet",
-                "PaymentsForCapitalExpenditures",
-                "PaymentsForPurchaseOfPropertyPlantAndEquipment",
-                "InvestmentsInPropertyPlantAndEquipment",
-                "CapitalExpendituresForPropertyPlantAndEquipment",
-                "PaymentsToAcquireAssets",
-                "PaymentsForAcquisitionOfPropertyPlantAndEquipment",
-                "PaymentsToAcquirePropertyPlantAndEquipmentAndOtherAssets",
-                # Intangibles / software (many filers report separately)
-                "PaymentsForSoftwareAndWebSiteDevelopmentCosts",
-                "PaymentsForDevelopmentOfRealEstate",
-                "InvestmentsInPropertyPlantAndEquipmentAndIntangibleAssets",
-                "PaymentsForAcquisitionOfPropertyPlantAndEquipmentAndIntangibleAssets",
-                "CapitalExpendituresIncludingSoftware",
-            ],
-            description="Capital expenditures (PP&E / investing activities; M&A excluded)",
-            category="cash_flow",
-        ),
-        SynonymGroup(
-            name="dividends_paid",
-            synonyms=[
-                "PaymentsOfDividends",
-                "PaymentsOfDividendsCommonStock",
-                "DividendsPaid",
-            ],
-            description="Dividends paid",
-            category="cash_flow",
-        ),
-        SynonymGroup(
-            name="share_repurchases",
-            synonyms=[
-                "PaymentsForRepurchaseOfCommonStock",
-                "StockRepurchasedDuringPeriodValue",
-                "PaymentsForRepurchaseOfEquity",
-            ],
-            description="Share repurchases/buybacks",
-            category="cash_flow",
-        ),
-        SynonymGroup(
-            name="debt_repayment",
-            synonyms=[
-                "RepaymentsOfLongTermDebt",
-                "RepaymentsOfDebt",
-                "RepaymentsOfShortTermDebt",
-            ],
-            description="Debt repayments",
-            category="cash_flow",
-        ),
-        SynonymGroup(
-            name="debt_proceeds",
-            synonyms=[
-                "ProceedsFromIssuanceOfLongTermDebt",
-                "ProceedsFromDebtNetOfIssuanceCosts",
-                "ProceedsFromIssuanceOfDebt",
-            ],
-            description="Proceeds from debt issuance",
-            category="cash_flow",
-        ),
-        SynonymGroup(
-            name="free_cash_flow",
-            synonyms=[
-                "FreeCashFlow",
-            ],
-            description="Free cash flow (operating cash flow minus capex)",
-            category="cash_flow",
-        ),
-        # ═══════════════════════════════════════════════════════════════════
-        # LEASE-RELATED (Phil Oakley Framework)
-        # ═══════════════════════════════════════════════════════════════════
-        SynonymGroup(
-            name="operating_lease_payments",
-            synonyms=[
-                "OperatingLeasePayments",
-                "PaymentsForOperatingLeases",
-                "LesseeOperatingLeaseLiabilityPaymentsDue",
-                "OperatingLeasesFutureMinimumPaymentsDue",
-            ],
-            description="Operating lease payments (Phil Oakley framework)",
-            category="cash_flow",
-        ),
-        SynonymGroup(
-            name="operating_lease_liability",
-            synonyms=[
-                "OperatingLeaseLiability",
-                "OperatingLeaseLiabilityCurrent",
-                "OperatingLeaseLiabilityNoncurrent",
-            ],
-            description="Operating lease liability",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="operating_lease_right_of_use_asset",
-            synonyms=[
-                "OperatingLeaseRightOfUseAsset",
-                "RightOfUseAssetObtainedInExchangeForOperatingLeaseLiability",
-            ],
-            description="Operating lease right-of-use asset",
-            category="balance_sheet",
-        ),
-        SynonymGroup(
-            name="finance_lease_liability",
-            synonyms=[
-                "FinanceLeaseLiability",
-                "FinanceLeaseLiabilityCurrent",
-                "FinanceLeaseLiabilityNoncurrent",
-                "CapitalLeaseObligations",
-            ],
-            description="Finance/capital lease liability",
-            category="balance_sheet",
-        ),
-        # ═══════════════════════════════════════════════════════════════════
-        # FINANCIAL RATIOS / METRICS
-        # ═══════════════════════════════════════════════════════════════════
-        SynonymGroup(
-            name="book_value_per_share",
-            synonyms=[
-                "BookValuePerShare",
-                "BookValuePerShareCommon",
-            ],
-            description="Book value per share",
-            category="metrics",
-        ),
-        SynonymGroup(
-            name="return_on_equity",
-            synonyms=[
-                "ReturnOnEquity",
-                "ROE",
-            ],
-            description="Return on equity",
-            category="metrics",
-        ),
-        SynonymGroup(
-            name="return_on_assets",
-            synonyms=[
-                "ReturnOnAssets",
-                "ROA",
-            ],
-            description="Return on assets",
-            category="metrics",
-        ),
-    ]
+    # Primary: concept_mappings (EdgarTools extraction source)
+    cm_groups = _get_synonym_groups_from_concept_mappings()
+    cm_by_name = {g.name: g for g in cm_groups}
+    cm_concept_names = set(cm_by_name)
+
+    # Supplement: gaap-derived for concepts only in gaap (broader tag coverage)
+    gaap_groups = _get_synonym_groups_from_gaap()
+    result_by_name = dict(cm_by_name)
+    for g in gaap_groups:
+        if g.name not in cm_concept_names:
+            result_by_name[g.name] = g
+
+    _builtin_groups_cache = list(result_by_name.values())
     return _builtin_groups_cache
+
+
+# Legacy builtin groups removed - now using EdgarTools concept_mappings + gaap only.
 
 
 class SynonymGroups:

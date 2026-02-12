@@ -4,13 +4,68 @@ Statement resolution for XBRL financial statements.
 
 This module provides functionality for identifying and extracting
 financial statements (Income Statement, Balance Sheet, Cash Flow)
-from XBRL data.
+from XBRL data. Includes statement_to_concepts for EdgarTools parity.
 """
 
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Set
 from enum import Enum
 
 from financial4all.xbrl.facts import FactSet
+
+
+@dataclass
+class StatementInfo:
+    """EdgarTools-parity: statement type info with primary concept and title."""
+    name: str
+    concept: str
+    title: str
+
+
+# EdgarTools-parity: mapping of statement types to primary concepts
+# Used by StatementResolver for backward compatibility and get_all_statements
+statement_to_concepts = {
+    "IncomeStatement": StatementInfo(
+        name="IncomeStatement",
+        concept="us-gaap_IncomeStatementAbstract",
+        title="Consolidated Statement of Income",
+    ),
+    "BalanceSheet": StatementInfo(
+        name="BalanceSheet",
+        concept="us-gaap_StatementOfFinancialPositionAbstract",
+        title="Consolidated Balance Sheets",
+    ),
+    "CashFlowStatement": StatementInfo(
+        name="CashFlowStatement",
+        concept="us-gaap_StatementOfCashFlowsAbstract",
+        title="Consolidated Statement of Cash Flows",
+    ),
+    "StatementOfEquity": StatementInfo(
+        name="StatementOfEquity",
+        concept="us-gaap_StatementOfStockholdersEquityAbstract",
+        title="Consolidated Statement of Equity",
+    ),
+    "ComprehensiveIncome": StatementInfo(
+        name="ComprehensiveIncome",
+        concept="us-gaap_StatementOfIncomeAndComprehensiveIncomeAbstract",
+        title="Consolidated Statement of Comprehensive Income",
+    ),
+    "CoverPage": StatementInfo(
+        name="CoverPage",
+        concept="dei_CoverAbstract",
+        title="Cover Page",
+    ),
+    "ScheduleOfInvestments": StatementInfo(
+        name="ScheduleOfInvestments",
+        concept="us-gaap_ScheduleOfInvestmentsAbstract",
+        title="Consolidated Schedule of Investments",
+    ),
+    "FinancialHighlights": StatementInfo(
+        name="FinancialHighlights",
+        concept="us-gaap_InvestmentCompanyFinancialHighlightsAbstract",
+        title="Financial Highlights",
+    ),
+}
 
 
 class StatementType(Enum):

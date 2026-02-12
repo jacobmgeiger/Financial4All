@@ -54,8 +54,18 @@ class Config:
     supplement_with_company_facts: bool = True
 
     # 10-Q summation: when annual 10-K fact is missing, sum 4 consecutive 10-Q facts
-    # to fill the gap. Off by default to avoid incorrect aggregation in edge cases.
-    fill_gaps_from_10q: bool = False
+    # to fill the gap. Enables CapEx for companies (e.g. NVDA 2013–2021) that report
+    # only quarterly in 10-Q with no 10-K annual fact.
+    fill_gaps_from_10q: bool = True
+
+    # EdgarTools-aligned validation and cleanup
+    exclude_amended_filings: bool = False  # When True, prefer 10-K over 10-K/A in fact resolution
+    run_datapoint_validation: bool = True  # Run post-extraction validation (YoY, margins)
+    apply_presentation_signs: bool = False  # Apply preferred sign transformation (expenses positive, outflows negative)
+    exclude_structural_elements: bool = True  # Filter Axis, Domain, Member, Table, Abstract from fact resolution
+
+    # Statement DataFrame caching: when True, bypass cache and recompute to_dataframe() each call
+    disable_statement_cache: bool = True  # Default True during testing; set False for production perf
 
     # Logging
     log_level: str = "INFO"
@@ -101,6 +111,25 @@ def get_config() -> Config:
             _config.fill_gaps_from_10q = False
         if os.getenv("F4A_CACHE_DIR"):
             _config.cache_dir = os.getenv("F4A_CACHE_DIR")
+        env_exclude = os.getenv("F4A_EXCLUDE_AMENDED_FILINGS", "").lower()
+        if env_exclude in ("1", "true", "yes"):
+            _config.exclude_amended_filings = True
+        elif env_exclude in ("0", "false", "no"):
+            _config.exclude_amended_filings = False
+        env_validation = os.getenv("F4A_RUN_DATAPOINT_VALIDATION", "").lower()
+        if env_validation in ("0", "false", "no"):
+            _config.run_datapoint_validation = False
+        env_presentation = os.getenv("F4A_APPLY_PRESENTATION_SIGNS", "").lower()
+        if env_presentation in ("1", "true", "yes"):
+            _config.apply_presentation_signs = True
+        env_structural = os.getenv("F4A_EXCLUDE_STRUCTURAL_ELEMENTS", "").lower()
+        if env_structural in ("0", "false", "no"):
+            _config.exclude_structural_elements = False
+        env_cache = os.getenv("F4A_DISABLE_STATEMENT_CACHE", "").lower()
+        if env_cache in ("1", "true", "yes"):
+            _config.disable_statement_cache = True
+        elif env_cache in ("0", "false", "no"):
+            _config.disable_statement_cache = False
     return _config
 
 

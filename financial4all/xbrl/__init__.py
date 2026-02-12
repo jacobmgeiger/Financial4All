@@ -59,7 +59,8 @@ from financial4all.xbrl.abstract_detection import (
 )
 from financial4all.xbrl.validation import (
     ValidationLevel, ValidationSeverity, ValidationIssue, ValidationResult,
-    validate_balance_sheet, validate_statement
+    validate_balance_sheet, validate_income_statement, validate_cash_flow,
+    validate_statement
 )
 from financial4all.xbrl.currency import CurrencyConverter, ExchangeRate
 from financial4all.xbrl.deduplication_strategy import RevenueDeduplicator
@@ -177,6 +178,8 @@ __all__ = [
     "ValidationIssue",
     "ValidationResult",
     "validate_balance_sheet",
+    "validate_income_statement",
+    "validate_cash_flow",
     "validate_statement",
     
     # Currency

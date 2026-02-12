@@ -16,8 +16,17 @@ from financial4all.sec.client import SECClient
 
 # app.py
 # This script creates a comprehensive Dash web application for financial analysis.
+# Display hierarchy: subelements of aggregate categories are indented (EdgarTools-style).
 # It allows users to input a ticker symbol, fetch financial data from the SEC,
 # visualize trends, view standardized statements with interactive formula switching, and export data.
+
+# --- EdgarTools-style display: subelements indented under aggregate categories ---
+METRIC_INDENTED_SUBELEMENTS = frozenset({
+    "General and Administrative Expense",  # under SG&A (income statement)
+    "Selling and Marketing Expense",       # under SG&A (income statement)
+    "General and administrative",          # under SG&A (profitability % of revenue)
+    "Selling and marketing",               # under SG&A (profitability % of revenue)
+})
 
 # --- NEW: Metric Definitions for Tooltips ---
 METRIC_DEFINITIONS = {
@@ -340,8 +349,11 @@ def on_ticker_change(ticker_upper, periods):
 
         # Extract balance sheet and cash flow DataFrames for downstream callbacks
         # (avoids re-fetching in display_standard_is and generate_analysis_report)
+        # presentation=True: CapEx as negative (outflow), D&A from operating section
         bs_df = balance_sheet.to_dataframe() if balance_sheet else pd.DataFrame()
-        cf_df = cash_flow.to_dataframe() if cash_flow else pd.DataFrame()
+        cf_df = (
+            cash_flow.to_dataframe(presentation=True) if cash_flow else pd.DataFrame()
+        )
 
         # For backward compatibility, create df_merged (all metrics)
         # This combines income statement with other available metrics
@@ -599,9 +611,18 @@ def update_key_ratios_display(ratios_json, ticker):
                     height=50,
                 )
 
-                # Format the value display - check if it's a percentage ratio
+                # Format the value display - check if it's a percentage ratio or currency
                 if "%" in ratio_name or "Margin" in ratio_name or "RO" in ratio_name:
                     value_display = f"{latest_value:.2f}%"
+                elif "Free Cash Flow" in ratio_name or "Cash Flow" in ratio_name:
+                    # Format as currency (financials typically in millions)
+                    abs_val = abs(latest_value)
+                    if abs_val >= 1e9:
+                        value_display = f"${latest_value / 1e9:.2f}B"
+                    elif abs_val >= 1e6:
+                        value_display = f"${latest_value / 1e6:.1f}M"
+                    else:
+                        value_display = f"${latest_value:,.0f}"
                 else:
                     value_display = f"{latest_value:.2f}"
 
@@ -999,13 +1020,15 @@ def display_standard_is(
         ]
         is_final_calculation = metric_name in final_calculations
 
-        # Metric name cell with tooltip
+        # Metric name cell with tooltip; subelements indented (EdgarTools-style)
+        is_subelement = metric_name in METRIC_INDENTED_SUBELEMENTS
         metric_cell_content = [
             html.Div(
                 metric_name,
                 style={
                     "fontWeight": "bold" if is_final_calculation else "normal",
                     "fontSize": "0.9em",
+                    "paddingLeft": "20px" if is_subelement else "0",
                 },
                 title=metric_def if metric_def else None,  # Tooltip on hover
             ),
@@ -1217,11 +1240,13 @@ def display_standard_is(
             if is_yoy_header:
                 in_yoy_section = True
 
-            # Build metric name cell
+            # Build metric name cell; subelements indented (EdgarTools-style)
+            is_subelement = metric_name.replace("**", "") in METRIC_INDENTED_SUBELEMENTS
             metric_cell = html.Td(
                 metric_name.replace("**", ""),  # Remove markdown bold markers
                 style={
                     "padding": "10px 12px",
+                    "paddingLeft": "30px" if is_subelement else "10px",
                     "verticalAlign": "middle",
                     "minWidth": "220px",
                     "border": "1px solid #444",

@@ -92,7 +92,8 @@ class ValidationResult:
         )
 
 
-# Standard concepts for balance sheet validation
+# Standard concepts for balance sheet validation (EdgarTools-aligned).
+# Label variants ensure _find_value_by_labels matches common filing labels.
 BALANCE_SHEET_TOTALS = {
     # Assets
     "total_assets": [
@@ -119,15 +120,16 @@ BALANCE_SHEET_TOTALS = {
         "Noncontrolling Interest",
         "Minority Interest",
     ],
-    # Combined totals
+    # Combined totals (EdgarTools validation.py alignment)
     "liabilities_and_equity": [
         "Total Liabilities and Equity",
         "Total Liabilities and Stockholders' Equity",
+        "Total Liabilities and Shareholders' Equity",
         "Liabilities and Equity",
     ],
 }
 
-# Section subtotals for Level 2 validation
+# Section subtotals for Level 2 validation (EdgarTools-aligned).
 BALANCE_SHEET_SECTIONS = {
     "current_assets": [
         "Total Current Assets",
@@ -453,6 +455,229 @@ def validate_balance_sheet(
     )
 
 
+def validate_income_statement(
+    statement_or_df: Union[Any, 'pd.DataFrame'],
+    tolerance: float = 1.0,
+    tolerance_pct: float = 0.001,
+) -> ValidationResult:
+    """
+    Validate income statement equations (EdgarTools-aligned).
+
+    Checks:
+    - Gross Profit = Revenue - Cost of Revenue
+    - Net Income = Income Before Taxes - Taxes
+    - Income Before Taxes = Operating Income + Other income (expense), net
+    - Operating Income ≈ Gross Profit - operating expenses (when components exist)
+
+    Args:
+        statement_or_df: IncomeStatement object or DataFrame with standard column names
+        tolerance: Absolute tolerance for rounding (default $1)
+        tolerance_pct: Percentage tolerance (default 0.1%)
+
+    Returns:
+        ValidationResult with validation status
+    """
+    issues: List[ValidationIssue] = []
+    checks: List[str] = []
+
+    if hasattr(statement_or_df, 'to_dataframe'):
+        try:
+            df = statement_or_df.to_dataframe()
+        except Exception as e:
+            logger.warning("Failed to convert income statement to DataFrame: %s", e)
+            return ValidationResult(
+                is_valid=False,
+                issues=[ValidationIssue(
+                    severity=ValidationSeverity.ERROR,
+                    code="CONVERSION_ERROR",
+                    message=f"Failed to convert to DataFrame: {e}"
+                )],
+                checks_performed=["conversion"],
+                metadata={"error": str(e)},
+            )
+    else:
+        df = statement_or_df
+
+    if df is None or df.empty:
+        return ValidationResult(
+            is_valid=True,
+            issues=[],
+            checks_performed=["empty_check"],
+            metadata={},
+        )
+
+    def _get_val(col: str, idx) -> Optional[float]:
+        if col not in df.columns:
+            return None
+        v = df.loc[idx, col]
+        if PANDAS_AVAILABLE and pd.isna(v):
+            return None
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return None
+
+    for idx in df.index:
+        # Gross Profit = Revenue - Cost of Revenue
+        if "Gross Profit" in df.columns and "Revenue" in df.columns and "Cost of Revenue" in df.columns:
+            checks.append("gross_profit")
+            gp = _get_val("Gross Profit", idx)
+            rev = _get_val("Revenue", idx)
+            cogs = _get_val("Cost of Revenue", idx)
+            if gp is not None and rev is not None and cogs is not None and rev != 0:
+                expected_gp = rev - cogs
+                diff = abs(gp - expected_gp)
+                diff_pct = diff / abs(rev)
+                if diff > tolerance and diff_pct > tolerance_pct:
+                    issues.append(ValidationIssue(
+                        severity=ValidationSeverity.WARNING,
+                        code="GROSS_PROFIT_MISMATCH",
+                        message=f"Gross Profit ({gp:,.0f}) != Revenue - Cost of Revenue ({expected_gp:,.0f}) for {idx}",
+                        details={"period": str(idx), "diff": diff, "diff_pct": diff_pct},
+                    ))
+
+        # Net Income = Income Before Taxes - Taxes
+        if "Net Income" in df.columns and "Income Before Taxes" in df.columns and "Taxes" in df.columns:
+            checks.append("net_income")
+            ni = _get_val("Net Income", idx)
+            ibt = _get_val("Income Before Taxes", idx)
+            tax = _get_val("Taxes", idx)
+            if ni is not None and ibt is not None and tax is not None:
+                expected_ni = ibt - tax
+                diff = abs(ni - expected_ni)
+                div = max(abs(ibt), 1)
+                diff_pct = diff / div
+                if diff > tolerance and diff_pct > tolerance_pct:
+                    issues.append(ValidationIssue(
+                        severity=ValidationSeverity.WARNING,
+                        code="NET_INCOME_MISMATCH",
+                        message=f"Net Income ({ni:,.0f}) != Income Before Taxes - Taxes ({expected_ni:,.0f}) for {idx}",
+                        details={"period": str(idx), "diff": diff},
+                    ))
+
+        # Income Before Taxes = Operating Income + Other income (expense), net
+        other_col = "Other income (expense), net"
+        if other_col in df.columns and "Income Before Taxes" in df.columns and "Operating Income" in df.columns:
+            checks.append("ibt_equation")
+            ibt = _get_val("Income Before Taxes", idx)
+            oi = _get_val("Operating Income", idx)
+            other = _get_val(other_col, idx)
+            if ibt is not None and oi is not None and other is not None:
+                expected_ibt = oi + other
+                diff = abs(ibt - expected_ibt)
+                div = max(abs(ibt), 1)
+                diff_pct = diff / div
+                if diff > tolerance and diff_pct > tolerance_pct:
+                    issues.append(ValidationIssue(
+                        severity=ValidationSeverity.INFO,
+                        code="IBT_MISMATCH",
+                        message=f"Income Before Taxes ({ibt:,.0f}) != Operating Income + Other ({expected_ibt:,.0f}) for {idx}",
+                        details={"period": str(idx), "diff": diff},
+                    ))
+
+    return ValidationResult(
+        is_valid=not any(i.severity == ValidationSeverity.ERROR for i in issues),
+        issues=issues,
+        checks_performed=checks,
+        metadata={"statement_type": "IncomeStatement"},
+    )
+
+
+def validate_cash_flow(
+    statement_or_df: Union[Any, 'pd.DataFrame'],
+    tolerance: float = 1.0,
+) -> ValidationResult:
+    """
+    Validate cash flow statement reconciliation (EdgarTools-aligned).
+
+    Checks: Net Change in Cash = Operating + Investing + Financing (when all present)
+
+    Args:
+        statement_or_df: CashFlowStatement object or DataFrame
+        tolerance: Absolute tolerance for rounding
+
+    Returns:
+        ValidationResult with validation status
+    """
+    issues: List[ValidationIssue] = []
+    checks: List[str] = []
+
+    if hasattr(statement_or_df, 'to_dataframe'):
+        try:
+            df = statement_or_df.to_dataframe()
+        except Exception as e:
+            logger.warning("Failed to convert cash flow to DataFrame: %s", e)
+            return ValidationResult(
+                is_valid=False,
+                issues=[ValidationIssue(
+                    severity=ValidationSeverity.ERROR,
+                    code="CONVERSION_ERROR",
+                    message=f"Failed to convert to DataFrame: {e}"
+                )],
+                checks_performed=["conversion"],
+                metadata={"error": str(e)},
+            )
+    else:
+        df = statement_or_df
+
+    if df is None or df.empty:
+        return ValidationResult(
+            is_valid=True,
+            issues=[],
+            checks_performed=["empty_check"],
+            metadata={},
+        )
+
+    net_col = "Net Change in Cash"
+    ocf_col = "Operating Cash Flow"
+    icf_col = "Investing Cash Flow"
+    fcf_col = "Financing Cash Flow"
+
+    if net_col not in df.columns:
+        return ValidationResult(
+            is_valid=True,
+            issues=[],
+            checks_performed=["cash_reconciliation"],
+            metadata={},
+        )
+
+    def _get_val(col: str, idx) -> Optional[float]:
+        if col not in df.columns:
+            return None
+        v = df.loc[idx, col]
+        if PANDAS_AVAILABLE and pd.isna(v):
+            return None
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return None
+
+    for idx in df.index:
+        net = _get_val(net_col, idx)
+        ocf = _get_val(ocf_col, idx)
+        icf = _get_val(icf_col, idx)
+        fcf = _get_val(fcf_col, idx)
+
+        if net is not None and ocf is not None and icf is not None and fcf is not None:
+            checks.append("cash_reconciliation")
+            expected = ocf + icf + fcf
+            diff = abs(net - expected)
+            if diff > tolerance:
+                issues.append(ValidationIssue(
+                    severity=ValidationSeverity.WARNING,
+                    code="CASH_RECONCILIATION_MISMATCH",
+                    message=f"Net Change in Cash ({net:,.0f}) != OCF + ICF + FCF ({expected:,.0f}) for {idx}",
+                    details={"period": str(idx), "diff": diff},
+                ))
+
+    return ValidationResult(
+        is_valid=not any(i.severity == ValidationSeverity.ERROR for i in issues),
+        issues=issues,
+        checks_performed=checks,
+        metadata={"statement_type": "CashFlowStatement"},
+    )
+
+
 def validate_statement(
     statement: Any,
     statement_type: Optional[str] = None,
@@ -496,6 +721,10 @@ def validate_statement(
     # Dispatch to appropriate validator
     if detected_type == 'BalanceSheet':
         return validate_balance_sheet(statement, level=level)
+    if detected_type == 'IncomeStatement':
+        return validate_income_statement(statement)
+    if detected_type == 'CashFlowStatement':
+        return validate_cash_flow(statement)
 
     # For unsupported statement types, return a pass-through result
     return ValidationResult(

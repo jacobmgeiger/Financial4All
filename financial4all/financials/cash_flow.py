@@ -17,7 +17,12 @@ from datetime import date as date_type
 
 from financial4all.xbrl.facts import FactSet
 from financial4all.xbrl.periods import PeriodType
-from financial4all.xbrl.standardization import get_synonym_groups, get_default_store
+from financial4all.xbrl.structural_filter import is_xbrl_structural_element
+from financial4all.xbrl.standardization import (
+    get_synonym_groups,
+    get_default_store,
+    _load_company_tags_by_display,
+)
 from financial4all.core import log
 
 
@@ -31,19 +36,33 @@ class CashFlowStatement:
     annual cash flow metrics.
     """
 
-    # Mapping from display names to normalized concept names in SynonymGroups
+    # Mapping from display names to concept names in SynonymGroups.
+    # Aligned with EdgarTools concept_mappings.json.
     DISPLAY_NAME_TO_CONCEPT = {
-        "Operating Cash Flow": "operating_cash_flow",
-        "Investing Cash Flow": "investing_cash_flow",
-        "Financing Cash Flow": "financing_cash_flow",
+        "Operating Cash Flow": "net_cash_from_operating_activities",
+        "Investing Cash Flow": "net_cash_from_investing_activities",
+        "Financing Cash Flow": "net_cash_from_financing_activities",
         "Net Change in Cash": "net_change_in_cash",
         "Depreciation & Amortization": "depreciation_and_amortization",
-        "CapEx": "capex",
+        "CapEx": "capital_expenditures",  # Use capital_expenditures (PaymentsToAcquireProductiveAssets, etc.)
     }
 
     # Two-tier CapEx fallback disabled: M&A (PaymentsToAcquireBusinessesNetOfCashAcquired) is not CapEx
     # and would mislabel e.g. NVDA 2021 (8,524 M&A vs 1,128 CapEx). Prefer showing — when no PP&E fact.
     CAPEX_FALLBACK_CONCEPTS: List[str] = []
+
+    # Concepts that are typically totals (EdgarTools parity - prefer over components)
+    IS_TOTAL_CONCEPTS: Set[str] = frozenset({
+        "DepreciationAndAmortization",
+        "DepreciationDepletionAndAmortization",
+        "DepreciationAmortizationAndAccretionNet",
+    })
+
+    def _is_total_concept(self, concept: str) -> bool:
+        """Check if concept is typically a total (prefer over components)."""
+        local = concept.split("_")[-1] if "_" in concept else concept
+        local = local.split(":")[-1] if ":" in local else local
+        return local in self.IS_TOTAL_CONCEPTS
 
     # Cached standard mapping
     _STANDARD_MAPPING_CACHE: Optional[Dict[str, List[str]]] = None
@@ -65,12 +84,22 @@ class CashFlowStatement:
         for display_name, concept_name in cls.DISPLAY_NAME_TO_CONCEPT.items():
             group = synonyms.get_group(concept_name)
             if group:
-                mapping[display_name] = group.synonyms
+                mapping[display_name] = list(group.synonyms)
             else:
                 log.warning(
                     f"Concept '{concept_name}' not found in SynonymGroups for '{display_name}'"
                 )
                 mapping[display_name] = []
+
+        # Merge company-specific tags (e.g. NVDA CapEx custom extensions)
+        company_tags = _load_company_tags_by_display()
+        for display_name, extra_tags in company_tags.items():
+            if display_name in mapping and extra_tags:
+                seen = set(mapping[display_name])
+                for t in extra_tags:
+                    if t not in seen:
+                        seen.add(t)
+                        mapping[display_name].append(t)
 
         cls._STANDARD_MAPPING_CACHE = mapping
         return mapping
@@ -195,15 +224,25 @@ class CashFlowStatement:
         self, company_facts: Dict[str, Any], cik: Optional[str] = None
     ) -> None:
         """
-        Fill gaps by merging facts from SEC company facts API (annual duration only).
+        Fill gaps by merging facts from SEC company facts API.
+
+        When fill_gaps_from_10q is True, includes quarterly facts so CapEx can be
+        aggregated from 10-Q when annual 10-K fact is missing (e.g. NVDA 2013–2021).
 
         Args:
             company_facts: Dictionary from SEC company facts API
             cik: Optional CIK for entity info extraction
         """
         cf_fs = FactSet.from_company_facts(company_facts, cik=cik)
-        cf_annual = cf_fs.filter_annual()
-        self._original_fact_set.supplement_from(cf_annual)
+        try:
+            from financial4all.config import get_config
+            include_quarterly = get_config().fill_gaps_from_10q
+        except Exception:
+            include_quarterly = False
+        if include_quarterly:
+            self._original_fact_set.supplement_from(cf_fs)
+        else:
+            self._original_fact_set.supplement_from(cf_fs.filter_annual())
         self.fact_set = self._original_fact_set.filter_annual()
         self._dataframe = None  # Invalidate cache so to_dataframe() reflects new facts
 
@@ -231,6 +270,11 @@ class CashFlowStatement:
         Returns:
             Dictionary mapping period_key -> fact.value
         """
+        # Prioritize is_total concepts (EdgarTools parity - e.g. DepreciationAndAmortization)
+        xbrl_concepts = sorted(
+            xbrl_concepts,
+            key=lambda c: (0 if self._is_total_concept(c) else 1, xbrl_concepts.index(c)),
+        )
         # Get all facts for all concepts (include namespace variants for company facts API)
         concept_facts_map = {}
         for concept in xbrl_concepts:
@@ -248,8 +292,19 @@ class CashFlowStatement:
         # Fallback: facts with no unit or generic numeric unit (for periods with no USD fact)
         facts_by_period_fallback = defaultdict(list)
 
+        try:
+            from financial4all.config import get_config
+            exclude_structural = get_config().exclude_structural_elements
+        except Exception:
+            exclude_structural = True
+
         for concept, facts in concept_facts_map.items():
             for fact in facts:
+                if exclude_structural and is_xbrl_structural_element(
+                    getattr(fact, "concept", "") or concept,
+                    getattr(fact, "label", None),
+                ):
+                    continue
                 period_key = self._normalize_period_key(fact.period.end)
                 priority = concept_priority.get(concept, 999)
                 form_bonus = 0 if fact.form == "10-K" else 100
@@ -512,18 +567,41 @@ class CashFlowStatement:
                         pass
         return out
 
-    def to_dataframe(self) -> pd.DataFrame:
+    def to_dataframe(
+        self,
+        presentation: Optional[bool] = None,
+    ) -> pd.DataFrame:
         """
         Convert cash flow statement to pandas DataFrame.
 
         Only includes metrics that have at least one reported value.
         Filters out completely empty columns.
 
+        Args:
+            presentation: When True, apply sign transformation (outflows negative).
+                         When False, skip. When None, use config.apply_presentation_signs.
+                         EdgarTools parity.
+
         Returns:
             DataFrame with standardized cash flow metrics
         """
-        if self._dataframe is not None:
-            return self._dataframe
+        _use_cache = True
+        try:
+            from financial4all.config import get_config
+            _use_cache = not get_config().disable_statement_cache
+        except Exception:
+            pass
+        if _use_cache and self._dataframe is not None:
+            df = self._dataframe.copy()
+            try:
+                from financial4all.config import get_config
+                _apply = presentation if presentation is not None else get_config().apply_presentation_signs
+            except Exception:
+                _apply = presentation if presentation is not None else False
+            if _apply:
+                from financial4all.xbrl.presentation import apply_presentation
+                df = apply_presentation(df, "CashFlowStatement")
+            return df
 
         # First pass: extract metrics by standard name using period-aware resolution
         metrics_data = defaultdict(dict)
@@ -634,7 +712,28 @@ class CashFlowStatement:
         # Filter out completely empty columns
         df = df.loc[:, ~df.isna().all()]
 
-        self._dataframe = df
+        # EdgarTools-aligned validation and presentation
+        try:
+            from financial4all.config import get_config
+            config = get_config()
+            if config.run_datapoint_validation:
+                from financial4all.xbrl.datapoint_validation import validate_statement_df
+                result = validate_statement_df(df, "CashFlowStatement")
+                for issue in result.warnings:
+                    log.warning("[Datapoint] %s", issue)
+        except Exception as e:
+            log.debug("Presentation/validation step skipped: %s", e)
+
+        if _use_cache:
+            self._dataframe = df.copy()  # Cache raw (before presentation)
+        try:
+            from financial4all.config import get_config
+            _apply = presentation if presentation is not None else get_config().apply_presentation_signs
+        except Exception:
+            _apply = presentation if presentation is not None else False
+        if _apply:
+            from financial4all.xbrl.presentation import apply_presentation
+            df = apply_presentation(df, "CashFlowStatement")
         return df
 
     def get_metric(self, metric_name: str, period_offset: int = 0) -> Optional[float]:

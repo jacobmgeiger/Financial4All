@@ -6,8 +6,9 @@ This module provides functionality for parsing XBRL instance documents,
 presentation linkbases, and calculation linkbases.
 """
 
-from typing import Dict, List, Optional, Any, Union, TYPE_CHECKING
+from collections import defaultdict
 from pathlib import Path
+from typing import Dict, List, Optional, Any, Union, TYPE_CHECKING
 
 try:
     from lxml import etree as ET
@@ -133,31 +134,44 @@ class XBRLParser:
             "units": units,
         }
     
-    def parse_calculation_linkbase(self, file_path: Union[str, Path]) -> Dict[str, List[Dict[str, Any]]]:
+    def parse_calculation_linkbase(
+        self, file_path_or_content: Union[str, Path]
+    ) -> Dict[str, List[Dict[str, Any]]]:
         """
-        Parse a calculation linkbase XML file.
-        
+        Parse a calculation linkbase XML file or XML content string.
+
         This extracts calculation relationships (parent-child formulas)
         from XBRL calculation linkbase files.
-        
+
         Args:
-            file_path: Path to calculation linkbase XML file
-            
+            file_path_or_content: Path to file or XML content string
+
         Returns:
             Dictionary mapping parent concepts to lists of formulas
-            
+
         Raises:
             ValueError: If file cannot be read or parsed
         """
         from collections import defaultdict
-        
+
         try:
-            file_path_obj = Path(file_path)
-            if not file_path_obj.exists():
-                raise ValueError(f"Calculation linkbase file not found: {file_path}")
-            
-            # Read file content and parse with safe parser
-            content = file_path_obj.read_text(encoding='utf-8')
+            content = file_path_or_content
+            if isinstance(file_path_or_content, str):
+                stripped = file_path_or_content.strip()
+                if not (stripped.startswith("<") or stripped.startswith("<?xml")):
+                    path_val = Path(file_path_or_content)
+                    if not path_val.exists():
+                        raise ValueError(
+                            f"Calculation linkbase file not found: {file_path_or_content}"
+                        )
+                    content = path_val.read_text(encoding="utf-8")
+            elif isinstance(file_path_or_content, Path):
+                if not file_path_or_content.exists():
+                    raise ValueError(
+                        f"Calculation linkbase file not found: {file_path_or_content}"
+                    )
+                content = file_path_or_content.read_text(encoding="utf-8")
+
             root = self._safe_parse_xml(content)
         except (FileNotFoundError, IOError) as e:
             raise ValueError(f"Error reading calculation linkbase file: {file_path}") from e
@@ -247,31 +261,48 @@ class XBRLParser:
         
         return dict(calculations)
     
-    def parse_presentation_linkbase(self, file_path: Union[str, Path]) -> Dict[str, "PresentationTree"]:
+    def parse_presentation_linkbase(
+        self, file_path_or_content: Union[str, Path]
+    ) -> Dict[str, "PresentationTree"]:
         """
-        Parse a presentation linkbase XML file.
-        
+        Parse a presentation linkbase XML file or XML content string.
+
         This extracts presentation relationships (statement structure)
         from XBRL presentation linkbase files and builds presentation trees.
-        
+
         Args:
-            file_path: Path to presentation linkbase XML file
-            
+            file_path_or_content: Path to presentation linkbase XML file,
+                or XML content as string (when fetching from SEC)
+
         Returns:
             Dictionary mapping role_uri -> PresentationTree
-            
+
         Raises:
             ValueError: If file cannot be read or parsed
         """
         from financial4all.xbrl.presentation import PresentationTree, PresentationNode
-        
+
         try:
-            file_path_obj = Path(file_path)
-            if not file_path_obj.exists():
-                raise ValueError(f"Presentation linkbase file not found: {file_path}")
-            
-            # Read and parse file
-            content = file_path_obj.read_text(encoding='utf-8')
+            content = file_path_or_content
+            if isinstance(file_path_or_content, str):
+                stripped = file_path_or_content.strip()
+                # Treat as XML content if it looks like XML (not a path)
+                if stripped.startswith("<") or stripped.startswith("<?xml"):
+                    content = file_path_or_content
+                else:
+                    path_val = Path(file_path_or_content)
+                    if not path_val.exists():
+                        raise ValueError(
+                            f"Presentation linkbase file not found: {file_path_or_content}"
+                        )
+                    content = path_val.read_text(encoding="utf-8")
+            elif isinstance(file_path_or_content, Path):
+                if not file_path_or_content.exists():
+                    raise ValueError(
+                        f"Presentation linkbase file not found: {file_path_or_content}"
+                    )
+                content = file_path_or_content.read_text(encoding="utf-8")
+
             root = self._safe_parse_xml(content)
         except (FileNotFoundError, IOError) as e:
             raise ValueError(f"Error reading presentation linkbase file: {file_path}") from e
@@ -627,8 +658,10 @@ class XBRLParser:
                     child_id, element_id, depth + 1, from_map, all_nodes
                 )
                 
-                # Update preferred label and order after child is built
+                # Update preferred label, order, and is_total after child is built (EdgarTools parity)
                 if child_id in all_nodes:
                     if preferred_label:
                         all_nodes[child_id].preferred_label = preferred_label
+                        # totalLabel role: filers typically name label ref with "totalLabel"
+                        all_nodes[child_id].is_total = "totallabel" in preferred_label.lower()
                     all_nodes[child_id].order = rel['order']

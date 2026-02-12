@@ -8,17 +8,29 @@ Operating Income, etc.) to XBRL concepts via SynonymGroups, uses period-aware
 resolution and fallback concept discovery, applies calculations (e.g. Gross
 Profit, Operating Income), removes redundant metrics (e.g. Operating Expenses
 when R&D+SG&A exist), and returns a period-indexed DataFrame in METRIC_ORDER.
+
+EdgarTools compatibility:
+    to_dataframe() supports presentation, show_date_range, label_column,
+    include_standardization, and view="summary"|"standard"|"detailed" for
+    alignment with EdgarTools display conventions.
 """
 
 import pandas as pd
 import numpy as np
 from typing import Dict, Optional, Any, List, Set
 from collections import defaultdict
-from datetime import date as date_type
+from datetime import date as date_type, datetime
 
 from financial4all.xbrl.facts import FactSet, Fact
 from financial4all.xbrl.periods import PeriodType, classify_fiscal_period
-from financial4all.xbrl.standardization import get_synonym_groups, get_default_store
+from financial4all.xbrl.fact_resolution import sort_fact_candidates_by_priority
+from financial4all.xbrl.structural_filter import is_xbrl_structural_element
+from financial4all.xbrl.standardization import (
+    get_synonym_groups,
+    get_default_store,
+    get_display_name as get_std_display_name,
+    _load_company_tags_by_display,
+)
 from financial4all.xbrl.standardization.reverse_index import get_reverse_index
 from financial4all.xbrl.calculations import CalculationEngine
 from financial4all.xbrl.dimension_classifier import is_breakdown_dimension
@@ -36,32 +48,30 @@ class IncomeStatement:
     facts; to_dataframe() returns a period-indexed DataFrame in METRIC_ORDER.
     """
 
-    # Mapping from display names to normalized concept names in SynonymGroups
-    # This allows us to use user-friendly display names while leveraging
-    # the comprehensive synonym groups from the standardization system
+    # Mapping from display names to concept names in SynonymGroups.
+    # Aligned with EdgarTools concept_mappings.json (concept names = normalized display labels).
     DISPLAY_NAME_TO_CONCEPT = {
         "Revenue": "revenue",
-        "Cost of Revenue": "cost_of_revenue",
+        "Cost of Revenue": "total_cost_of_revenue",
         "Gross Profit": "gross_profit",
-        "R&D Expenses": "research_and_development",
-        "SG&A Expenses": "sga_expense",
-        "Operating Expenses": "operating_expenses",
+        "R&D Expenses": "research_and_development_expense",
+        "SG&A Expenses": "selling_general_and_administrative_expense",
+        "General and Administrative Expense": "general_and_administrative_expense",
+        "Selling and Marketing Expense": "selling_expense",
+        "Operating Expenses": "total_operating_expenses",
+        "Restructuring and other charges": "restructuring_expense",
+        "Other Operating Expense": "other_operating_expense",
+        "Asset Impairment Charges": "goodwill_impairment",
         "Operating Income": "operating_income",
         "Interest Income": "interest_income",
         "Interest Expense": "interest_expense",
-        "Other, net": "other_net",
-        "Interest Income (Net)": "interest_income_net",
-        # Note: "Other income (expense), net" can be extracted OR calculated
-        # If extracted: use directly
-        # If calculated: Interest Income + Interest Expense + Other, net
-        # Note: "Income Before Taxes" can be extracted OR calculated
-        # If extracted: use directly, then calculate Other income (expense), net = Income Before Taxes - Operating Income
-        # If calculated: Operating Income + Other income (expense), net
-        "Income Before Taxes": "income_before_tax",  # Try to extract first, calculate if not available
+        "Other, net": "nonoperating_income_expense",
+        "Interest Income (Net)": "interest_expense",
+        "Income Before Taxes": "income_before_tax",
         "Taxes": "income_tax_expense",
         "Net Income": "net_income",
-        "Outstanding Shares Basic": "weighted_average_shares_outstanding_basic",
-        "Outstanding Shares Diluted": "weighted_average_shares_outstanding_diluted",
+        "Outstanding Shares Basic": "shares_outstanding_basic",
+        "Outstanding Shares Diluted": "shares_outstanding_diluted",
         "Basic EPS": "earnings_per_share_basic",
         "Diluted EPS": "earnings_per_share_diluted",
     }
@@ -86,12 +96,22 @@ class IncomeStatement:
         for display_name, concept_name in cls.DISPLAY_NAME_TO_CONCEPT.items():
             group = synonyms.get_group(concept_name)
             if group:
-                mapping[display_name] = group.synonyms
+                mapping[display_name] = list(group.synonyms)
             else:
                 log.warning(
                     f"Concept '{concept_name}' not found in SynonymGroups for '{display_name}'"
                 )
                 mapping[display_name] = []
+
+        # Merge company-specific tags (e.g. NVDA revenue/cost variants)
+        company_tags = _load_company_tags_by_display()
+        for display_name, extra_tags in company_tags.items():
+            if display_name in mapping and extra_tags:
+                seen = set(mapping[display_name])
+                for t in extra_tags:
+                    if t not in seen:
+                        seen.add(t)
+                        mapping[display_name].append(t)
 
         cls._STANDARD_MAPPING_CACHE = mapping
         return mapping
@@ -109,7 +129,12 @@ class IncomeStatement:
         "Gross Profit",
         "R&D Expenses",
         "SG&A Expenses",
+        "General and Administrative Expense",
+        "Selling and Marketing Expense",
         "Operating Expenses",
+        "Restructuring and other charges",
+        "Other Operating Expense",
+        "Asset Impairment Charges",
         "Operating Income",
         "Interest Income",
         "Interest Expense",
@@ -128,6 +153,27 @@ class IncomeStatement:
     # Metrics that support segment/breakdown extraction in detailed view.
     SEGMENT_METRICS: Set[str] = frozenset({"Revenue", "Cost of Revenue"})
 
+    # Redundant metrics: preferred name -> alternates to collapse (EdgarTools-style deduplication)
+    # When both exist with same/similar data, keep preferred and drop alternate.
+    DUPLICATE_METRIC_GROUPS: Dict[str, List[str]] = {
+        "R&D Expenses": ["Research and Development Expense"],
+        "SG&A Expenses": ["Selling, General and Administrative Expense"],
+        "Income Tax Expense": ["Taxes"],
+    }
+
+    # Concepts that typically use totalLabel in presentation (EdgarTools parity).
+    # When multiple facts exist for the same period, prefer facts from these concepts.
+    IS_TOTAL_CONCEPTS: Set[str] = frozenset({
+        "OperatingExpenses", "OperatingCostsAndExpenses",
+        "SellingGeneralAndAdministrativeExpense",
+        "CostOfRevenue", "CostOfGoodsSold", "CostOfGoodsAndServicesSold", "CostOfSales",
+        "GrossProfit", "OperatingIncomeLoss", "OperatingIncome",
+        "IncomeLossBeforeIncomeTaxes", "IncomeLossFromContinuingOperationsBeforeIncomeTaxes",
+        "IncomeTaxExpenseBenefit", "IncomeTaxExpenseBenefitContinuingOperations",
+        "NetIncomeLoss", "NetIncome",
+        "Revenues", "Revenue", "SalesRevenueNet", "RevenueFromContractWithCustomer",
+    })
+
     # Standard order for income statement metrics (matching user's reference).
     # Operating Expenses omitted: it is R&D + SG&A and redundant for display.
     METRIC_ORDER = [
@@ -136,6 +182,11 @@ class IncomeStatement:
         "Gross Profit",
         "R&D Expenses",
         "SG&A Expenses",
+        "General and Administrative Expense",
+        "Selling and Marketing Expense",
+        "Restructuring and other charges",
+        "Other Operating Expense",
+        "Asset Impairment Charges",
         "Operating Income",
         "Interest Income",
         "Interest Expense",
@@ -144,6 +195,7 @@ class IncomeStatement:
         "Interest Income (Net)",  # Only if separate Interest Income/Expense don't exist
         "Income Before Taxes",  # Extract first, calculate if not available: Operating Income + Other income (expense), net
         "Taxes",
+        "Income Tax Expense",  # Preferred over Taxes when both exist (dedup)
         "Net Income",
         "Outstanding Shares Basic",
         "Outstanding Shares Diluted",
@@ -169,23 +221,207 @@ class IncomeStatement:
     }
 
     def __init__(
-        self, fact_set: FactSet, calculation_engine: Optional[CalculationEngine] = None
+        self,
+        fact_set: Optional[FactSet] = None,
+        calculation_engine: Optional[CalculationEngine] = None,
+        _presentation_dataframe: Optional[pd.DataFrame] = None,
     ):
         """
-        Initialize income statement from fact set.
+        Initialize income statement from fact set or presentation-tree data.
 
         Args:
-            fact_set: FactSet containing income statement facts
+            fact_set: FactSet containing income statement facts (None when using
+                presentation-tree path)
             calculation_engine: Optional calculation engine for deriving missing values
+            _presentation_dataframe: Pre-built DataFrame from XBRL presentation tree
+                (EdgarTools parity); when set, to_dataframe returns this
         """
-        # Store original fact_set for broader searches
-        # Use filter_annual() instead of filter_annual_10k() to capture more historical data
-        # This includes annual data from 10-K, 10-K/A, and other form types
+        self._presentation_dataframe = _presentation_dataframe
+        if fact_set is None:
+            fact_set = FactSet(facts=[], entity_info=None)
         self.fact_set = fact_set.filter_annual()
-        self._original_fact_set = fact_set  # Keep original for debugging/discovery
+        self._original_fact_set = fact_set
         self.calculation_engine = calculation_engine or CalculationEngine()
         self.standardizer = get_default_store()
         self._dataframe: Optional[pd.DataFrame] = None
+
+    # Fallback display names for common unmapped income-statement concepts
+    _UNMAPPED_DISPLAY_NAMES: Dict[str, str] = {
+        "EarningsPerShareBasic": "Basic EPS",
+        "EarningsPerShareDiluted": "Diluted EPS",
+        "WeightedAverageNumberOfSharesOutstandingBasic": "Weighted Average Shares Outstanding",
+        "WeightedAverageNumberOfDilutedSharesOutstanding": "Weighted Average Shares Outstanding, Diluted",
+        "BusinessCombinationAdvancedConsiderationWrittenOff": "Business Combination Consideration Written Off",
+    }
+
+    @classmethod
+    def _clean_unmapped_display_name(cls, concept: str) -> str:
+        """
+        Produce a readable display name for unmapped XBRL concepts.
+        Uses fallback map for common concepts, else strips prefix and title-cases.
+        """
+        if not concept:
+            return ""
+        local = concept.split("_")[-1] if "_" in concept else concept
+        return cls._UNMAPPED_DISPLAY_NAMES.get(
+            local, local.replace("_", " ").replace("-", " ").title()
+        )
+
+    @classmethod
+    def _dataframe_from_line_items(
+        cls,
+        line_items: List[Dict[str, Any]],
+        reporting_periods: List[Dict[str, Any]],
+        standardizer: Any,
+    ) -> Optional[pd.DataFrame]:
+        """
+        Build DataFrame from presentation-tree line items (EdgarTools parity).
+
+        Returns DataFrame with index=periods, columns=metrics to match app expectation.
+        Filters to duration (annual) periods only for income statement.
+
+        Args:
+            line_items: From xbrl.get_statement('IncomeStatement')
+            reporting_periods: From xbrl.reporting_periods
+            standardizer: MappingStore for concept -> display name
+
+        Returns:
+            DataFrame with index=periods, columns=metrics (or None if empty)
+        """
+        if not line_items:
+            return None
+
+        # Collect period keys and labels - filter to duration only, prefer annual (330-400 days)
+        raw_periods = reporting_periods or []
+        period_tuples = []
+        for p in raw_periods:
+            if p.get("type") == "instant":
+                continue
+            key = p.get("key", "")
+            if not key.startswith("duration_"):
+                continue
+            # Parse duration key (duration_YYYY-MM-DD_YYYY-MM-DD) to compute span
+            parts = key.replace("duration_", "").split("_")
+            if len(parts) >= 2:
+                try:
+                    start_d = datetime.strptime(parts[0], "%Y-%m-%d").date()
+                    end_d = datetime.strptime(parts[1], "%Y-%m-%d").date()
+                    days = (end_d - start_d).days
+                    if days < 330 or days > 400:
+                        continue  # Skip quarterly and irregular periods
+                except (ValueError, IndexError):
+                    pass
+            label = p.get("label", p.get("end_date", key))
+            period_tuples.append((key, label))
+        # Fallback: if no annual periods found, include all duration periods
+        if not period_tuples:
+            for p in raw_periods:
+                if p.get("type") == "instant":
+                    continue
+                key = p.get("key", "")
+                if key.startswith("duration_"):
+                    label = p.get("label", p.get("end_date", key))
+                    period_tuples.append((key, label))
+        if not period_tuples:
+            all_keys = set()
+            for item in line_items:
+                for k in (item.get("values") or {}).keys():
+                    if k.startswith("duration_"):
+                        all_keys.add(k)
+            period_tuples = [(k, k) for k in sorted(all_keys, reverse=True)]
+
+        # Build rows: one per metric, columns = periods
+        rows = []
+        seen_labels = set()
+
+        for item in line_items:
+            values = item.get("values") or {}
+            if not values:
+                continue
+            concept = item.get("concept", "")
+            label = item.get("label", "")
+            # Context for disambiguation (EdgarTools parity: is_total, section, calculation_parent)
+            context = {
+                "statement_type": "IncomeStatement",
+                "label": label,
+                "is_total": item.get("is_total", False),
+                "section": item.get("section"),
+                "calculation_parent": item.get("calculation_parent"),
+            }
+            display_name = get_std_display_name(concept, context) if concept else None
+            if not display_name and hasattr(standardizer, "get_standard_name"):
+                standard_concept = standardizer.get_standard_name(concept)
+                display_name = (
+                    get_std_display_name(standard_concept, context)
+                    if standard_concept
+                    else cls._clean_unmapped_display_name(standard_concept)
+                )
+            row_label = display_name or cls._clean_unmapped_display_name(concept) or label or concept
+            if not row_label or row_label in seen_labels:
+                continue
+            seen_labels.add(row_label)
+            row_data = {"Metric": row_label}
+            for period_key, period_label in period_tuples:
+                val = values.get(period_key)
+                row_data[period_label] = val
+            rows.append(row_data)
+
+        if not rows:
+            return None
+        df = pd.DataFrame(rows)
+        df = df.set_index("Metric")
+        # App expects index=periods, columns=metrics
+        df = df.T
+        df.index.name = "end"
+
+        # Recalculate Operating Income = Gross Profit - Total Operating Expenses
+        # XBRL can report wrong Operating Income (e.g., segment/discontinued-ops values)
+        gp_col = "Gross Profit" if "Gross Profit" in df.columns else None
+        oi_col = "Operating Income" if "Operating Income" in df.columns else None
+        opex_col = "Total Operating Expenses" if "Total Operating Expenses" in df.columns else "Operating Expenses" if "Operating Expenses" in df.columns else None
+        component_cols = [
+            c for c in [
+                "Research and Development Expense", "R&D Expenses",
+                "Selling, General and Administrative Expense", "SG&A Expenses",
+                "Restructuring and other charges", "Other Operating Expense",
+                "Asset Impairment Charges", "Business Combination Consideration Written Off",
+            ]
+            if c in df.columns
+        ]
+        if gp_col and oi_col:
+            for idx in df.index:
+                gp = df.loc[idx, gp_col]
+                if pd.isna(gp):
+                    continue
+                opex = None
+                if opex_col and pd.notna(df.loc[idx, opex_col]):
+                    opex = float(df.loc[idx, opex_col])
+                elif component_cols:
+                    opex = sum(
+                        float(df.loc[idx, c]) if pd.notna(df.loc[idx, c]) else 0
+                        for c in component_cols
+                    )
+                if opex is not None:
+                    try:
+                        df.loc[idx, oi_col] = float(gp) - opex
+                    except (TypeError, ValueError):
+                        pass
+
+        # Recalculate Taxes = Income Before Tax - Net Income (ensures equation holds)
+        tax_col = "Taxes" if "Taxes" in df.columns else "Income Tax Expense" if "Income Tax Expense" in df.columns else None
+        ibt_col = "Income Before Taxes" if "Income Before Taxes" in df.columns else "Income Before Tax" if "Income Before Tax" in df.columns else None
+        ni_col = "Net Income" if "Net Income" in df.columns else None
+        if tax_col and ibt_col and ni_col:
+            for idx in df.index:
+                ibt = df.loc[idx, ibt_col]
+                ni = df.loc[idx, ni_col]
+                if pd.notna(ibt) and pd.notna(ni):
+                    try:
+                        df.loc[idx, tax_col] = float(ibt) - float(ni)
+                    except (TypeError, ValueError):
+                        pass
+
+        return df
 
     @classmethod
     def from_company_facts(
@@ -209,10 +445,10 @@ class IncomeStatement:
         cls, filing: Any, client: Optional[Any] = None
     ) -> "IncomeStatement":
         """
-        Create income statement from a SEC filing (statement-centric extraction).
+        Create income statement from a SEC filing (presentation-tree or fact-centric).
 
-        Parses XBRL from the filing and builds the statement for consistent
-        per-filing structure.
+        When XBRL has presentation linkbases, uses presentation-tree driven extraction
+        (EdgarTools parity). Falls back to fact-centric extraction otherwise.
 
         Args:
             filing: Filing object with get_xbrl_content()
@@ -224,7 +460,24 @@ class IncomeStatement:
         from financial4all.xbrl.xbrl import XBRL
 
         xbrl = XBRL.from_filing(filing, client=client)
-        fact_set = FactSet.from_xbrl_instance(xbrl, cik=getattr(filing, "cik", None))
+
+        # EdgarTools parity: prefer presentation-tree path when linkbases available
+        if xbrl.presentation_trees:
+            line_items = xbrl.get_statement("IncomeStatement")
+            if line_items:
+                df = cls._dataframe_from_line_items(
+                    line_items, xbrl.reporting_periods, get_default_store()
+                )
+                if df is not None and not df.empty:
+                    return cls(
+                        fact_set=None,
+                        _presentation_dataframe=df,
+                    )
+
+        # Fallback: fact-centric extraction
+        fact_set = FactSet.from_xbrl_instance(
+            xbrl, cik=getattr(filing, "cik", None)
+        )
         return cls(fact_set)
 
     @classmethod
@@ -288,10 +541,46 @@ class IncomeStatement:
     # Flow metrics that can be gap-filled by summing 4 quarters when fill_gaps_from_10q=True
     _10Q_FILL_METRICS: Set[str] = {
         "Revenue", "Cost of Revenue", "R&D Expenses", "SG&A Expenses",
-        "Operating Expenses", "Operating Income", "Interest Income",
+        "General and Administrative Expense", "Selling and Marketing Expense",
+        "Restructuring and other charges", "Other Operating Expense",
+        "Asset Impairment Charges", "Operating Expenses", "Operating Income",
+        "Interest Income",
         "Interest Expense", "Other, net", "Interest Income (Net)",
         "Income Before Taxes", "Taxes", "Net Income",
     }
+
+    def _get_depreciation_by_period(self) -> Dict[str, float]:
+        """
+        Get Depreciation and Amortization (D&A) by period for SG&A derivation.
+
+        Used when deriving SG&A from the income statement equation for periods where
+        SG&A is not reported (e.g. ANF pre-2023). D&A is typically reported on the
+        cash flow statement; the fact set includes all company facts.
+
+        Returns:
+            Dict mapping period_key (YYYY-MM-DD) -> D&A value
+        """
+        synonyms = get_synonym_groups()
+        group = synonyms.get_group("depreciation_and_amortization") if synonyms else None
+        concepts = list(group.synonyms) if group else ["DepreciationAndAmortization", "Depreciation"]
+        out: Dict[str, float] = {}
+        for concept in concepts:
+            facts = self._original_fact_set.get_all_facts_for_concept(
+                concept, include_variants=True
+            )
+            for fact in facts:
+                if fact.period.period_type != PeriodType.DURATION or not fact.period.start:
+                    continue
+                if fact.unit != "USD" and not (fact.unit or "").startswith("USD"):
+                    continue
+                if not isinstance(fact.value, (int, float)):
+                    continue
+                if not fact.period.is_annual():
+                    continue
+                period_key = str(fact.period.end)
+                if period_key not in out:
+                    out[period_key] = float(fact.value)
+        return out
 
     def _aggregate_quarterly_to_annual(
         self, concepts: List[str]
@@ -356,6 +645,10 @@ class IncomeStatement:
     def to_dataframe(
         self,
         view: str = "standard",
+        presentation: Optional[bool] = None,
+        show_date_range: bool = False,
+        label_column: Optional[str] = None,
+        include_standardization: bool = False,
     ) -> pd.DataFrame:
         """
         Convert income statement to pandas DataFrame.
@@ -366,14 +659,70 @@ class IncomeStatement:
 
         Args:
             view: Output level. "standard" (default): no segment rows.
-                  "summary": totals only. "detailed": include segment
-                  breakdown rows (e.g., Revenue — Americas) inline.
+                  "summary": totals only (EdgarTools SUMMARY). "detailed": include
+                  segment breakdown rows (e.g., Revenue — Americas) inline.
+            presentation: When True, apply sign transformation (expenses positive).
+                         When False, skip. When None, use config.apply_presentation_signs.
+                         EdgarTools parity.
+            show_date_range: When True, duration period labels use "start to end".
+                            Single-filing path supports this; multi-period uses end_date only.
+            label_column: Name for row identifier column when transposed. "Metric" (default)
+                          or "label" for EdgarTools API parity.
+            include_standardization: When True, attach standard_concept map. See
+                                   get_standard_concept_map() for cross-company use.
 
         Returns:
             DataFrame with standardized income statement metrics
         """
-        if self._dataframe is not None and view == "standard":
-            return self._dataframe
+        # EdgarTools parity: use pre-built DataFrame from presentation-tree path
+        # (_presentation_dataframe is source data, not cache - always use when present)
+        _use_cache = True
+        try:
+            from financial4all.config import get_config
+            _use_cache = not get_config().disable_statement_cache
+        except Exception:
+            pass
+        if self._presentation_dataframe is not None:
+            df = self._presentation_dataframe.copy()
+            # Apply presentation signs if requested (presentation param overrides config)
+            try:
+                from financial4all.config import get_config
+                _apply = presentation if presentation is not None else get_config().apply_presentation_signs
+            except Exception:
+                _apply = presentation if presentation is not None else False
+            if _apply:
+                from financial4all.xbrl.presentation import apply_presentation
+                df = apply_presentation(df, "IncomeStatement")
+            # show_date_range: when False, use end date only for period index (EdgarTools parity)
+            if not show_date_range and not df.empty:
+                import re
+                new_index = []
+                for idx in df.index:
+                    s = str(idx)
+                    m = re.match(r"\d{4}-\d{2}-\d{2} to (\d{4}-\d{2}-\d{2})", s)
+                    new_index.append(m.group(1) if m else s)
+                df.index = new_index
+            if include_standardization:
+                df.attrs["standard_concept_map"] = self.get_standard_concept_map(df)
+            if label_column is not None:
+                df.attrs["label_column"] = label_column
+            return df
+
+        if _use_cache and self._dataframe is not None and view in ("standard", "summary"):
+            df = self._dataframe.copy()
+            try:
+                from financial4all.config import get_config
+                _apply = presentation if presentation is not None else get_config().apply_presentation_signs
+            except Exception:
+                _apply = presentation if presentation is not None else False
+            if _apply:
+                from financial4all.xbrl.presentation import apply_presentation
+                df = apply_presentation(df, "IncomeStatement")
+            if include_standardization:
+                df.attrs["standard_concept_map"] = self.get_standard_concept_map(df)
+            if label_column is not None:
+                df.attrs["label_column"] = label_column
+            return df
 
         # Extract metrics by standard name
         metrics_data = defaultdict(dict)
@@ -502,6 +851,64 @@ class IncomeStatement:
                         metrics_data["Revenue"][period_key] = cog
                         metrics_data["Cost of Revenue"][period_key] = rev
 
+        # Step 1c: SG&A from components when total not reported
+        # Retailers (e.g. ANF) report GeneralAndAdministrativeExpense + SellingExpense separately;
+        # derive SG&A = G&A + Selling for periods where total is missing
+        gna = metrics_data.get("General and Administrative Expense", {})
+        sm = metrics_data.get("Selling and Marketing Expense", {})
+        sga = metrics_data.get("SG&A Expenses", {})
+        for period_key in set(gna) | set(sm):
+            if period_key not in sga or (isinstance(sga.get(period_key), (int, float)) and pd.isna(sga[period_key])):
+                ga_val = gna.get(period_key)
+                sm_val = sm.get(period_key)
+                if isinstance(ga_val, (int, float)) and isinstance(sm_val, (int, float)):
+                    combined = ga_val + sm_val
+                    metrics_data.setdefault("SG&A Expenses", {})[period_key] = combined
+                    reported_metrics.add("SG&A Expenses")
+                    log.debug(
+                        f"Derived SG&A ({combined:,.0f}) from G&A + Selling for period {period_key}"
+                    )
+
+        # Step 1d: SG&A from income statement equation when not reported at all
+        # Some companies (e.g. ANF pre-2023) reported total SG&A or G&A+Selling only in recent
+        # years; older filings use different tags. Derive SG&A = Gross Profit - Operating Income
+        # - Restructuring - Other Operating - Asset Impairment - D&A for periods where missing.
+        sga = metrics_data.get("SG&A Expenses", {})
+        gp = metrics_data.get("Gross Profit", {})
+        oi = metrics_data.get("Operating Income", {})
+        rest = metrics_data.get("Restructuring and other charges", {})
+        other_op = metrics_data.get("Other Operating Expense", {})
+        impair = metrics_data.get("Asset Impairment Charges", {})
+        da_by_period = self._get_depreciation_by_period()
+        for period_key in all_extracted_periods:
+            if period_key in sga and isinstance(sga.get(period_key), (int, float)) and not pd.isna(sga[period_key]):
+                continue
+            gp_val = gp.get(period_key)
+            oi_val = oi.get(period_key)
+            if not isinstance(gp_val, (int, float)) or not isinstance(oi_val, (int, float)):
+                continue
+            if pd.isna(gp_val) or pd.isna(oi_val):
+                continue
+            rest_val = rest.get(period_key) if isinstance(rest.get(period_key), (int, float)) else 0
+            other_val = other_op.get(period_key) if isinstance(other_op.get(period_key), (int, float)) else 0
+            impair_val = impair.get(period_key) if isinstance(impair.get(period_key), (int, float)) else 0
+            if pd.isna(rest_val):
+                rest_val = 0
+            if pd.isna(other_val):
+                other_val = 0
+            if pd.isna(impair_val):
+                impair_val = 0
+            da_val = da_by_period.get(period_key, 0)
+            if da_val is None or pd.isna(da_val):
+                da_val = 0
+            derived = gp_val - oi_val - rest_val - other_val - impair_val - da_val
+            if derived > 0:
+                metrics_data.setdefault("SG&A Expenses", {})[period_key] = derived
+                reported_metrics.add("SG&A Expenses")
+                log.debug(
+                    f"Derived SG&A ({derived:,.0f}) from income statement equation for period {period_key}"
+                )
+
         # Step 2: Handle combined fields (only if separate components don't exist)
         # Pass metrics_data so we can check if separate components already exist
         combined_field_data = self._detect_and_handle_combined_fields(metrics_data)
@@ -531,7 +938,44 @@ class IncomeStatement:
         # Sort periods with most recent first (for leftmost column display)
         all_periods = sorted(all_periods, reverse=True)
 
+        # Collapse duplicate metrics (e.g. Research and Development -> R&D, Taxes -> Income Tax Expense)
+        for preferred, alternates in self.DUPLICATE_METRIC_GROUPS.items():
+            if preferred not in metrics_data and alternates:
+                for alt in alternates:
+                    if alt in metrics_data:
+                        metrics_data[preferred] = metrics_data.pop(alt)
+                        reported_metrics.discard(alt)
+                        reported_metrics.add(preferred)
+                        break
+            elif preferred in metrics_data:
+                for alt in alternates:
+                    if alt not in metrics_data:
+                        continue
+                    # Merge alternate into preferred for missing periods
+                    pref_data = metrics_data[preferred]
+                    alt_data = metrics_data[alt]
+                    for pk, pv in alt_data.items():
+                        if pk not in pref_data or (pv is not None and pd.notna(pv) and (pref_data[pk] is None or pd.isna(pref_data[pk]))):
+                            pref_data[pk] = pv
+                    del metrics_data[alt]
+                    reported_metrics.discard(alt)
+
+        # Prefer SG&A (section total) over G&A component: when SG&A exists, drop G&A
+        # (EdgarTools parity - is_total prioritization; avoids multi-filing breakdown pollution)
+        if "General and Administrative Expense" in metrics_data and "SG&A Expenses" in metrics_data:
+            del metrics_data["General and Administrative Expense"]
+            reported_metrics.discard("General and Administrative Expense")
+        if "Selling and Marketing Expense" in metrics_data and "SG&A Expenses" in metrics_data:
+            del metrics_data["Selling and Marketing Expense"]
+            reported_metrics.discard("Selling and Marketing Expense")
+
+        # Suppress Restructuring/Other/Impairment when op ex structure is clean (EdgarTools parity).
+        # When (Gross Profit - Operating Income) ≈ (R&D + SG&A), the face statement has no
+        # separate Restructuring/Other lines - avoid pollution from disclosure/other-year facts.
+        self._suppress_component_metrics_when_clean(metrics_data, all_extracted_periods)
+
         # Build ordered column list: main metrics with segment rows inline (when view=detailed)
+        # view="summary" (EdgarTools SUMMARY): totals only, no segment breakdowns - same as standard
         ordered_columns: List[str] = []
         segment_labels_by_parent: Dict[str, List[str]] = {}
         if view == "detailed" and segment_data:
@@ -559,8 +1003,26 @@ class IncomeStatement:
             metric_get = metric_data.get
             df_data[std_name] = [metric_get(period, np.nan) for period in all_periods]
 
-        df = pd.DataFrame(df_data, index=all_periods)
+        # show_date_range: when True, use "start to end" for period index (EdgarTools parity)
+        # Fact-centric path approximates start = end - 365 days when start unavailable
+        index_labels = list(all_periods)
+        if show_date_range and all_periods:
+            from datetime import datetime as _dt, timedelta
+            new_labels = []
+            for end_str in all_periods:
+                try:
+                    end_d = _dt.strptime(end_str, "%Y-%m-%d").date()
+                    start_d = end_d - timedelta(days=365)
+                    new_labels.append(f"{start_d} to {end_str}")
+                except (ValueError, TypeError):
+                    new_labels.append(end_str)
+            index_labels = new_labels
+
+        df = pd.DataFrame(df_data, index=index_labels)
         df.index.name = "end"
+
+        if label_column is not None:
+            df.attrs["label_column"] = label_column
 
         # Add fiscal period classification if entity info is available
         if self._original_fact_set.entity_info:
@@ -705,13 +1167,13 @@ class IncomeStatement:
                             )
                             interest_income_col.loc[idx] = np.nan
                     
-                    # Negative Interest Income is always suspicious
+                    # Negative Interest Income: allow for debt-heavy companies (e.g. ANF) where
+                    # net interest is negative; log at debug only.
                     if interest_val < 0:
-                        log.warning(
-                            f"Interest Income is negative for period {idx}: {interest_val}. "
-                            f"Setting to NaN as this is likely misclassified."
+                        log.debug(
+                            f"Interest Income is negative for period {idx}: {interest_val} "
+                            f"(may be net interest for companies with interest expense > interest income)."
                         )
-                        interest_income_col.loc[idx] = np.nan
                     
                     # NOTE: We DON'T reject values that are just large (> 10% ratio) but NOT close
                     # Cash-rich companies can legitimately have Interest Income > 10% of Operating Income
@@ -760,9 +1222,36 @@ class IncomeStatement:
         df = self._remove_redundant_metrics(df)
         df = self._reorder_dataframe_columns(df)
 
-        # Cache only standard view (detailed/summary are computed on demand)
-        if view == "standard":
-            self._dataframe = df
+        # Step 7: EdgarTools-aligned presentation and validation
+        try:
+            from financial4all.config import get_config
+            config = get_config()
+            if config.run_datapoint_validation:
+                from financial4all.xbrl.datapoint_validation import validate_statement_df
+                result = validate_statement_df(df, "IncomeStatement")
+                for issue in result.warnings:
+                    log.warning("[Datapoint] %s", issue)
+        except Exception as e:
+            log.debug("Presentation/validation step skipped: %s", e)
+
+        # Cache raw df (before presentation) for standard/summary view
+        if _use_cache and view in ("standard", "summary"):
+            self._dataframe = df.copy()
+
+        # Apply presentation based on param (EdgarTools parity: param overrides config)
+        try:
+            from financial4all.config import get_config
+            _apply = presentation if presentation is not None else get_config().apply_presentation_signs
+        except Exception:
+            _apply = presentation if presentation is not None else False
+        if _apply:
+            from financial4all.xbrl.presentation import apply_presentation
+            df = apply_presentation(df, "IncomeStatement")
+
+        if include_standardization:
+            df.attrs["standard_concept_map"] = self.get_standard_concept_map(df)
+        if label_column is not None:
+            df.attrs["label_column"] = label_column
         return df
 
     def _get_all_facts_for_metric(
@@ -1033,6 +1522,12 @@ class IncomeStatement:
 
         return result
 
+    def _is_total_concept(self, concept: str) -> bool:
+        """Check if concept is typically a total (totalLabel) in presentation."""
+        local = concept.split("_")[-1] if "_" in concept else concept
+        local = local.split(":")[-1] if ":" in local else local
+        return local in self.IS_TOTAL_CONCEPTS
+
     def _resolve_concepts_by_period(
         self,
         std_name: str,
@@ -1047,6 +1542,7 @@ class IncomeStatement:
         2. Apply multi-tier filtering to get best facts
         3. Group by period end date
         4. For each period, select best fact based on priority:
+           - is_total: prefer concepts with totalLabel (EdgarTools parity)
            - Concept priority (earlier in list = higher priority)
            - Form type (10-K preferred over 10-Q)
            - Unit (USD for most metrics, shares for outstanding shares)
@@ -1061,6 +1557,11 @@ class IncomeStatement:
         Returns:
             Dictionary mapping period_key -> fact.value
         """
+        # Prioritize is_total concepts (EdgarTools parity): totals first, then rest
+        xbrl_concepts = sorted(
+            xbrl_concepts,
+            key=lambda c: (0 if self._is_total_concept(c) else 1, xbrl_concepts.index(c)),
+        )
         # Get all facts for all concepts
         concept_facts_map = self._get_all_facts_for_metric(xbrl_concepts)
 
@@ -1162,10 +1663,22 @@ class IncomeStatement:
         # Group facts by period and resolve conflicts
         period_facts_map: Dict[str, List[Fact]] = {}
 
+        try:
+            from financial4all.config import get_config
+            exclude_structural = get_config().exclude_structural_elements
+        except Exception:
+            exclude_structural = True
+
         for concept_idx, (concept, facts) in enumerate(
             filtered_facts_by_concept.items()
         ):
             for fact in facts:
+                # EdgarTools-aligned: exclude structural elements (Axis, Domain, Member, etc.)
+                if exclude_structural and is_xbrl_structural_element(
+                    getattr(fact, "concept", "") or concept,
+                    getattr(fact, "label", None),
+                ):
+                    continue
                 # For numeric metrics, exclude facts with non-numeric values early
                 # (HTML, disclosure text, policy strings)
                 if std_name in self.NUMERIC_METRICS and not isinstance(
@@ -1189,20 +1702,17 @@ class IncomeStatement:
             if not fact_candidates:
                 continue
 
-            # Sort by priority: prefer non-dimensional (consolidated) over dimensional (segment)
-            # first—fixes ANF where RevenueFromContractWithCustomerExcludingAssessedTax
-            # (GiftCard segment, 141M) was chosen over Revenues (total, 4.9B) due to concept order.
-            # Then: concept priority > form > unit > filing date
-            fact_candidates.sort(
-                key=lambda x: (
-                    0 if not x[1].dimensions else 1,  # Prefer non-dimensional (consolidated)
-                    x[0],  # Concept priority (lower = higher priority)
-                    0 if x[1].form == "10-K" else 1,  # Prefer 10-K
-                    0 if self._is_valid_unit_for_metric(x[1].unit, std_name) else 1,  # Prefer valid unit
-                    -(
-                        x[1].filed.timestamp() if x[1].filed else float("-inf")
-                    ),  # Prefer more recent (negated for descending)
-                )
+            # EdgarTools-aligned: sort by fact_resolution priority (non-dimensional > form > concept > unit > recency)
+            try:
+                from financial4all.config import get_config
+                exclude_amended = get_config().exclude_amended_filings
+            except Exception:
+                exclude_amended = False
+            fact_candidates = sort_fact_candidates_by_priority(
+                fact_candidates,
+                self._is_valid_unit_for_metric,
+                std_name,
+                exclude_amended=exclude_amended,
             )
 
             # Select best fact - try candidates in order until we find a valid one
@@ -1244,8 +1754,19 @@ class IncomeStatement:
                         )
                         is_valid = False
 
+                # For Interest Income, reject NET concepts (Income - Expense, not income itself)
+                # InterestIncomeExpenseNet maps to InterestIncome in gaap but is the NET, not gross income
+                if std_name == "Interest Income":
+                    fact_concept = (getattr(fact, "concept", "") or "").upper()
+                    if "INTERESTINCOMEEXPENSENET" in fact_concept or "INTERESTINCOMEEXPENSENONOPERATINGNET" in fact_concept:
+                        log.debug(
+                            f"Skipping Interest Income fact for period {period_key}: "
+                            f"concept is NET (income-expense), not gross Interest Income"
+                        )
+                        is_valid = False
+
                 # For Interest Income, check against Operating Income AND Income Before Taxes
-                if std_name == "Interest Income" and other_metrics_data:
+                if std_name == "Interest Income" and other_metrics_data and is_valid:
                     operating_income_data = other_metrics_data.get(
                         "Operating Income", {}
                     )
@@ -1316,20 +1837,46 @@ class IncomeStatement:
                             )
                             is_valid = False
                     
-                    # Negative Interest Income is always suspicious
-                    # Guard: some XBRL facts (e.g. ANF) have string values—skip numeric checks if not numeric
+                    # Negative Interest Income: some companies (e.g. ANF with net interest expense) report
+                    # negative values when interest expense exceeds interest income. Allow but log at debug.
                     if isinstance(candidate_value, (int, float)) and candidate_value < 0:
-                        log.warning(
-                            f"Skipping Interest Income fact candidate {candidate_idx} for period {period_key}: "
-                            f"value {candidate_value} is negative, which is unusual. This may be misclassified."
+                        log.debug(
+                            f"Interest Income fact candidate {candidate_idx} for period {period_key}: "
+                            f"value {candidate_value} is negative (may be net interest for debt-heavy companies)."
                         )
-                        is_valid = False
                     elif not isinstance(candidate_value, (int, float)):
                         # Non-numeric (e.g. string) cannot be used for Interest Income
                         is_valid = False
                     
                     # NOTE: We DON'T reject values that are just large (> 10% ratio) but NOT close
                     # Cash-rich companies can legitimately have Interest Income > 10% of Operating Income
+
+                # For Interest Expense, handle NET concepts when we have separate Interest Income
+                # NET concepts (InterestIncomeExpenseNet, InterestIncomeExpenseNonoperatingNet) represent
+                # (Income - Expense), not the expense itself. When we have Interest Income, derive the
+                # actual expense: Expense = Interest Income - NET (e.g. ANF 2025: 39,934 - 27,857 = 12,077).
+                if std_name == "Interest Expense" and other_metrics_data:
+                    interest_income_data = other_metrics_data.get("Interest Income", {})
+                    interest_income_val = interest_income_data.get(period_key)
+                    fact_concept = (getattr(fact, "concept", "") or "").upper()
+                    is_net_concept = (
+                        "INTERESTINCOMEEXPENSENET" in fact_concept
+                        or "INTERESTINCOMEEXPENSENONOPERATINGNET" in fact_concept
+                    )
+                    if (
+                        is_net_concept
+                        and interest_income_val is not None
+                        and isinstance(candidate_value, (int, float))
+                        and isinstance(interest_income_val, (int, float))
+                    ):
+                        # Derive actual expense from NET: Expense = Interest Income - NET
+                        net_value = candidate_value
+                        derived_expense = interest_income_val - net_value
+                        candidate_value = derived_expense
+                        log.debug(
+                            f"Interest Expense for period {period_key}: derived {derived_expense:,.0f} "
+                            f"from Interest Income ({interest_income_val:,.0f}) - NET ({net_value:,.0f})"
+                        )
 
                 if is_valid:
                     fact_value = candidate_value
@@ -1687,6 +2234,48 @@ class IncomeStatement:
 
         return combined_data
 
+    @staticmethod
+    def _suppress_component_metrics_when_clean(
+        metrics_data: Dict[str, Dict[str, Any]],
+        periods: Set[str],
+    ) -> None:
+        """
+        For periods where (Gross Profit - Operating Income) ≈ (R&D + SG&A), suppress
+        Restructuring, Other Operating Expense, Asset Impairment - they likely come from
+        disclosures/other years, not the face statement (EdgarTools parity).
+        """
+        gp = metrics_data.get("Gross Profit", {})
+        oi = metrics_data.get("Operating Income", {})
+        rd = metrics_data.get("R&D Expenses", {})
+        sga = metrics_data.get("SG&A Expenses", {})
+        if not gp or not oi or (not rd and not sga):
+            return
+        components = [
+            "Restructuring and other charges",
+            "Other Operating Expense",
+            "Asset Impairment Charges",
+        ]
+        for period in periods:
+            gpv = gp.get(period)
+            oiv = oi.get(period)
+            rdv = rd.get(period) or 0
+            sgav = sga.get(period) or 0
+            if not isinstance(gpv, (int, float)) or not isinstance(oiv, (int, float)):
+                continue
+            if pd.isna(gpv) or pd.isna(oiv):
+                continue
+            implied_opex = float(gpv) - float(oiv)
+            core_sum = (float(rdv) if isinstance(rdv, (int, float)) and not pd.isna(rdv) else 0) + (
+                float(sgav) if isinstance(sgav, (int, float)) and not pd.isna(sgav) else 0
+            )
+            if implied_opex <= 0:
+                continue
+            tol = max(abs(implied_opex) * 0.005, 1.0)  # 0.5% or $1
+            if abs(implied_opex - core_sum) <= tol:
+                for comp in components:
+                    if comp in metrics_data and period in metrics_data[comp]:
+                        metrics_data[comp][period] = np.nan
+
     def _remove_redundant_metrics(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Remove redundant metrics (e.g., if Revenue exists, remove Revenues/SalesRevenueNet).
@@ -1736,9 +2325,12 @@ class IncomeStatement:
                     "Removed 'Interest Income (Net)' - separate components and calculated 'Other income (expense), net' exist"
                 )
 
-        # Remove "Operating Expenses" when R&D and SG&A are present (redundant: Operating Expenses = R&D + SG&A)
+        # Remove "Operating Expenses" when we have component breakdown (SG&A or G&A+Selling)
         if "Operating Expenses" in df_cleaned.columns:
-            if "R&D Expenses" in df_cleaned.columns and "SG&A Expenses" in df_cleaned.columns:
+            has_sga = "SG&A Expenses" in df_cleaned.columns
+            has_components = ("General and Administrative Expense" in df_cleaned.columns
+                             and "Selling and Marketing Expense" in df_cleaned.columns)
+            if "R&D Expenses" in df_cleaned.columns and (has_sga or has_components):
                 df_cleaned = df_cleaned.drop(columns=["Operating Expenses"])
                 log.debug(
                     "Removed 'Operating Expenses' - redundant with R&D Expenses + SG&A Expenses"
@@ -1809,23 +2401,147 @@ class IncomeStatement:
                     df_calc.loc[mask, "Revenue"] - df_calc.loc[mask, "Cost of Revenue"]
                 )
 
-        # Operating Income = Gross Profit - Operating Expenses (or R&D + SG&A when OpEx column not shown)
+        # Operating Income = Gross Profit - sum(all operating expenses)
+        # Use Operating Expenses (total) if only that; else sum component columns
         if "Operating Income" in df_calc.columns and "Gross Profit" in df_calc.columns:
             mask = df_calc["Operating Income"].isna()
             if mask.any():
-                if "Operating Expenses" in df_calc.columns:
+                component_cols = [
+                    "R&D Expenses",
+                    "SG&A Expenses",
+                    "Restructuring and other charges",
+                    "Other Operating Expense",
+                    "Asset Impairment Charges",
+                ]
+                present_components = [c for c in component_cols if c in df_calc.columns]
+                if "Operating Expenses" in df_calc.columns and not present_components:
                     df_calc.loc[mask, "Operating Income"] = (
                         df_calc.loc[mask, "Gross Profit"]
                         - df_calc.loc[mask, "Operating Expenses"]
                     )
-                elif "R&D Expenses" in df_calc.columns and "SG&A Expenses" in df_calc.columns:
+                elif present_components:
+                    total_opex = df_calc[present_components[0]].fillna(0)
+                    for c in present_components[1:]:
+                        total_opex = total_opex + df_calc[c].fillna(0)
                     df_calc.loc[mask, "Operating Income"] = (
-                        df_calc.loc[mask, "Gross Profit"]
-                        - (df_calc.loc[mask, "R&D Expenses"] + df_calc.loc[mask, "SG&A Expenses"])
+                        df_calc.loc[mask, "Gross Profit"] - total_opex
                     )
+
+        # Detect when "Other, net" is actually the total "Other income (expense), net"
+        # NonoperatingIncomeExpense can tag the total line (e.g. NVDA). Two signals:
+        # 1) Other, net ≈ IBT - OI (or NI+Taxes - OI) => it's the total
+        # 2) Interest Income + Interest Expense + Other_net >> Other_net => double-count, Other_net is the total
+        if "Other, net" in df_calc.columns and "Operating Income" in df_calc.columns:
+            # Get expected total (IBT - OI) from IBT or Net Income + Taxes
+            has_ibt = "Income Before Taxes" in df_calc.columns
+            has_ni_tax = "Net Income" in df_calc.columns and "Taxes" in df_calc.columns
+            if has_ibt or has_ni_tax:
+                if "Other income (expense), net" not in df_calc.columns:
+                    df_calc["Other income (expense), net"] = np.nan
+                for idx in df_calc.index:
+                    other_net_val = df_calc.loc[idx, "Other, net"]
+                    oi_val = df_calc.loc[idx, "Operating Income"]
+                    if pd.isna(other_net_val) or pd.isna(oi_val):
+                        continue
+                    # expected_total = IBT - OI
+                    if has_ibt:
+                        ibt_val = df_calc.loc[idx, "Income Before Taxes"]
+                    else:
+                        ibt_val = None
+                    if pd.notna(ibt_val):
+                        expected_total = ibt_val - oi_val
+                    elif has_ni_tax:
+                        ni = df_calc.loc[idx, "Net Income"]
+                        tax = df_calc.loc[idx, "Taxes"]
+                        if pd.notna(ni) and pd.notna(tax):
+                            expected_total = (ni + tax) - oi_val
+                        else:
+                            continue
+                    else:
+                        continue
+                    if abs(expected_total) < 1e-6:
+                        continue
+                    # Use 5% tolerance - companies may report IBT from different concepts (e.g. continuing ops)
+                    if abs(other_net_val - expected_total) < max(1, abs(expected_total) * 0.05):
+                        # Other, net is the total; use for Other income (expense), net
+                        df_calc.loc[idx, "Other income (expense), net"] = other_net_val
+                        # Derive component: Other, net = Total - Interest Income - Interest Expense
+                        int_inc = df_calc.loc[idx, "Interest Income"] if "Interest Income" in df_calc.columns else 0
+                        int_exp = df_calc.loc[idx, "Interest Expense"] if "Interest Expense" in df_calc.columns else 0
+                        int_inc = int_inc if pd.notna(int_inc) else 0
+                        int_exp = int_exp if pd.notna(int_exp) else 0
+                        derived_other_net = other_net_val - int_inc - int_exp
+                        df_calc.loc[idx, "Other, net"] = derived_other_net
+                        log.debug(
+                            f"Other, net was total for {idx}: set Other income (expense), net={other_net_val:,.0f}, "
+                            f"derived Other, net={derived_other_net:,.0f}"
+                        )
+
+        # Fallback: when Other_net is the total (not component), calc_total = Int_inc + Int_exp + Other_net
+        # would double-count. Signal: Other_net >= Interest_inc (total is large) AND calc_total >> Other_net.
+        # Don't trigger when Other_net < Interest_inc (Other_net is the small component, e.g. NVDA 2024).
+        if (
+            "Other, net" in df_calc.columns
+            and "Interest Income" in df_calc.columns
+            and ("Other income (expense), net" not in df_calc.columns or df_calc["Other income (expense), net"].isna().any())
+        ):
+            if "Other income (expense), net" not in df_calc.columns:
+                df_calc["Other income (expense), net"] = np.nan
+            for idx in df_calc.index:
+                if pd.notna(df_calc.loc[idx, "Other income (expense), net"]):
+                    continue
+                other_net_val = df_calc.loc[idx, "Other, net"]
+                int_inc = df_calc.loc[idx, "Interest Income"] if pd.notna(df_calc.loc[idx, "Interest Income"]) else 0
+                int_exp = df_calc.loc[idx, "Interest Expense"] if "Interest Expense" in df_calc.columns and pd.notna(df_calc.loc[idx, "Interest Expense"]) else 0
+                if pd.isna(other_net_val) or other_net_val == 0:
+                    continue
+                calc_total = int_inc + int_exp + other_net_val
+                # Only when Other_net looks like the total (>= 50% of Interest_inc) and we'd double-count
+                other_is_large = abs(other_net_val) >= abs(int_inc) * 0.5
+                if other_is_large and calc_total > abs(other_net_val) * 1.15:
+                    df_calc.loc[idx, "Other income (expense), net"] = other_net_val
+                    derived_other_net = other_net_val - int_inc - int_exp
+                    df_calc.loc[idx, "Other, net"] = derived_other_net
+                    log.debug(
+                        f"Other, net double-count fix for {idx}: calc_total {calc_total:,.0f} >> other_net {other_net_val:,.0f}; "
+                        f"set total, derived Other, net={derived_other_net:,.0f}"
+                    )
+
+        # PRIORITY 3 (run first): Calculate Other income (expense), net from components if not already calculated
+        # Other income (expense), net = Interest Income + Interest Expense + Other, net
+        # Must run before PRIORITY 1/2 so that IBT = OI + Other income can use the correct Other income
+        # when companies (e.g. ANF) report Interest Income/Expense separately but IBT is mis-extracted as OI
+        if (
+            "Other income (expense), net" not in df_calc.columns
+            or df_calc["Other income (expense), net"].isna().any()
+        ):
+            if (
+                len(
+                    [
+                        col
+                        for col in ["Interest Income", "Interest Expense", "Other, net"]
+                        if col in df_calc.columns
+                    ]
+                )
+                >= 2
+            ):
+                if "Other income (expense), net" not in df_calc.columns:
+                    df_calc["Other income (expense), net"] = np.nan
+
+                mask = df_calc["Other income (expense), net"].isna()
+                if mask.any():
+                    other_income_expense = pd.Series(0.0, index=df_calc.index[mask])
+                    if "Interest Income" in df_calc.columns:
+                        other_income_expense = other_income_expense + df_calc.loc[mask, "Interest Income"].fillna(0)
+                    if "Interest Expense" in df_calc.columns:
+                        other_income_expense = other_income_expense + df_calc.loc[mask, "Interest Expense"].fillna(0)
+                    if "Other, net" in df_calc.columns:
+                        other_income_expense = other_income_expense + df_calc.loc[mask, "Other, net"].fillna(0)
+                    df_calc.loc[mask, "Other income (expense), net"] = other_income_expense
 
         # PRIORITY 1: If Income Before Taxes was extracted directly, use it and calculate backwards
         # Income Before Taxes (extracted) -> Other income (expense), net = Income Before Taxes - Operating Income
+        # Only fills Other income where still missing (PRIORITY 3 may have already populated from components)
         income_before_taxes_extracted = False
         if "Income Before Taxes" in df_calc.columns:
             # Check if Income Before Taxes has any extracted (non-null) values
@@ -1894,77 +2610,39 @@ class IncomeStatement:
                             f"for {mask.sum()} periods"
                         )
 
-        # PRIORITY 2: If Income Before Taxes was NOT extracted, calculate it from components
-        # Income Before Taxes = Operating Income + Other income (expense), net
+        # PRIORITY 2: Calculate Income Before Taxes = Operating Income + Other income (expense), net
+        # When we have both OI and Other income, use the calculated value—it is more reliable than
+        # extracted IBT, which may equal Operating Income (e.g. ANF uses same/similar concept for both).
         if "Operating Income" in df_calc.columns:
             # Create or update the column if it doesn't exist
             if "Income Before Taxes" not in df_calc.columns:
                 df_calc["Income Before Taxes"] = np.nan
-            
-            # Only calculate if Income Before Taxes wasn't extracted (or fill in missing periods)
-            if not income_before_taxes_extracted or df_calc["Income Before Taxes"].isna().any():
-                # Calculate: Operating Income + Other income (expense), net
-                # Prefer "Other income (expense), net" if it exists, otherwise try "Interest Income (Net)"
-                other_income_component = None
 
-                if "Other income (expense), net" in df_calc.columns:
-                    other_income_component = df_calc["Other income (expense), net"]
-                elif "Interest Income (Net)" in df_calc.columns:
-                    # Fallback to Interest Income (Net) if Other income (expense), net doesn't exist
-                    other_income_component = df_calc["Interest Income (Net)"]
+            other_income_component = None
+            if "Other income (expense), net" in df_calc.columns:
+                other_income_component = df_calc["Other income (expense), net"]
+            elif "Interest Income (Net)" in df_calc.columns:
+                other_income_component = df_calc["Interest Income (Net)"]
 
-                if other_income_component is not None:
-                    # Calculate: Operating Income + Other income component
-                    # Only fill in missing values (don't overwrite extracted values)
-                    mask = df_calc["Income Before Taxes"].isna()
-                    if mask.any():
-                        income_before_taxes = df_calc.loc[mask, "Operating Income"].fillna(0) + other_income_component.loc[mask].fillna(0)
-                        df_calc.loc[mask, "Income Before Taxes"] = income_before_taxes
-
-        # PRIORITY 3: Calculate Other income (expense), net from components if not already calculated
-        # Other income (expense), net = Interest Income - Interest Expense + Other, net
-        # IMPORTANT: Interest Expense is normalized to be negative (see Step 3.5),
-        # so we ADD it (not subtract) because subtracting a negative = adding
-        # Only calculate if not already set from Income Before Taxes
-        if (
-            "Other income (expense), net" not in df_calc.columns
-            or df_calc["Other income (expense), net"].isna().any()
-        ):
-            if (
-                len(
-                    [
-                        col
-                        for col in ["Interest Income", "Interest Expense", "Other, net"]
-                        if col in df_calc.columns
-                    ]
-                )
-                >= 2
-            ):
-                # Create or update the column
-                if "Other income (expense), net" not in df_calc.columns:
-                    df_calc["Other income (expense), net"] = np.nan
-
-                # Calculate: Interest Income + Interest Expense + Other, net
-                # Note: Interest Expense is already negative (normalized), so we add it
-                # Only fill in missing values (don't overwrite values calculated from Income Before Taxes)
-                mask = df_calc["Other income (expense), net"].isna()
+            if other_income_component is not None:
+                # Calculate IBT = OI + Other for all periods where both are available
+                calc_ibt = df_calc["Operating Income"].fillna(0) + other_income_component.fillna(0)
+                mask = df_calc["Operating Income"].notna() & other_income_component.notna()
                 if mask.any():
-                    other_income_expense = pd.Series(0.0, index=df_calc.index[mask])
-
-                    # Add Interest Income (positive)
-                    if "Interest Income" in df_calc.columns:
-                        other_income_expense = other_income_expense + df_calc.loc[mask, "Interest Income"].fillna(0)
-
-                    # Add Interest Expense (already negative due to normalization, so adding = subtracting)
-                    if "Interest Expense" in df_calc.columns:
-                        other_income_expense = other_income_expense + df_calc.loc[mask, "Interest Expense"].fillna(0)
-
-                    # Add Other, net (can be positive or negative)
-                    if "Other, net" in df_calc.columns:
-                        other_income_expense = other_income_expense + df_calc.loc[mask, "Other, net"].fillna(0)
-
-                    # Update only missing values
-                    df_calc.loc[mask, "Other income (expense), net"] = other_income_expense
+                    # Use calculated IBT when it differs from extracted (fixes ANF-type misclassification)
+                    # or when IBT was missing
+                    use_calc = df_calc["Income Before Taxes"].isna()
+                    diff_significant = (
+                        (df_calc["Income Before Taxes"] - calc_ibt).abs()
+                        > (calc_ibt.abs() * 0.001 + 1)
+                    )
+                    use_calc = use_calc | (mask & diff_significant)
+                    if use_calc.any():
+                        df_calc.loc[use_calc, "Income Before Taxes"] = calc_ibt.loc[use_calc]
+                        if diff_significant.any():
+                            log.debug(
+                                "Income Before Taxes: using OI + Other income (extracted IBT differed)"
+                            )
 
         # Net Income = Income Before Taxes - Taxes
         if "Net Income" in df_calc.columns:
@@ -1976,6 +2654,30 @@ class IncomeStatement:
                 )
 
         return df_calc
+
+    def get_standard_concept_map(self, df: Optional[pd.DataFrame] = None) -> Dict[str, str]:
+        """
+        Get mapping of display metrics to standard concept identifiers (EdgarTools parity).
+
+        Useful for cross-company analysis and filtering. Segment columns (e.g. "Revenue — Americas")
+        map to their parent standard concept ("Revenue").
+
+        Args:
+            df: DataFrame with metric columns. If None, uses to_dataframe().
+
+        Returns:
+            Dict mapping each column name to its standard concept (base metric name)
+        """
+        if df is None:
+            df = self.to_dataframe()
+        if df is None or df.empty:
+            return {}
+        result = {}
+        for col in df.columns:
+            # Segment columns "Revenue — Americas" -> "Revenue"
+            base = col.split(" — ", 1)[0].strip() if " — " in col else col
+            result[col] = base
+        return result
 
     def get_metric(self, metric_name: str, period_offset: int = 0) -> Optional[float]:
         """

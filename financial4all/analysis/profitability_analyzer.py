@@ -64,6 +64,7 @@ class ProfitabilityAnalyzer:
             revenue_growth_rates = revenue_growth
 
         # Add Y/Y % change for Outstanding Shares Basic and Diluted (alongside Revenue)
+        # Sanitize extreme values (e.g. 100000%) from unit mismatch (thousands vs millions)
         shares_growth_rates = {}  # Store growth rates for Trends section calculation
         shares_metrics = ["Outstanding Shares Basic", "Outstanding Shares Diluted"]
         for shares_metric in shares_metrics:
@@ -71,54 +72,73 @@ class ProfitabilityAnalyzer:
                 shares_growth = ProfitabilityAnalyzer._calculate_yoy_growth(
                     is_df[shares_metric], date_columns
                 )
+                # Replace absurd growth from unit mismatch with NaN
+                for k, v in shares_growth.items():
+                    if v is not None and not pd.isna(v):
+                        if v > 10 or v < -0.99:
+                            shares_growth[k] = np.nan
                 ordered_metrics.append((f"{shares_metric} Y/Y % Change", shares_growth))
-                # Store growth rates for Trends section calculation
                 shares_growth_rates[shares_metric] = shares_growth
 
-        # 2. Expenses as % of Revenue section
-        # Add section header row (empty values)
+        # 2. Expenses as % of Revenue (vertical common size) - dynamic
+        # Include ALL income statement columns as % of revenue, except shares/EPS
         ordered_metrics.append(
             ("Expenses as % of Revenue", {col: np.nan for col in date_columns})
         )
 
-        # Calculate each expense as % of Revenue
-        expense_metrics = [
-            ("Gross Margin", "Gross Profit"),
-            ("Research and development", "R&D Expenses"),
-            ("Sales, general and administrative", "SG&A Expenses"),
-            ("Restructuring and other charges", "Restructuring and other charges"),
-            ("Acquisition termination cost", "Acquisition termination cost"),
-            ("Interest income", "Interest Income"),
-            ("Interest expense", "Interest Expense"),
-            ("Other, net", "Other, net"),
-        ]
+        # Columns to exclude from % of revenue (not expenses or revenue components)
+        exclude_from_pct = {
+            "Revenue",  # Base for %
+            "Outstanding Shares Basic",
+            "Outstanding Shares Diluted",
+            "Basic EPS",
+            "Diluted EPS",
+        }
 
-        for display_name, metric_name in expense_metrics:
-            if metric_name in is_df.columns and "Revenue" in is_df.columns:
-                expense_pct = ProfitabilityAnalyzer._calculate_percentage_of_revenue(
-                    is_df[metric_name], is_df["Revenue"], date_columns
-                )
-                ordered_metrics.append((display_name, expense_pct))
-                # Store for Y/Y change calculation
-                pct_values[display_name] = expense_pct
+        # Display name overrides for vertical common size labels (column -> display)
+        display_name_overrides = {
+            "Cost of Revenue": "Cost of revenue",
+            "Gross Profit": "Gross Margin",
+            "R&D Expenses": "Research and development",
+            "SG&A Expenses": "Sales, general and administrative",
+            "General and Administrative Expense": "General and administrative",
+            "Selling and Marketing Expense": "Selling and marketing",
+            "Restructuring and other charges": "Restructuring and other charges",
+            "Other Operating Expense": "Other operating expense",
+            "Asset Impairment Charges": "Asset impairment charges",
+            "Operating Income": "Operating Margin",
+            "Interest Income": "Interest income",
+            "Interest Expense": "Interest expense",
+            "Other, net": "Other, net",
+            "Other income (expense), net": "Other income (expense), net",
+            "Income Before Taxes": "Income before taxes",
+            "Net Income": "Net margin",
+        }
 
-        # 3. Operating Margin = Operating Income / Revenue
-        if "Operating Income" in is_df.columns and "Revenue" in is_df.columns:
-            operating_margin = ProfitabilityAnalyzer._calculate_percentage_of_revenue(
-                is_df["Operating Income"], is_df["Revenue"], date_columns
+        # Include all IS columns (in DataFrame order) for vertical common size
+        # Taxes/Income Tax Expense excluded - uses Income Before Taxes as denominator (handled below)
+        exclude_from_pct.add("Taxes")
+        exclude_from_pct.add("Income Tax Expense")
+
+        for col in is_df.columns:
+            if col in exclude_from_pct or "Revenue" not in is_df.columns:
+                continue
+            display = display_name_overrides.get(
+                col, ProfitabilityAnalyzer._metric_to_display(col)
             )
-            ordered_metrics.append(("Operating Margin", operating_margin))
-            # Store for Y/Y change calculation
-            pct_values["Operating Margin"] = operating_margin
+            expense_pct = ProfitabilityAnalyzer._calculate_percentage_of_revenue(
+                is_df[col], is_df["Revenue"], date_columns
+            )
+            ordered_metrics.append((display, expense_pct))
+            pct_values[display] = expense_pct
 
-        # 4. Tax Rate = Income Tax Expense (benefit) / Profit Before Taxes
-        # Note: "Taxes" is the standard metric name, "Income Before Taxes" is the standard name
-        if "Taxes" in is_df.columns and "Income Before Taxes" in is_df.columns:
+        # Tax Rate = Income Tax Expense (or Taxes) / Income Before Taxes (separate denominator)
+        tax_col = "Income Tax Expense" if "Income Tax Expense" in is_df.columns else "Taxes"
+        if tax_col in is_df.columns and "Income Before Taxes" in is_df.columns:
             tax_rate = ProfitabilityAnalyzer._calculate_percentage_of_revenue(
-                is_df["Taxes"], is_df["Income Before Taxes"], date_columns
+                is_df[tax_col], is_df["Income Before Taxes"], date_columns
             )
             ordered_metrics.append(("Tax rate", tax_rate))
-            # Store for Y/Y change calculation
             pct_values["Tax rate"] = tax_rate
 
         # 5. Year-over-Year % Change (Trends) section
@@ -180,9 +200,11 @@ class ProfitabilityAnalyzer:
                     ):
                         try:
                             # Difference = current growth rate - previous growth rate
-                            # Both are already decimals (e.g., 0.10 for 10%)
                             diff = float(current_growth) - float(next_growth)
-                            shares_trend_diff[date_col] = diff
+                            # Sanitize absurd trend diff from unit mismatch
+                            shares_trend_diff[date_col] = (
+                                diff if abs(diff) <= 2 else np.nan
+                            )
                         except (ValueError, TypeError):
                             shares_trend_diff[date_col] = np.nan
                     else:
@@ -385,6 +407,19 @@ class ProfitabilityAnalyzer:
         result_df = pd.DataFrame(rows)
 
         return result_df
+
+    @staticmethod
+    def _metric_to_display(metric_name: str) -> str:
+        """
+        Convert metric column name to display label for vertical common size.
+        Lowercases except first letter; handles common patterns.
+        """
+        if not metric_name or not isinstance(metric_name, str):
+            return str(metric_name)
+        s = metric_name.strip()
+        if not s:
+            return s
+        return s[0].upper() + s[1:].lower()
 
     @staticmethod
     def _parse_numeric_value(value: Union[str, float, int, None]) -> Optional[float]:

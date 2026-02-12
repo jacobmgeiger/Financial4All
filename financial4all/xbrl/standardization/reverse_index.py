@@ -93,51 +93,59 @@ class ReverseIndex:
         self._gaap_mappings: Dict[str, Any] = self._load_json(gaap_mappings_path)
         self._display_names: Dict[str, str] = self._load_json(display_names_path)
         
-        # Build the reverse index: convert from concept -> [tags] to tag -> [concepts]
-        # Our gaap_mappings.json format: standard_concept -> [tag1, tag2, ...]
-        self._index: Dict[str, List[str]] = {}
-        
-        for standard_concept, tags in self._gaap_mappings.items():
-            if isinstance(tags, list):
-                # Our format: standard_concept -> [tag1, tag2, ...]
-                for tag in tags:
-                    # Normalize tag (strip namespace) for consistent lookup
-                    # Handle both 'us-gaap:Tag' and 'Tag' formats
-                    normalized_tag = tag
-                    if ':' in normalized_tag:
-                        normalized_tag = normalized_tag.split(':', 1)[1]
-                    if '_' in normalized_tag:
-                        parts = normalized_tag.split('_', 1)
-                        if len(parts) > 1 and parts[0].lower().replace('-', '') in ('usgaap', 'dei', 'srt', 'ifrs'):
-                            normalized_tag = parts[1]
-                    
-                    # Store mapping: tag -> [standard_concept]
-                    if normalized_tag not in self._index:
-                        self._index[normalized_tag] = []
-                    if standard_concept not in self._index[normalized_tag]:
-                        self._index[normalized_tag].append(standard_concept)
-            elif isinstance(tags, dict):
-                # Edgartools format: tag -> {standard_tags: [...], ambiguous: bool, ...}
-                # This is already in reverse format, but we need to convert to our format
-                tag = standard_concept  # In this format, the key is the tag
-                standard_concepts_list = tags.get("standard_tags", [tags.get("standard_tag", tag)])
-                self._index[tag] = standard_concepts_list if isinstance(standard_concepts_list, list) else [standard_concepts_list]
-            else:
-                # String format: tag -> concept (simple mapping)
-                tag = standard_concept  # In this format, the key is the tag
-                self._index[tag] = [tags] if isinstance(tags, str) else [tag]
+        # Build the reverse index: tag -> {concepts, metadata}
+        # Supports two formats:
+        # - Edgartools (tag-centric): tag -> {standard_tags: [...], ambiguous?, deprecated?, comment?}
+        # - Legacy (concept-centric): display_name -> [tag1, tag2, ...]
+        self._index: Dict[str, Any] = {}
+        self._is_edgartools_format = self._detect_gaap_format()
+
+        if self._is_edgartools_format:
+            for tag, entry in self._gaap_mappings.items():
+                standard_tags = entry.get("standard_tags", entry.get("standard_tag", []))
+                if isinstance(standard_tags, str):
+                    standard_tags = [standard_tags]
+                self._index[tag] = {
+                    "concepts": standard_tags,
+                    "ambiguous": entry.get("ambiguous", len(standard_tags) > 1),
+                    "deprecated": entry.get("deprecated"),
+                    "comment": entry.get("comment"),
+                }
+        else:
+            for standard_concept, tags in self._gaap_mappings.items():
+                if isinstance(tags, list):
+                    for tag in tags:
+                        tag_key = self._strip_tag_for_key(str(tag))
+                        if tag_key not in self._index:
+                            self._index[tag_key] = {"concepts": [], "ambiguous": False, "deprecated": None, "comment": None}
+                        if standard_concept not in self._index[tag_key]["concepts"]:
+                            self._index[tag_key]["concepts"].append(standard_concept)
+                else:
+                    tag_key = self._strip_tag_for_key(standard_concept)
+                    self._index[tag_key] = {
+                        "concepts": [tags] if isinstance(tags, str) else [standard_concept],
+                        "ambiguous": False,
+                        "deprecated": None,
+                        "comment": None,
+                    }
         
         # Cache for normalized lookups (strips namespace prefixes)
         self._normalized_cache: Dict[str, str] = {}
         self._build_normalized_cache()
         
         # Statistics
-        ambiguous_count = sum(1 for v in self._index.values() 
-                              if isinstance(v, list) and len(v) > 1)
+        ambiguous_count = sum(
+            1 for v in self._index.values()
+            if isinstance(v, dict) and (v.get("ambiguous") or len(v.get("concepts", [])) > 1)
+        )
+        deprecated_count = sum(
+            1 for v in self._index.values()
+            if isinstance(v, dict) and v.get("deprecated")
+        )
         self._stats = {
             "total_mappings": len(self._index),
             "ambiguous_count": ambiguous_count,
-            "deprecated_count": 0,  # Not currently tracked in our format
+            "deprecated_count": deprecated_count,
             "excluded_count": len(EXCLUDED_TAGS),
         }
         
@@ -149,6 +157,23 @@ class ReverseIndex:
             self._stats["excluded_count"]
         )
     
+    def _detect_gaap_format(self) -> bool:
+        """Detect if gaap_mappings is Edgartools tag-centric format."""
+        if not self._gaap_mappings:
+            return False
+        first_val = next(iter(self._gaap_mappings.values()), None)
+        return isinstance(first_val, dict) and "standard_tags" in first_val
+
+    def _strip_tag_for_key(self, tag: str) -> str:
+        """Strip namespace from tag for consistent index keys."""
+        if ":" in tag:
+            return tag.split(":", 1)[1]
+        if "_" in tag:
+            parts = tag.split("_", 1)
+            if len(parts) > 1 and parts[0].lower().replace("-", "") in ("usgaap", "dei", "srt", "ifrs"):
+                return parts[1]
+        return tag
+
     def _load_json(self, path: str) -> dict:
         """Load a JSON file, returning empty dict on failure."""
         try:
@@ -235,25 +260,23 @@ class ReverseIndex:
         if normalized is None:
             return None
         
-        # Get the mapping entry (now always a list of standard concepts)
+        # Get the mapping entry (dict with concepts, ambiguous, deprecated, comment)
         entry = self._index.get(normalized)
         if entry is None:
             return None
-        
-        # Handle list format (our format: tag -> [concept1, concept2, ...])
-        if isinstance(entry, list):
+
+        if isinstance(entry, dict) and "concepts" in entry:
+            standard_tags = entry.get("concepts", [])
+            is_ambiguous = entry.get("ambiguous", len(standard_tags) > 1)
+            deprecated = entry.get("deprecated")
+            comment = entry.get("comment")
+        elif isinstance(entry, list):
+            # Legacy list format
             standard_tags = entry
             is_ambiguous = len(entry) > 1
             deprecated = None
             comment = None
-        elif isinstance(entry, dict):
-            # Legacy format support
-            standard_tags = entry.get("standard_tags", [])
-            is_ambiguous = entry.get("ambiguous", False)
-            deprecated = entry.get("deprecated")
-            comment = entry.get("comment")
         else:
-            # String format (single concept)
             standard_tags = [entry] if entry else []
             is_ambiguous = False
             deprecated = None
@@ -557,19 +580,23 @@ class ReverseIndex:
     def get_ambiguous_mappings(self) -> Dict[str, List[str]]:
         """
         Get all tags that map to multiple concepts (for documentation and context rules).
-        
+
         Used to document ambiguous mappings and add context rules (plan 1.2).
         Callers should pass statement_type, section, or calculation_parent
         when resolving these tags.
-        
+
         Returns:
             Dict mapping tag -> list of standard concept candidates
         """
-        return {
-            tag: list(concepts)
-            for tag, concepts in self._index.items()
-            if isinstance(concepts, list) and len(concepts) > 1
-        }
+        result = {}
+        for tag, entry in self._index.items():
+            if isinstance(entry, dict):
+                concepts = entry.get("concepts", [])
+                if entry.get("ambiguous") or len(concepts) > 1:
+                    result[tag] = list(concepts)
+            elif isinstance(entry, list) and len(entry) > 1:
+                result[tag] = list(entry)
+        return result
 
     @property
     def stats(self) -> Dict[str, int]:

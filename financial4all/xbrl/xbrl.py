@@ -32,6 +32,7 @@ from financial4all.xbrl.entity_info import EntityInfo, extract_dei_facts, build_
 from financial4all.xbrl.periods import Period, PeriodType
 from financial4all.xbrl.period_selector import select_periods
 from financial4all.xbrl.statement_resolver import StatementResolver, StatementType
+from financial4all.xbrl.statements import statement_to_concepts
 from financial4all.xbrl.deduplication_strategy import RevenueDeduplicator
 from financial4all.xbrl.abstract_detection import is_abstract_concept
 from financial4all.xbrl.models import select_display_label
@@ -187,6 +188,19 @@ class XBRL:
         if not xml_content:
             raise XBRLFilingWithNoXbrlData("Filing does not contain XBRL data")
 
+        # Fetch presentation and calculation linkbases when available (EdgarTools parity)
+        presentation_linkbase = getattr(filing, "presentation_linkbase", None)
+        calculation_linkbase = getattr(filing, "calculation_linkbase", None)
+        definition_linkbase = getattr(filing, "definition_linkbase", None)
+        if not presentation_linkbase and hasattr(filing, "get_presentation_linkbase_content"):
+            pre_content = filing.get_presentation_linkbase_content(client)
+            if pre_content:
+                presentation_linkbase = pre_content
+        if not calculation_linkbase and hasattr(filing, "get_calculation_linkbase_content"):
+            cal_content = filing.get_calculation_linkbase_content(client)
+            if cal_content:
+                calculation_linkbase = cal_content
+
         # Detect Inline XBRL (HTML) vs standalone XML
         content_str = (
             xml_content[:500]
@@ -206,10 +220,16 @@ class XBRL:
             if not xml_content:
                 raise XBRLFilingWithNoXbrlData("Failed to extract XBRL from Inline XBRL HTML")
 
-        # Try to get linkbase paths
-        presentation_linkbase = getattr(filing, 'presentation_linkbase', None)
-        calculation_linkbase = getattr(filing, 'calculation_linkbase', None)
-        definition_linkbase = getattr(filing, 'definition_linkbase', None)
+        # Use linkbase content from fetch above, or explicit filing attributes
+        presentation_linkbase = presentation_linkbase or getattr(
+            filing, "presentation_linkbase", None
+        )
+        calculation_linkbase = calculation_linkbase or getattr(
+            filing, "calculation_linkbase", None
+        )
+        definition_linkbase = definition_linkbase or getattr(
+            filing, "definition_linkbase", None
+        )
 
         return cls.from_xml(
             xml_content,
@@ -635,59 +655,94 @@ class XBRL:
     
     def get_all_statements(self) -> List[Dict[str, Any]]:
         """
-        Get all available financial statements.
-        
+        Get all available financial statements (EdgarTools-parity format).
+
         Returns:
-            List of statement metadata (role, definition, element count)
+            List of statement metadata: role, definition, element_count,
+            type, primary_concept, role_name, category
         """
         if self._all_statements_cached is not None:
             return self._all_statements_cached
-        
-        resolver = StatementResolver(self.presentation_trees)
-        statements = resolver.find_statements()
-        
+
+        statements = []
+        for role, tree in self.presentation_trees.items():
+            role_def = (tree.definition or "").lower()
+            primary_concept = tree.root_element_id
+            statement_type = None
+            statement_category = None
+
+            # Match using statement_to_concepts (EdgarTools parity)
+            for statement_alias, info in statement_to_concepts.items():
+                if primary_concept == info.concept:
+                    statement_type = (
+                        f"{statement_alias}Parenthetical"
+                        if "parenthetical" in role_def
+                        else statement_alias
+                    )
+                    break
+
+            # Additional patterns for notes and disclosures
+            if not statement_type:
+                if (
+                    "us-gaap_NotesToFinancialStatementsAbstract" in primary_concept
+                    or "note" in role_def
+                ):
+                    statement_type = "Notes"
+                    statement_category = "note"
+                elif (
+                    "us-gaap_DisclosuresAbstract" in primary_concept
+                    or "disclosure" in role_def
+                ):
+                    statement_type = "Disclosures"
+                    statement_category = "disclosure"
+                elif (
+                    "us-gaap_AccountingPoliciesAbstract" in primary_concept
+                    or "accounting policies" in role_def
+                ):
+                    statement_type = "AccountingPolicies"
+                    statement_category = "note"
+                elif (
+                    "us-gaap_SegmentDisclosureAbstract" in primary_concept
+                    or "segment" in role_def
+                ):
+                    statement_type = "SegmentDisclosure"
+                    statement_category = "disclosure"
+
+            role_name = (
+                role.split("/")[-1] if "/" in role else role.split("#")[-1] if "#" in role else ""
+            )
+
+            stmt = {
+                "role": role,
+                "definition": tree.definition,
+                "element_count": len(tree.all_nodes),
+                "type": statement_type,
+                "primary_concept": primary_concept,
+                "role_name": role_name,
+                "category": statement_category,
+            }
+            statements.append(stmt)
+
         self._all_statements_cached = statements
         return statements
-    
-    def find_statement(self, role_or_type: str) -> Tuple[List[Dict[str, Any]], Optional[str], Optional[str]]:
+
+    def find_statement(
+        self, role_or_type: str, is_parenthetical: bool = False
+    ) -> Tuple[List[Dict[str, Any]], Optional[str], Optional[str]]:
         """
         Find statement by role URI, statement type, or statement short name.
-        
+
+        EdgarTools parity: uses StatementResolver with multi-layer matching.
+
         Args:
-            role_or_type: Can be role URI, statement type, or short name
-            
+            role_or_type: Role URI, statement type (e.g. 'IncomeStatement'), or short name
+            is_parenthetical: Whether to look for a parenthetical statement
+
         Returns:
             Tuple of (matching_statements, found_role, actual_statement_type)
         """
-        resolver = StatementResolver(self.presentation_trees)
-        
-        # Try direct role match
-        if role_or_type in self.presentation_trees:
-            stmt = resolver.get_statement_by_role(role_or_type)
-            if stmt:
-                return [stmt], role_or_type, stmt.get('statement_type')
-        
-        # Try statement type match
-        stmt = resolver.get_statement_by_type(role_or_type)
-        if stmt:
-            return [stmt], stmt.get('role_uri'), stmt.get('statement_type')
-        
-        # Try partial match on role definition
-        all_statements = resolver.find_statements()
-        matching = []
-        role_lower = role_or_type.lower()
-        
-        for stmt in all_statements:
-            definition = stmt.get('definition', '').lower()
-            role_name = stmt.get('role_uri', '').lower()
-            
-            if role_lower in definition or role_lower in role_name:
-                matching.append(stmt)
-        
-        if matching:
-            return matching, matching[0].get('role_uri'), matching[0].get('statement_type')
-        
-        return [], None, None
+        resolver = StatementResolver(self)
+        return resolver.find_statement(role_or_type, is_parenthetical)
     
     def get_statement(self, role_or_type: str,
                      period_filter: Optional[str] = None,
@@ -714,9 +769,14 @@ class XBRL:
         if should_display_dimensions is None:
             should_display_dimensions = True
         
-        # Generate line items (simplified - full implementation would be more complex)
+        # Generate line items with context for disambiguation (is_total, section, calculation_parent)
         line_items = []
-        self._generate_line_items(root_id, tree.all_nodes, line_items, period_filter, None, should_display_dimensions)
+        self._generate_line_items(
+            root_id, tree.all_nodes, line_items,
+            period_filter=period_filter, path=None,
+            should_display_dimensions=should_display_dimensions,
+            role_uri=found_role, statement_type=actual_statement_type or "IncomeStatement",
+        )
         
         # Apply deduplication for income statements
         if actual_statement_type == 'IncomeStatement':
@@ -724,10 +784,18 @@ class XBRL:
         
         return line_items
     
-    def _generate_line_items(self, element_id: str, nodes: Dict[str, PresentationNode],
-                            result: List[Dict[str, Any]], period_filter: Optional[str] = None,
-                            path: Optional[List[str]] = None, should_display_dimensions: bool = False) -> None:
-        """Recursively generate line items for a statement."""
+    def _generate_line_items(
+        self,
+        element_id: str,
+        nodes: Dict[str, PresentationNode],
+        result: List[Dict[str, Any]],
+        period_filter: Optional[str] = None,
+        path: Optional[List[str]] = None,
+        should_display_dimensions: bool = False,
+        role_uri: Optional[str] = None,
+        statement_type: str = "IncomeStatement",
+    ) -> None:
+        """Recursively generate line items for a statement with context for disambiguation."""
         if element_id not in nodes:
             return
         
@@ -745,8 +813,14 @@ class XBRL:
         decimals = {}
         units = {}
         
-        # Find facts for this element
+        # Find facts for this element (exact match, or local-name match for extensions)
         matching_facts = [f for f in self._facts.values() if f.element_id == element_id]
+        if not matching_facts:
+            local_part = element_id.split("_")[-1] if "_" in element_id else element_id
+            matching_facts = [
+                f for f in self._facts.values()
+                if f.element_id.endswith("_" + local_part) or f.element_id == local_part
+            ]
         
         for fact in matching_facts:
             context_id = fact.context_ref
@@ -762,7 +836,33 @@ class XBRL:
                 if fact.unit_ref:
                     units[period_key] = fact.unit_ref
         
-        # Create line item
+        # Context for disambiguation (EdgarTools parity: is_total, section, calculation_parent)
+        calculation_parent = None
+        if role_uri and role_uri in self.calculation_trees:
+            calc_tree = self.calculation_trees[role_uri]
+            calc_node = calc_tree.all_nodes.get(element_id)
+            if calc_node and getattr(calc_node, "parent", None):
+                calculation_parent = calc_node.parent
+        section = None
+        try:
+            from financial4all.xbrl.standardization.sections import get_section_for_concept
+            section = get_section_for_concept(element_id, statement_type)
+        except Exception:
+            pass
+
+        # EdgarTools parity: skip structural elements (Axis, Domain, Table, etc.)
+        from financial4all.xbrl.structural_filter import is_xbrl_structural_element
+        if is_xbrl_structural_element(element_id, label):
+            # Still process children (traverse tree) but don't add this item
+            for child_id in node.children:
+                self._generate_line_items(
+                    child_id, nodes, result,
+                    period_filter=period_filter, path=current_path,
+                    should_display_dimensions=should_display_dimensions,
+                    role_uri=role_uri, statement_type=statement_type,
+                )
+            return
+
         line_item = {
             'concept': element_id,
             'name': node.element_name or element_id,
@@ -773,14 +873,22 @@ class XBRL:
             'level': node.depth,
             'is_abstract': node.is_abstract,
             'has_values': len(values) > 0,
-            'children': node.children
+            'children': node.children,
+            'is_total': getattr(node, 'is_total', False),
+            'section': section,
+            'calculation_parent': calculation_parent,
         }
-        
+
         result.append(line_item)
-        
+
         # Process children
         for child_id in node.children:
-            self._generate_line_items(child_id, nodes, result, period_filter, current_path, should_display_dimensions)
+            self._generate_line_items(
+                child_id, nodes, result,
+                period_filter=period_filter, path=current_path,
+                should_display_dimensions=should_display_dimensions,
+                role_uri=role_uri, statement_type=statement_type,
+            )
     
     def render_statement(self, statement_type: str, period_view: Optional[str] = None) -> RenderedStatement:
         """

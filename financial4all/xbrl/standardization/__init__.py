@@ -71,6 +71,9 @@ try:
                 StandardizationStore = parent_module.StandardizationStore
                 get_synonym_groups = parent_module.get_synonym_groups
                 get_default_store = parent_module.get_default_store
+                _load_company_tags_by_display = getattr(
+                    parent_module, "_load_company_tags_by_display", lambda: {}
+                )
             finally:
                 # Restore original path
                 sys.path[:] = original_path
@@ -85,6 +88,9 @@ try:
         StandardizationStore = parent_module.StandardizationStore
         get_synonym_groups = parent_module.get_synonym_groups
         get_default_store = parent_module.get_default_store
+        _load_company_tags_by_display = getattr(
+            parent_module, "_load_company_tags_by_display", lambda: {}
+        )
 except Exception as e:
     # If import fails, try alternative: import via module name after ensuring path
     try:
@@ -113,6 +119,9 @@ except Exception as e:
         StandardizationStore = parent_module.StandardizationStore
         get_synonym_groups = parent_module.get_synonym_groups
         get_default_store = parent_module.get_default_store
+        _load_company_tags_by_display = getattr(
+            parent_module, "_load_company_tags_by_display", lambda: {}
+        )
     except Exception:
         # Last resort: raise a clear error
         raise ImportError(

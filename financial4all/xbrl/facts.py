@@ -534,7 +534,10 @@ class FactSet:
         return base_key
 
     def get_all_facts_for_concept(
-        self, concept: str, include_variants: bool = True
+        self,
+        concept: str,
+        include_variants: bool = True,
+        exclude_structural: bool = False,
     ) -> List[Fact]:
         """
         Get all facts for a concept with comprehensive namespace variant matching.
@@ -549,6 +552,8 @@ class FactSet:
         Args:
             concept: XBRL concept name (e.g., "Revenues" or "us-gaap_Revenues")
             include_variants: If True, tries multiple namespace variations
+            exclude_structural: If True, filter out facts with structural concepts
+                (Axis, Domain, Member, Table, Abstract) - EdgarTools-aligned
 
         Returns:
             List of all matching facts
@@ -559,7 +564,9 @@ class FactSet:
         all_facts = []
         seen_facts = set()  # Track by normalized key to avoid duplicates
 
-        # Generate all possible variations: exact, us-gaap, bare, and extension prefixes
+        # Generate all possible variations: exact, us-gaap, bare, and extension prefixes.
+        # Filing XML stores extension elements as local name only (e.g. PaymentsToAcquire...
+        # from nvda:PaymentsToAcquire...). EdgarTools alignment: ensure we find all variants.
         variations = [concept]
         if include_variants:
             if not concept.startswith("us-gaap_"):
@@ -573,6 +580,9 @@ class FactSet:
                 local_name = concept.split("_", 1)[1]
             else:
                 local_name = concept
+            # Always add bare local name: XML parsing yields local-name-only for extension elements
+            if local_name not in variations:
+                variations.append(local_name)
             # Custom extension taxonomies: try prefix_localName for every prefix present in this FactSet
             extension_prefixes = set()
             for f in self.facts:
@@ -608,6 +618,14 @@ class FactSet:
                     fact_key = f"{fact_key}_{dims_key}"
 
                 if fact_key not in seen_facts:
+                    # EdgarTools-aligned: optionally exclude structural elements
+                    if exclude_structural:
+                        from financial4all.xbrl.structural_filter import is_xbrl_structural_element
+                        if is_xbrl_structural_element(
+                            fact.concept,
+                            getattr(fact, "label", None),
+                        ):
+                            continue
                     seen_facts_add(fact_key)
                     all_facts_append(fact)
 
