@@ -1,9 +1,10 @@
 # financial4all/analysis/trend_analyzer.py
 """
-Trend analysis calculations.
+Trend analysis on period-indexed financial DataFrames.
 
-This module provides functionality for calculating growth rates, trends,
-and comparative analysis of financial metrics.
+TrendAnalyzer takes a DataFrame (e.g. from IncomeStatement.to_dataframe()) and
+computes year-over-year growth, CAGR, and similar trend metrics. Used by
+reporting and dashboards for growth and comparison views.
 """
 
 import pandas as pd

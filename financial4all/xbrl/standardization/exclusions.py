@@ -43,6 +43,7 @@ EXCLUDED_TAGS: Set[str] = {
     "DebtInstrumentConvertibleLiquidationPreferencePerShare",
     "DefinedBenefitPlanAmountsRecognizedInOtherComprehensiveIncomeLossNetGainLossBeforeTax",
     "DemutualizationByInsuranceEntitySecuritiesIssuedPricePerShareOrUnit",
+    "DesignAndDevelopmentCostsDisclosure",
     "DilutedEarningsPerShareProForma",
     "DilutiveSecuritiesEffectOnBasicEarningsPerShareOther",
     "DiscontinuedOperationIncomeLossFromDiscontinuedOperationNetOfTaxPerBasicAndDilutedShare",

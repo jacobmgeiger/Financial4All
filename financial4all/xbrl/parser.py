@@ -40,21 +40,25 @@ class XBRLParser:
     XBRL_NAMESPACE = "http://www.xbrl.org/2003/instance"
     LINKBASE_NAMESPACE = "http://www.xbrl.org/2003/linkbase"
     XLINK_NAMESPACE = "http://www.w3.org/1999/xlink"
-    
+    XBRDLI_NAMESPACE = "http://xbrl.org/2006/xbrldi"
+
     def __init__(self):
         """Initialize XBRL parser."""
         self.namespaces = {
             "xbrl": self.XBRL_NAMESPACE,
+            "xbrli": self.XBRL_NAMESPACE,
+            "xbrldi": self.XBRDLI_NAMESPACE,
             "link": self.LINKBASE_NAMESPACE,
             "xlink": self.XLINK_NAMESPACE,
         }
         
-        # Create optimized parser if lxml is available
+        # Create optimized parser if lxml is available (edgartools-style: 10-30x faster)
         if LXML_AVAILABLE:
             self._parser = ET.XMLParser(
                 remove_blank_text=True,
                 recover=True,
-                huge_tree=True
+                huge_tree=True,
+                resolve_entities=False,  # Security and speed
             )
         else:
             self._parser = None

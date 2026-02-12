@@ -1,9 +1,11 @@
 # financial4all/xbrl/periods.py
 """
-Period handling and validation for XBRL data.
+XBRL period representation and helpers.
 
-This module provides functionality for handling XBRL periods including
-instant periods, duration periods, and comparative periods.
+Period and PeriodType represent instant vs duration; from_xbrl_dict() builds
+from SEC API start/end. Helpers: is_annual(), is_quarterly(), classify_fiscal_period,
+filter/sort period lists, and determine_periods_to_display for UI. Used by
+FactSet, statement resolution, and period selection.
 """
 
 from enum import Enum

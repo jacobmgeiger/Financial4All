@@ -1,10 +1,11 @@
 # financial4all/xbrl/__init__.py
 """
-XBRL parsing and processing module.
+XBRL parsing, fact extraction, and statement resolution.
 
-This module provides functionality for parsing XBRL documents, extracting facts,
-resolving financial statements, and handling XBRL-specific features like
-dimensions, periods, and calculations.
+Exposes Fact/FactSet, Period/PeriodType, standardization (SynonymGroups, reverse
+index, MappingStore), StatementResolver, presentation/dimensions, and helpers
+(parse_date, format_value, entity_info). Used by financial statement classes
+and the SEC company-facts pipeline.
 """
 
 from financial4all.xbrl.parser import XBRLParser
@@ -20,6 +21,10 @@ from financial4all.xbrl.period_selector import select_periods
 from financial4all.xbrl.entity_info import EntityInfo, extract_dei_facts, build_entity_info
 from financial4all.xbrl.presentation import PresentationTree, PresentationNode
 from financial4all.xbrl.dimensions import Table, Axis, Domain
+from financial4all.xbrl.dimension_classifier import (
+    is_breakdown_dimension,
+    is_face_dimension,
+)
 # Import from parent standardization.py module (not the standardization package)
 from financial4all.xbrl import standardization
 SynonymGroup = standardization.SynonymGroup
@@ -109,6 +114,8 @@ __all__ = [
     "Table",
     "Axis",
     "Domain",
+    "is_breakdown_dimension",
+    "is_face_dimension",
     
     # Standardization (parent module)
     "SynonymGroup",

@@ -1,9 +1,11 @@
 # financial4all/analysis/__init__.py
 """
-Financial analysis and reporting module.
+Financial analysis and reporting on standardized statements.
 
-This module provides functionality for generating comprehensive financial
-analysis reports including multi-year comparisons, ratios, trends, and Excel exports.
+Provides TrendAnalyzer (period-over-period), CommonSizeGenerator (vertical/horizontal),
+ProfitabilityAnalyzer (margins, returns), and FinancialAnalysisReport (combined
+report plus Excel export with formulas). All operate on DataFrames from the
+financials module.
 """
 
 from financial4all.analysis.report_generator import FinancialAnalysisReport

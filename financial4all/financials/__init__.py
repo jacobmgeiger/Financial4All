@@ -1,9 +1,11 @@
 # financial4all/financials/__init__.py
 """
-Financial statement extraction and analysis module.
+Financial statement extraction and standardization from XBRL.
 
-This module provides classes for extracting and standardizing financial statements
-including income statements, balance sheets, and cash flow statements.
+Exposes IncomeStatement, BalanceSheet, CashFlowStatement (built from
+FactSet/company facts), and FinancialRatios (derived from those statements).
+All statement classes expose to_dataframe() for period-indexed DataFrames
+with standardized metric names.
 """
 
 from financial4all.financials.income_statement import IncomeStatement

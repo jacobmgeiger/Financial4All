@@ -1,9 +1,11 @@
 # financial4all/financials/ratios.py
 """
-Financial ratio calculations.
+Financial ratio calculations from standardized statements.
 
-This module provides functionality for calculating common financial ratios
-from financial statements.
+FinancialRatios takes IncomeStatement and optionally BalanceSheet and
+CashFlowStatement, and produces DataFrames of profitability (margins),
+liquidity (e.g. current ratio), and efficiency ratios. Period index
+aligns with the underlying statement DataFrames.
 """
 
 import pandas as pd
@@ -18,25 +20,25 @@ from financial4all.core import log
 
 class FinancialRatios:
     """
-    Financial ratios calculated from financial statements.
-    
-    This class provides methods to calculate common profitability,
-    liquidity, and efficiency ratios.
+    Computes financial ratios from standardized income statement, balance sheet, and cash flow.
+
+    All methods return a DataFrame indexed by period (same as the source statement).
+    Ratios are computed only where required columns exist; missing metrics yield NaN.
     """
-    
+
     def __init__(
         self,
         income_statement: IncomeStatement,
         balance_sheet: Optional[BalanceSheet] = None,
-        cash_flow: Optional[CashFlowStatement] = None
-    ):
+        cash_flow: Optional[CashFlowStatement] = None,
+    ) -> None:
         """
-        Initialize financial ratios calculator.
-        
+        Initialize the ratios calculator with at least an income statement.
+
         Args:
-            income_statement: Income statement
-            balance_sheet: Optional balance sheet
-            cash_flow: Optional cash flow statement
+            income_statement: Required; used for profitability ratios.
+            balance_sheet: Optional; used for liquidity (and related) ratios.
+            cash_flow: Optional; used for cash-based ratios if needed.
         """
         self.income_statement = income_statement
         self.balance_sheet = balance_sheet

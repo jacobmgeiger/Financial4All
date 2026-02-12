@@ -1,10 +1,10 @@
 # financial4all/analysis/profitability_analyzer.py
 """
-Profitability ratio analyzer for income statements.
+Profitability ratios and expense/revenue breakdowns from income (and optional BS/CF) DataFrames.
 
-This module provides functionality for calculating profitability ratios
-including Y/Y revenue growth, expenses as percentage of revenue, operating margin,
-and tax rate.
+ProfitabilityAnalyzer.calculate_ratios() produces a transposed DataFrame (Metric + date
+columns) with Y/Y revenue growth, expenses as % of revenue, operating margin, tax rate,
+CapEx % of sales, and related metrics. Input format matches IncomeStatement.to_dataframe().
 """
 
 import pandas as pd

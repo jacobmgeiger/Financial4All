@@ -1,9 +1,11 @@
 # financial4all/core.py
 """
-Core utilities and base classes for Financial4All.
+Core utilities and shared infrastructure for Financial4All.
 
-This module provides common utilities, base classes, and helper functions
-used throughout the package.
+Provides package-wide logging (log), path helpers for project root and data
+directories, and resource resolution that works in both development and
+PyInstaller-packaged environments. Import log from here for consistent
+logger naming.
 """
 
 import os

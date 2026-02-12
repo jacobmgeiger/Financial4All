@@ -56,18 +56,51 @@ app.layout = html.Div(
         # --- Ticker Input Section ---
         html.Div(
             [
-                html.Label("Ticker Symbol:", style={"color": "#B0B0B0"}),
-                dcc.Input(
-                    id="ticker-input",
-                    type="text",
-                    value="",
-                    placeholder="Enter Ticker Symbol (e.g., AAPL)",
-                    style={
-                        "width": "100%",
-                        "backgroundColor": "#333333",
-                        "color": "#E0E0E0",
-                        "border": "1px solid #555555",
-                    },
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Label("Ticker Symbol:", style={"color": "#B0B0B0"}),
+                                dcc.Input(
+                                    id="ticker-input",
+                                    type="text",
+                                    value="",
+                                    placeholder="Enter Ticker Symbol (e.g., AAPL)",
+                                    style={
+                                        "width": "100%",
+                                        "backgroundColor": "#333333",
+                                        "color": "#E0E0E0",
+                                        "border": "1px solid #555555",
+                                    },
+                                ),
+                            ],
+                            style={"flex": "1", "marginRight": "15px"},
+                        ),
+                        html.Div(
+                            [
+                                html.Label("Periods (10-K filings):", style={"color": "#B0B0B0"}),
+                                dcc.Dropdown(
+                                    id="periods-dropdown",
+                                    options=[
+                                        {"label": "Latest (~3 years)", "value": 1},
+                                        {"label": "3 filings (~6–9 years)", "value": 3},
+                                        {"label": "5 filings (~12–15 years)", "value": 5},
+                                        {"label": "10 filings (~20+ years)", "value": 10},
+                                        {"label": "15 filings (~30+ years)", "value": 15},
+                                    ],
+                                    value=1,
+                                    clearable=False,
+                                    style={
+                                        "width": "100%",
+                                        "backgroundColor": "#333333",
+                                        "color": "#E0E0E0",
+                                    },
+                                ),
+                            ],
+                            style={"flex": "0 0 200px"},
+                        ),
+                    ],
+                    style={"display": "flex", "flexWrap": "wrap", "gap": "10px", "alignItems": "flex-end"},
                 ),
                 html.Div(
                     id="status-output", style={"marginTop": "10px", "color": "#B0B0B0"}
@@ -128,30 +161,60 @@ app.layout = html.Div(
                         ],
                         style={"textAlign": "center", "padding": "10px"},
                     ),
-                    # --- Unit Scale Selection ---
+                    # --- View and Unit Scale Selection ---
                     html.Div(
                         [
-                            html.Label(
-                                "Display Units:",
-                                style={"color": "#B0B0B0", "marginRight": "10px"},
-                            ),
-                            dcc.Dropdown(
-                                id="unit-scale-dropdown",
-                                options=[
-                                    {"label": "Auto-detect", "value": "auto"},
-                                    {"label": "Millions", "value": "millions"},
-                                    {"label": "Billions", "value": "billions"},
-                                    {"label": "Thousands", "value": "thousands"},
-                                    {"label": "Raw Values", "value": "raw"},
+                            html.Div(
+                                [
+                                    html.Label(
+                                        "Income Statement View:",
+                                        style={"color": "#B0B0B0", "marginRight": "10px"},
+                                    ),
+                                    dcc.Dropdown(
+                                        id="is-view-dropdown",
+                                        options=[
+                                            {"label": "Standard", "value": "standard"},
+                                            {"label": "Detailed (with segments)", "value": "detailed"},
+                                        ],
+                                        value="standard",
+                                        clearable=False,
+                                        style={
+                                            "width": "200px",
+                                            "backgroundColor": "#333333",
+                                            "color": "#E0E0E0",
+                                            "display": "inline-block",
+                                            "marginRight": "20px",
+                                        },
+                                    ),
                                 ],
-                                value="millions",  # Default to millions
-                                clearable=False,
-                                style={
-                                    "width": "200px",
-                                    "backgroundColor": "#333333",
-                                    "color": "#E0E0E0",
-                                    "display": "inline-block",
-                                },
+                                style={"display": "inline-block"},
+                            ),
+                            html.Div(
+                                [
+                                    html.Label(
+                                        "Display Units:",
+                                        style={"color": "#B0B0B0", "marginRight": "10px"},
+                                    ),
+                                    dcc.Dropdown(
+                                        id="unit-scale-dropdown",
+                                        options=[
+                                            {"label": "Auto-detect", "value": "auto"},
+                                            {"label": "Millions", "value": "millions"},
+                                            {"label": "Billions", "value": "billions"},
+                                            {"label": "Thousands", "value": "thousands"},
+                                            {"label": "Raw Values", "value": "raw"},
+                                        ],
+                                        value="millions",
+                                        clearable=False,
+                                        style={
+                                            "width": "200px",
+                                            "backgroundColor": "#333333",
+                                            "color": "#E0E0E0",
+                                            "display": "inline-block",
+                                        },
+                                    ),
+                                ],
+                                style={"display": "inline-block"},
                             ),
                         ],
                         style={
@@ -176,6 +239,7 @@ app.layout = html.Div(
         dcc.Store(id="current-df-store"),
         dcc.Store(id="all-plottable-metrics-store"),
         dcc.Store(id="standard-is-store"),
+        dcc.Store(id="detailed-is-store"),  # Detailed view with segment breakdowns
         dcc.Store(id="alternatives-store"),  # NEW: Store for alternative calculations
         dcc.Store(id="key-ratios-store"),  # NEW: Store for calculated key ratios
         dcc.Store(
@@ -187,6 +251,8 @@ app.layout = html.Div(
         dcc.Store(
             id="unit-scale-store", data="millions"
         ),  # NEW: Store for user's unit scale preference
+        dcc.Store(id="balance-sheet-store"),  # Balance sheet DataFrame (avoids re-fetch in display)
+        dcc.Store(id="cash-flow-store"),  # Cash flow DataFrame (avoids re-fetch in display)
     ],
     style={
         "backgroundColor": "#1E1E1E",
@@ -228,15 +294,19 @@ def on_ticker_submit(n_submit, ticker):
         Output("current-df-store", "data"),
         Output("all-plottable-metrics-store", "data"),
         Output("standard-is-store", "data"),
+        Output("detailed-is-store", "data"),
         Output("alternatives-store", "data"),
         Output("is-selections-store", "data"),
         Output("standard-metrics-store", "data"),
-        Output("key-ratios-store", "data"),  # NEW: Output for key ratios
+        Output("key-ratios-store", "data"),
+        Output("balance-sheet-store", "data"),
+        Output("cash-flow-store", "data"),
     ],
-    [Input("load-trigger", "children")],  # Triggered by the first callback
+    [Input("load-trigger", "children")],  # Triggered by ticker submit
+    [State("periods-dropdown", "value")],
     prevent_initial_call=True,
 )
-def on_ticker_change(ticker_upper):
+def on_ticker_change(ticker_upper, periods):
     """
     This callback performs the heavy data lifting after being triggered by the
     initial feedback callback.
@@ -248,35 +318,40 @@ def on_ticker_change(ticker_upper):
     try:
         # Use the new Company API directly
         company = Company(ticker_upper)
-        financials = company.get_financials()
+        periods_val = int(periods) if periods is not None else 1
+        financials = company.get_financials(
+            periods=periods_val if periods_val > 1 else None,
+            use_cache=True,
+        )
 
         income_statement = financials["income_statement"]
         balance_sheet = financials["balance_sheet"]
         cash_flow = financials["cash_flow"]
 
-        # Get income statement DataFrame
+        # Get income statement DataFrames (standard and detailed with segment breakdowns)
         standard_is_df = income_statement.to_dataframe()
+        detailed_is_df = income_statement.to_dataframe(view="detailed")
 
         if standard_is_df is None or standard_is_df.empty:
             status_message = html.P(
                 f"No data retrieved for {ticker_upper}.", style={"color": "orange"}
             )
-            return status_message, None, [], None, None, {}, [], None
+            return status_message, None, [], None, None, None, {}, [], None, None, None
+
+        # Extract balance sheet and cash flow DataFrames for downstream callbacks
+        # (avoids re-fetching in display_standard_is and generate_analysis_report)
+        bs_df = balance_sheet.to_dataframe() if balance_sheet else pd.DataFrame()
+        cf_df = cash_flow.to_dataframe() if cash_flow else pd.DataFrame()
 
         # For backward compatibility, create df_merged (all metrics)
         # This combines income statement with other available metrics
         df_merged = standard_is_df.copy()
 
         # Add balance sheet and cash flow metrics if available
-        if balance_sheet:
-            bs_df = balance_sheet.to_dataframe()
-            if not bs_df.empty:
-                df_merged = df_merged.join(bs_df, how="outer", rsuffix="_bs")
-
-        if cash_flow:
-            cf_df = cash_flow.to_dataframe()
-            if not cf_df.empty:
-                df_merged = df_merged.join(cf_df, how="outer", rsuffix="_cf")
+        if not bs_df.empty:
+            df_merged = df_merged.join(bs_df, how="outer", rsuffix="_bs")
+        if not cf_df.empty:
+            df_merged = df_merged.join(cf_df, how="outer", rsuffix="_cf")
 
         # Calculate ratios
         ratios = FinancialRatios(income_statement, balance_sheet, cash_flow)
@@ -326,6 +401,9 @@ def on_ticker_change(ticker_upper):
         transposed_df = standard_is_df.T.reset_index().rename(
             columns={"index": "Metric"}
         )
+        transposed_detailed_df = detailed_is_df.T.reset_index().rename(
+            columns={"index": "Metric"}
+        )
 
         # Get company info directly from Company instance
         info = company.company_info
@@ -356,6 +434,15 @@ def on_ticker_change(ticker_upper):
             transposed_df_json = None
 
         try:
+            transposed_detailed_df_json = (
+                transposed_detailed_df.to_json(date_format="iso", orient="split")
+                if not transposed_detailed_df.empty
+                else None
+            )
+        except Exception:
+            transposed_detailed_df_json = None
+
+        try:
             key_ratios_json = (
                 key_ratios_df.to_json(date_format="iso", orient="split")
                 if not key_ratios_df.empty
@@ -364,15 +451,36 @@ def on_ticker_change(ticker_upper):
         except Exception:
             key_ratios_json = None
 
+        try:
+            bs_df_json = (
+                bs_df.to_json(date_format="iso", orient="split")
+                if not bs_df.empty
+                else None
+            )
+        except Exception:
+            bs_df_json = None
+
+        try:
+            cf_df_json = (
+                cf_df.to_json(date_format="iso", orient="split")
+                if not cf_df.empty
+                else None
+            )
+        except Exception:
+            cf_df_json = None
+
         return (
             status_message,
             df_merged_json,
             all_plottable_metrics,
             transposed_df_json,
+            transposed_detailed_df_json,
             alternatives,
             default_selections,
             standard_metrics,
-            key_ratios_json,  # NEW: Store the ratios
+            key_ratios_json,
+            bs_df_json,
+            cf_df_json,
         )
     except Exception as e:
         status_message = html.P(
@@ -381,7 +489,7 @@ def on_ticker_change(ticker_upper):
         import traceback
 
         traceback.print_exc()  # Print full traceback for debugging
-        return status_message, None, [], None, None, {}, [], None
+        return status_message, None, [], None, None, None, {}, [], None, None, None
 
 
 # --- NEW: Callback to display key ratio cards ---
@@ -560,6 +668,29 @@ def update_selections(values, ids, current_selections):
     return current_selections
 
 
+# --- Helper to deserialize Dash Store JSON to DataFrame ---
+def _store_json_to_dataframe(store_data):
+    """
+    Deserialize Dash Store data (str or dict) to pandas DataFrame.
+    Returns empty DataFrame if store_data is None or invalid.
+    """
+    if store_data is None:
+        return pd.DataFrame()
+    try:
+        if isinstance(store_data, str):
+            data = json.loads(store_data)
+            return pd.read_json(io.StringIO(json.dumps(data)), orient="split")
+        if isinstance(store_data, dict):
+            return pd.DataFrame(
+                data=store_data.get("data", []),
+                columns=store_data.get("columns", []),
+                index=store_data.get("index", []),
+            )
+    except (ValueError, TypeError, KeyError, json.JSONDecodeError):
+        pass
+    return pd.DataFrame()
+
+
 # --- NEW: Helper function to apply user selections to the income statement ---
 def _apply_user_selections_to_is(standard_is_json, alternatives_json, selections):
     """
@@ -683,23 +814,43 @@ def update_unit_scale(selected_unit):
     Output("standard-is-output", "children"),
     [
         Input("standard-is-store", "data"),
+        Input("detailed-is-store", "data"),
+        Input("is-view-dropdown", "value"),
         Input("is-selections-store", "data"),
         Input("unit-scale-store", "data"),
     ],
     [
         State("alternatives-store", "data"),
         State("ticker-input", "value"),
+        State("periods-dropdown", "value"),
+        State("balance-sheet-store", "data"),
+        State("cash-flow-store", "data"),
     ],
     prevent_initial_call=True,
 )
 def display_standard_is(
-    standard_is_json, selections, unit_scale_preference, alternatives_json, ticker
+    standard_is_json,
+    detailed_is_json,
+    is_view,
+    selections,
+    unit_scale_preference,
+    alternatives_json,
+    ticker,
+    periods,
+    balance_sheet_store,
+    cash_flow_store,
 ):
     """
     Generates and displays an interactive standardized income statement.
-    It now includes dropdowns for metrics with alternative calculation paths.
+    Shows segment breakdowns when "Detailed" view is selected.
     """
-    if not standard_is_json:
+    # Pick data source: detailed (with segments) or standard
+    is_json = (
+        detailed_is_json
+        if is_view == "detailed" and detailed_is_json
+        else standard_is_json
+    )
+    if not is_json:
         return html.Div(
             "No income statement data available.", style={"color": "#B0B0B0"}
         )
@@ -707,7 +858,7 @@ def display_standard_is(
     # Use the new helper function to get the correct DataFrame
     try:
         df_standard = _apply_user_selections_to_is(
-            standard_is_json, alternatives_json, selections
+            is_json, alternatives_json, selections
         )
     except Exception:
         return html.Div(
@@ -725,26 +876,10 @@ def display_standard_is(
         # Use original df_standard before date formatting for analysis
         df_for_analysis = df_standard.set_index("Metric").T
 
-        # Fetch balance sheet and cash flow DataFrames from Company API
-        bs_df = pd.DataFrame()
-        cf_df = pd.DataFrame()
-        if ticker:
-            try:
-                company = Company(ticker.strip().upper())
-                financials = company.get_financials()
-                bs_df = (
-                    financials["balance_sheet"].to_dataframe()
-                    if financials["balance_sheet"]
-                    else pd.DataFrame()
-                )
-                cf_df = (
-                    financials["cash_flow"].to_dataframe()
-                    if financials["cash_flow"]
-                    else pd.DataFrame()
-                )
-            except Exception:
-                # If fetching fails, continue with empty DataFrames
-                pass
+        # Use balance sheet and cash flow from stores (populated by on_ticker_change)
+        # Avoids redundant get_financials() fetch that previously caused ~1 min delay
+        bs_df = _store_json_to_dataframe(balance_sheet_store)
+        cf_df = _store_json_to_dataframe(cash_flow_store)
 
         analyzer = ProfitabilityAnalyzer()
         profitability_df = analyzer.calculate_ratios(df_for_analysis, bs_df, cf_df)
@@ -918,7 +1053,10 @@ def display_standard_is(
 
         # Add data cells with scaled values
         # EPS values should not be scaled (they're already per-share)
+        # Outstanding Shares: use same scale as currency (e.g. millions) for consistent
+        # display (3,225 vs 3,225,000,000) — matches Revenue/other financial notation
         is_eps_metric = "EPS" in metric_name
+        cell_scale = scale_factor
 
         for col in df_display.columns[1:]:
             value = row[col]
@@ -934,8 +1072,8 @@ def display_standard_is(
                         else:
                             display_value = f"{eps_value:.2f}"
                     else:
-                        # Scale the value by the detected scale factor (includes shares)
-                        scaled_value = float(value) / scale_factor
+                        # Scale by cell_scale (raw for shares, scale_factor for currency)
+                        scaled_value = float(value) / cell_scale
 
                         # Round to whole numbers (no decimals) for all non-EPS values
                         rounded_value = round(scaled_value)
@@ -1353,20 +1491,26 @@ def download_all_10ks(n_clicks, ticker):
     [Input("generate-analysis-btn", "n_clicks")],
     [
         State("ticker-input", "value"),
+        State("periods-dropdown", "value"),
         State("standard-is-store", "data"),
         State("is-selections-store", "data"),
         State("unit-scale-store", "data"),
         State("alternatives-store", "data"),
+        State("balance-sheet-store", "data"),
+        State("cash-flow-store", "data"),
     ],
     prevent_initial_call=True,
 )
 def generate_analysis_report(
     n_clicks,
     ticker,
+    periods,
     standard_is_json,
     selections,
     unit_scale_preference,
     alternatives_json,
+    balance_sheet_store,
+    cash_flow_store,
 ):
     """
     Generate and download comprehensive financial analysis report.
@@ -1426,25 +1570,9 @@ def generate_analysis_report(
             # Convert transposed format back to periods-as-index for analyzer
             df_for_analysis = df_standard.set_index("Metric").T
 
-            # Fetch balance sheet and cash flow DataFrames from Company API
-            bs_df = pd.DataFrame()
-            cf_df = pd.DataFrame()
-            try:
-                company = Company(ticker_upper)
-                financials = company.get_financials()
-                bs_df = (
-                    financials["balance_sheet"].to_dataframe()
-                    if financials["balance_sheet"]
-                    else pd.DataFrame()
-                )
-                cf_df = (
-                    financials["cash_flow"].to_dataframe()
-                    if financials["cash_flow"]
-                    else pd.DataFrame()
-                )
-            except Exception:
-                # If fetching fails, continue with empty DataFrames
-                pass
+            # Use balance sheet and cash flow from stores (populated by on_ticker_change)
+            bs_df = _store_json_to_dataframe(balance_sheet_store)
+            cf_df = _store_json_to_dataframe(cash_flow_store)
 
             analyzer = ProfitabilityAnalyzer()
             profitability_df = analyzer.calculate_ratios(df_for_analysis, bs_df, cf_df)

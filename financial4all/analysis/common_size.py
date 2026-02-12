@@ -1,9 +1,10 @@
 # financial4all/analysis/common_size.py
 """
-Common-size financial statement generator.
+Common-size (vertical) statement generation.
 
-This module provides functionality for generating common-size financial
-statements where line items are expressed as percentages of a base figure.
+CommonSizeGenerator converts income statement to % of revenue and balance sheet
+to % of total assets. Inputs are period-indexed DataFrames from the financials
+module. Used for cross-period and cross-company comparison.
 """
 
 import pandas as pd

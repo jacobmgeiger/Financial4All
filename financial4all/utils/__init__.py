@@ -1,9 +1,10 @@
 # financial4all/utils/__init__.py
 """
-Utility functions and helpers.
+Shared utilities for validation and formatting.
 
-This module provides various utility functions for data validation,
-formatting, and other common operations.
+Validators: validate_ticker, validate_cik, normalize_cik (CIK zero-padded to 10).
+Formatters: format_currency, format_number for display. Used by SEC client,
+company lookup, and UI/export layers.
 """
 
 from financial4all.utils.validators import validate_ticker, validate_cik

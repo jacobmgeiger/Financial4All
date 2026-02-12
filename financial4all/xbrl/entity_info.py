@@ -111,6 +111,39 @@ def extract_dei_facts(company_facts: Dict[str, Any]) -> Dict[str, Any]:
     return dei_facts
 
 
+def extract_dei_facts_from_xbrl(xbrl: Any) -> Dict[str, Any]:
+    """
+    Extract DEI (Document and Entity Information) facts from a parsed XBRL instance.
+
+    Scans XBRL._facts for element_ids starting with 'dei_' and builds a dict
+    compatible with build_entity_info().
+
+    Args:
+        xbrl: XBRL instance with _facts and contexts
+
+    Returns:
+        Dictionary mapping DEI concept names (without dei_ prefix) to values
+    """
+    dei_facts: Dict[str, Any] = {}
+
+    if not hasattr(xbrl, "_facts") or not xbrl._facts:
+        return dei_facts
+
+    for fact_key, model_fact in xbrl._facts.items():
+        element_id = getattr(model_fact, "element_id", "") or ""
+        if not element_id.lower().startswith("dei_"):
+            continue
+
+        concept_normalized = element_id.replace("dei_", "", 1).replace("dei:", "")
+        value = getattr(model_fact, "numeric_value", None) or getattr(
+            model_fact, "value", None
+        )
+        if value is not None:
+            dei_facts[concept_normalized] = value
+
+    return dei_facts
+
+
 def build_entity_info(dei_facts: Dict[str, Any], cik: Optional[str] = None) -> EntityInfo:
     """
     Build EntityInfo object from DEI facts.

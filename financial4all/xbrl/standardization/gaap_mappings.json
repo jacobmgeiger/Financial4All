@@ -81,7 +81,10 @@
     "CostOfGoodsSold",
     "CostOfRevenue",
     "CostOfSales",
-    "DirectOperatingCosts"
+    "DirectOperatingCosts",
+    "CostOfGoodsAndServicesSoldExcludingDepreciationDepletionAndAmortization",
+    "CostOfProductAndServiceRevenue",
+    "CostOfServices"
   ],
   "Debt Proceeds": [
     "ProceedsFromDebtNetOfIssuanceCosts",
@@ -317,7 +320,13 @@
     "SalesRevenueNet",
     "SalesRevenueNetOfReturnsAndAllowances",
     "TotalRevenue",
-    "TotalRevenues"
+    "TotalRevenues",
+    "SalesRevenueServicesNet",
+    "ProductRevenue",
+    "ServiceRevenue",
+    "ContractRevenue",
+    "SubscriptionRevenue",
+    "PlatformRevenue"
   ],
   "Selling, General and Administrative Expense": [
     "AdministrativeExpense",

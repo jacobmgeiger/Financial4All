@@ -1,9 +1,11 @@
 # financial4all/financials/cash_flow.py
 """
-Cash flow statement extraction and standardization.
+Cash flow statement extraction and standardization from XBRL.
 
-This module provides functionality for extracting and standardizing
-cash flow statements from XBRL data.
+CashFlowStatement is built from a FactSet (e.g. from SEC company facts).
+It maps standardized metrics (Operating/Investing/Financing cash flow, CapEx,
+D&A, etc.) via SynonymGroups, uses period-aware resolution and optional
+quarterly aggregation for CapEx, and returns a period-indexed DataFrame.
 """
 
 import pandas as pd
@@ -21,9 +23,12 @@ from financial4all.core import log
 
 class CashFlowStatement:
     """
-    Cash flow statement extracted from XBRL data.
+    Cash flow statement built from XBRL facts with standardized metric names.
 
-    This class handles extraction and standardization of cash flow metrics.
+    Uses DISPLAY_NAME_TO_CONCEPT and SynonymGroups; supports CapEx from
+    summed quarters when 10-K annual facts are missing. from_company_facts()
+    builds from the SEC company facts API; to_dataframe() returns period-indexed
+    annual cash flow metrics.
     """
 
     # Mapping from display names to normalized concept names in SynonymGroups
@@ -123,6 +128,84 @@ class CashFlowStatement:
         """
         fact_set = FactSet.from_company_facts(company_facts, cik=cik)
         return cls(fact_set)
+
+    @classmethod
+    def from_filing(
+        cls, filing: Any, client: Optional[Any] = None
+    ) -> "CashFlowStatement":
+        """
+        Create cash flow statement from a SEC filing (statement-centric extraction).
+
+        Parses XBRL from the filing and builds the statement for consistent
+        per-filing structure.
+
+        Args:
+            filing: Filing object with get_xbrl_content()
+            client: Optional SECClient for fetching XBRL content
+
+        Returns:
+            CashFlowStatement object
+        """
+        from financial4all.xbrl.xbrl import XBRL
+
+        xbrl = XBRL.from_filing(filing, client=client)
+        fact_set = FactSet.from_xbrl_instance(xbrl, cik=getattr(filing, "cik", None))
+        return cls(fact_set)
+
+    @classmethod
+    def from_filings(
+        cls,
+        filings: List[Any],
+        client: Optional[Any] = None,
+    ) -> "CashFlowStatement":
+        """
+        Create cash flow statement from multiple SEC filings (multi-year extraction).
+
+        Parses XBRL from each filing, merges FactSets (preferring most recent
+        filing for overlapping periods), and builds a unified statement.
+
+        Args:
+            filings: List of Filing objects (most recent first)
+            client: Optional SECClient for fetching XBRL content
+
+        Returns:
+            CashFlowStatement object with merged multi-year data
+        """
+        from financial4all.xbrl.xbrl import XBRL
+
+        fact_sets: List[FactSet] = []
+        for filing in filings:
+            try:
+                xbrl = XBRL.from_filing(filing, client=client)
+                fs = FactSet.from_xbrl_instance(
+                    xbrl, cik=getattr(filing, "cik", None)
+                )
+                if fs.facts:
+                    fact_sets.append(fs)
+            except Exception as e:
+                log.debug(f"Skipping filing {getattr(filing, 'accession_number', '?')}: {e}")
+                continue
+
+        if not fact_sets:
+            raise ValueError("No XBRL data could be extracted from any filing")
+        merged = FactSet.merge(fact_sets, prefer_most_recent=True)
+        return cls(merged)
+
+    def supplement_from_company_facts(
+        self, company_facts: Dict[str, Any], cik: Optional[str] = None
+    ) -> None:
+        """
+        Fill gaps by merging facts from SEC company facts API (annual duration only).
+
+        Args:
+            company_facts: Dictionary from SEC company facts API
+            cik: Optional CIK for entity info extraction
+        """
+        cf_fs = FactSet.from_company_facts(company_facts, cik=cik)
+        cf_annual = cf_fs.filter_annual()
+        self._original_fact_set.supplement_from(cf_annual)
+        self.fact_set = self._original_fact_set.filter_annual()
+        self._dataframe = None  # Invalidate cache so to_dataframe() reflects new facts
 
     def _resolve_concepts_by_period(
         self,
@@ -500,14 +583,21 @@ class CashFlowStatement:
                             period_key,
                         )
             # CapEx from summed quarters when no 10-K annual fact (e.g. NVDA 2013–2020 in SEC API).
-            # Reuse existing period key for that fiscal year when present (avoids duplicate FY columns).
+            # Configurable (fill_gaps_from_10q) to avoid incorrect aggregation in edge cases.
             def _fiscal_year_key(pk: str) -> str:
                 try:
                     y, m = int(pk[:4]), int(pk[5:7])
                     return f"{y}-01" if m <= 3 else f"{y + 1}-01"
                 except (ValueError, IndexError):
                     return pk
-            aggregated = self._aggregate_quarterly_capex_to_annual()
+            try:
+                from financial4all.config import get_config
+                fill_10q = get_config().fill_gaps_from_10q
+            except Exception:
+                fill_10q = False
+            aggregated = (
+                self._aggregate_quarterly_capex_to_annual() if fill_10q else {}
+            )
             for period_key, value in aggregated.items():
                 if period_key in metrics_data["CapEx"]:
                     continue

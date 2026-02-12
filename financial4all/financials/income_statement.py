@@ -1,30 +1,39 @@
 # financial4all/financials/income_statement.py
 """
-Income statement extraction and standardization.
+Income statement extraction and standardization from XBRL.
 
-This module provides functionality for extracting and standardizing
-income statements from XBRL data.
+IncomeStatement is built from a FactSet (e.g. from SEC company facts). It maps
+standardized display names (Revenue, Cost of Revenue, Gross Profit, R&D, SG&A,
+Operating Income, etc.) to XBRL concepts via SynonymGroups, uses period-aware
+resolution and fallback concept discovery, applies calculations (e.g. Gross
+Profit, Operating Income), removes redundant metrics (e.g. Operating Expenses
+when R&D+SG&A exist), and returns a period-indexed DataFrame in METRIC_ORDER.
 """
 
 import pandas as pd
 import numpy as np
 from typing import Dict, Optional, Any, List, Set
 from collections import defaultdict
+from datetime import date as date_type
 
 from financial4all.xbrl.facts import FactSet, Fact
 from financial4all.xbrl.periods import PeriodType, classify_fiscal_period
 from financial4all.xbrl.standardization import get_synonym_groups, get_default_store
 from financial4all.xbrl.standardization.reverse_index import get_reverse_index
 from financial4all.xbrl.calculations import CalculationEngine
+from financial4all.xbrl.dimension_classifier import is_breakdown_dimension
 from financial4all.core import log
 
 
 class IncomeStatement:
     """
-    Income statement extracted from XBRL data.
+    Income statement built from XBRL facts with standardized metric names and calculations.
 
-    This class handles extraction, standardization, and calculation
-    of income statement metrics.
+    Uses DISPLAY_NAME_TO_CONCEPT and SynonymGroups; supports period-aware resolution,
+    fallback concept discovery, and derived metrics (Gross Profit, Operating Income,
+    Other income (expense) net). Redundant columns (e.g. Operating Expenses) are
+    dropped when components exist. from_company_facts() builds from SEC company
+    facts; to_dataframe() returns a period-indexed DataFrame in METRIC_ORDER.
     """
 
     # Mapping from display names to normalized concept names in SynonymGroups
@@ -91,6 +100,33 @@ class IncomeStatement:
     def STANDARD_MAPPING(self) -> Dict[str, List[str]]:
         """Get standard mapping (backward compatibility)."""
         return self._get_standard_mapping()
+
+    # Metrics that must have numeric values only (no HTML, strings, or disclosure text).
+    # Prevents R&D and other cells from showing raw HTML or policy text.
+    NUMERIC_METRICS: Set[str] = {
+        "Revenue",
+        "Cost of Revenue",
+        "Gross Profit",
+        "R&D Expenses",
+        "SG&A Expenses",
+        "Operating Expenses",
+        "Operating Income",
+        "Interest Income",
+        "Interest Expense",
+        "Other, net",
+        "Other income (expense), net",
+        "Interest Income (Net)",
+        "Income Before Taxes",
+        "Taxes",
+        "Net Income",
+        "Outstanding Shares Basic",
+        "Outstanding Shares Diluted",
+        "Basic EPS",
+        "Diluted EPS",
+    }
+
+    # Metrics that support segment/breakdown extraction in detailed view.
+    SEGMENT_METRICS: Set[str] = frozenset({"Revenue", "Cost of Revenue"})
 
     # Standard order for income statement metrics (matching user's reference).
     # Operating Expenses omitted: it is R&D + SG&A and redundant for display.
@@ -168,7 +204,159 @@ class IncomeStatement:
         fact_set = FactSet.from_company_facts(company_facts, cik=cik)
         return cls(fact_set)
 
-    def to_dataframe(self) -> pd.DataFrame:
+    @classmethod
+    def from_filing(
+        cls, filing: Any, client: Optional[Any] = None
+    ) -> "IncomeStatement":
+        """
+        Create income statement from a SEC filing (statement-centric extraction).
+
+        Parses XBRL from the filing and builds the statement for consistent
+        per-filing structure.
+
+        Args:
+            filing: Filing object with get_xbrl_content()
+            client: Optional SECClient for fetching XBRL content
+
+        Returns:
+            IncomeStatement object
+        """
+        from financial4all.xbrl.xbrl import XBRL
+
+        xbrl = XBRL.from_filing(filing, client=client)
+        fact_set = FactSet.from_xbrl_instance(xbrl, cik=getattr(filing, "cik", None))
+        return cls(fact_set)
+
+    @classmethod
+    def from_filings(
+        cls,
+        filings: List[Any],
+        client: Optional[Any] = None,
+    ) -> "IncomeStatement":
+        """
+        Create income statement from multiple SEC filings (multi-year extraction).
+
+        Parses XBRL from each filing, merges FactSets (preferring most recent
+        filing for overlapping periods), and builds a unified statement.
+
+        Args:
+            filings: List of Filing objects (most recent first)
+            client: Optional SECClient for fetching XBRL content
+
+        Returns:
+            IncomeStatement object with merged multi-year data
+        """
+        from financial4all.xbrl.xbrl import XBRL
+
+        fact_sets: List[FactSet] = []
+        for filing in filings:
+            try:
+                xbrl = XBRL.from_filing(filing, client=client)
+                fs = FactSet.from_xbrl_instance(
+                    xbrl, cik=getattr(filing, "cik", None)
+                )
+                if fs.facts:
+                    fact_sets.append(fs)
+            except Exception as e:
+                log.debug(f"Skipping filing {getattr(filing, 'accession_number', '?')}: {e}")
+                continue
+
+        if not fact_sets:
+            raise ValueError("No XBRL data could be extracted from any filing")
+        merged = FactSet.merge(fact_sets, prefer_most_recent=True)
+        return cls(merged)
+
+    def supplement_from_company_facts(
+        self, company_facts: Dict[str, Any], cik: Optional[str] = None
+    ) -> None:
+        """
+        Fill gaps in this statement by merging facts from SEC company facts API.
+
+        Only adds facts for (concept, period_end) where we have no value.
+        Filing-sourced facts remain primary (EdgarTools-style hybrid extraction).
+
+        Args:
+            company_facts: Dictionary from SEC company facts API
+            cik: Optional CIK for entity info extraction
+        """
+        cf_fs = FactSet.from_company_facts(company_facts, cik=cik)
+        cf_annual = cf_fs.filter_annual()
+        self._original_fact_set.supplement_from(cf_annual)
+        self.fact_set = self._original_fact_set.filter_annual()
+        self._dataframe = None  # Invalidate cache so to_dataframe() reflects new facts
+
+    # Flow metrics that can be gap-filled by summing 4 quarters when fill_gaps_from_10q=True
+    _10Q_FILL_METRICS: Set[str] = {
+        "Revenue", "Cost of Revenue", "R&D Expenses", "SG&A Expenses",
+        "Operating Expenses", "Operating Income", "Interest Income",
+        "Interest Expense", "Other, net", "Interest Income (Net)",
+        "Income Before Taxes", "Taxes", "Net Income",
+    }
+
+    def _aggregate_quarterly_to_annual(
+        self, concepts: List[str]
+    ) -> Dict[str, Any]:
+        """
+        Sum quarterly facts into annual values for fiscal years lacking 10-K annual facts.
+
+        When fill_gaps_from_10q is True, use this to fill gaps for flow metrics
+        (Revenue, Cost of Revenue, etc.) from 4 consecutive 10-Q quarters.
+
+        Returns:
+            Dict mapping period_key (YYYY-MM-DD) -> annual value from summed quarters
+        """
+        out: Dict[str, Any] = {}
+        if not concepts:
+            return out
+        by_fy: Dict[str, List[tuple]] = defaultdict(list)
+        for concept in concepts:
+            facts = self._original_fact_set.get_all_facts_for_concept(
+                concept, include_variants=True
+            )
+            for fact in facts:
+                if fact.period.period_type != PeriodType.DURATION or not fact.period.start:
+                    continue
+                if fact.unit != "USD" and not (fact.unit and str(fact.unit).startswith("USD")):
+                    continue
+                try:
+                    val = float(fact.value)
+                except (ValueError, TypeError):
+                    continue
+                s, e = fact.period.start, fact.period.end
+                start_d = s if isinstance(s, date_type) else date_type.fromisoformat(str(s)[:10])
+                end_d = e if isinstance(e, date_type) else date_type.fromisoformat(str(e)[:10])
+                days = (end_d - start_d).days
+                y, m = end_d.year, end_d.month
+                fy_key = str(end_d) if m <= 3 else f"{y + 1}-01-31"
+                by_fy[fy_key].append((end_d, days, val))
+        for fy_key, candidates in by_fy.items():
+            seen: Set[tuple] = set()
+            unique: List[tuple] = []
+            for end_d, days, val in sorted(candidates, key=lambda x: (x[0], x[1])):
+                key = (end_d, days)
+                if key in seen:
+                    continue
+                seen.add(key)
+                unique.append((end_d, days, val))
+            if not unique:
+                continue
+            annual = next((v for _e, d, v in unique if 330 <= d <= 400), None)
+            if annual is not None:
+                out[fy_key] = annual
+                continue
+            quarters = [(e, d, v) for e, d, v in unique if 80 <= d <= 100]
+            if len(quarters) >= 4:
+                by_end: Dict[date_type, float] = {}
+                for end_d, _d, v in sorted(quarters, key=lambda x: x[0]):
+                    by_end[end_d] = v
+                if len(by_end) >= 4:
+                    out[fy_key] = sum(by_end.values())
+        return out
+
+    def to_dataframe(
+        self,
+        view: str = "standard",
+    ) -> pd.DataFrame:
         """
         Convert income statement to pandas DataFrame.
 
@@ -176,10 +364,15 @@ class IncomeStatement:
         Handles combined fields (e.g., InterestIncomeExpenseNet) intelligently.
         Filters out completely empty columns.
 
+        Args:
+            view: Output level. "standard" (default): no segment rows.
+                  "summary": totals only. "detailed": include segment
+                  breakdown rows (e.g., Revenue — Americas) inline.
+
         Returns:
             DataFrame with standardized income statement metrics
         """
-        if self._dataframe is not None:
+        if self._dataframe is not None and view == "standard":
             return self._dataframe
 
         # Extract metrics by standard name
@@ -253,6 +446,62 @@ class IncomeStatement:
                                     f"Added fallback data for {std_name} period {period_key} from concept discovery"
                                 )
 
+        # Step 1a2: 10-Q summation for gaps (configurable; off by default)
+        try:
+            from financial4all.config import get_config
+            fill_10q = get_config().fill_gaps_from_10q
+        except Exception:
+            fill_10q = False
+        if fill_10q:
+            def _fiscal_year_key(pk: str) -> str:
+                try:
+                    y, m = int(pk[:4]), int(pk[5:7])
+                    return f"{y}-01" if m <= 3 else f"{y + 1}-01"
+                except (ValueError, IndexError):
+                    return pk
+            for std_name in self._10Q_FILL_METRICS:
+                if std_name not in metrics_data:
+                    continue
+                covered = set(metrics_data[std_name].keys())
+                missing = all_extracted_periods - covered
+                if not missing:
+                    continue
+                concepts = self.STANDARD_MAPPING.get(std_name, [])
+                if not concepts:
+                    continue
+                aggregated = self._aggregate_quarterly_to_annual(concepts)
+                for period_key, value in aggregated.items():
+                    if period_key in metrics_data[std_name]:
+                        continue
+                    fy_key = _fiscal_year_key(period_key)
+                    existing_for_fy = [p for p in all_extracted_periods if _fiscal_year_key(p) == fy_key]
+                    target = existing_for_fy[0] if existing_for_fy else period_key
+                    if target in missing or target not in metrics_data[std_name]:
+                        metrics_data[std_name][target] = value
+                        if target == period_key:
+                            all_extracted_periods.add(period_key)
+                        log.debug(
+                            f"IncomeStatement: {std_name} period {target} filled from summed 10-Q"
+                        )
+
+        # Step 1b: Revenue/COGS swap detection
+        # For retailers, Revenue should exceed Cost of Revenue. If Revenue < COGS for a period,
+        # concepts may be swapped (e.g., store count vs revenue). Swap values and log.
+        if "Revenue" in metrics_data and "Cost of Revenue" in metrics_data:
+            rev_keys = set(metrics_data["Revenue"].keys())
+            cogs_keys = set(metrics_data["Cost of Revenue"].keys())
+            for period_key in rev_keys & cogs_keys:
+                rev = metrics_data["Revenue"][period_key]
+                cog = metrics_data["Cost of Revenue"][period_key]
+                if isinstance(rev, (int, float)) and isinstance(cog, (int, float)):
+                    if rev > 0 and cog > 0 and rev < cog:
+                        log.warning(
+                            f"Revenue/COGS swap detected for period {period_key}: "
+                            f"Revenue={rev:,.0f} < Cost of Revenue={cog:,.0f}. Swapping values."
+                        )
+                        metrics_data["Revenue"][period_key] = cog
+                        metrics_data["Cost of Revenue"][period_key] = rev
+
         # Step 2: Handle combined fields (only if separate components don't exist)
         # Pass metrics_data so we can check if separate components already exist
         combined_field_data = self._detect_and_handle_combined_fields(metrics_data)
@@ -260,6 +509,15 @@ class IncomeStatement:
             if period_data:  # Only add if we have data
                 metrics_data[std_name].update(period_data)
                 reported_metrics.add(std_name)
+
+        # Step 2b: For detailed view, extract segment breakdowns
+        segment_data: Dict[str, Dict[str, Any]] = {}
+        if view == "detailed":
+            segment_data = self._extract_segment_breakdowns()
+            for label, period_map in segment_data.items():
+                if period_map:
+                    metrics_data[label] = period_map
+                    reported_metrics.add(label)
 
         # Convert to DataFrame
         if not metrics_data or not reported_metrics:
@@ -273,17 +531,33 @@ class IncomeStatement:
         # Sort periods with most recent first (for leftmost column display)
         all_periods = sorted(all_periods, reverse=True)
 
-        # Build DataFrame - only include reported metrics
-        # Use local function references for performance
-        df_data = {}
-        df_data_setitem = df_data.__setitem__
+        # Build ordered column list: main metrics with segment rows inline (when view=detailed)
+        ordered_columns: List[str] = []
+        segment_labels_by_parent: Dict[str, List[str]] = {}
+        if view == "detailed" and segment_data:
+            for label in segment_data.keys():
+                parent = label.split(" — ", 1)[0] if " — " in label else None
+                if parent:
+                    segment_labels_by_parent.setdefault(parent, []).append(label)
 
+        for std_name in self.METRIC_ORDER:
+            if std_name not in reported_metrics:
+                continue
+            ordered_columns.append(std_name)
+            if view == "detailed" and std_name in segment_labels_by_parent:
+                for seg_label in sorted(segment_labels_by_parent[std_name]):
+                    if seg_label in reported_metrics:
+                        ordered_columns.append(seg_label)
         for std_name in reported_metrics:
+            if std_name not in ordered_columns:
+                ordered_columns.append(std_name)
+
+        # Build DataFrame with ordered columns
+        df_data = {}
+        for std_name in ordered_columns:
             metric_data = metrics_data.get(std_name, {})
             metric_get = metric_data.get
-            df_data_setitem(
-                std_name, [metric_get(period, np.nan) for period in all_periods]
-            )
+            df_data[std_name] = [metric_get(period, np.nan) for period in all_periods]
 
         df = pd.DataFrame(df_data, index=all_periods)
         df.index.name = "end"
@@ -486,7 +760,9 @@ class IncomeStatement:
         df = self._remove_redundant_metrics(df)
         df = self._reorder_dataframe_columns(df)
 
-        self._dataframe = df
+        # Cache only standard view (detailed/summary are computed on demand)
+        if view == "standard":
+            self._dataframe = df
         return df
 
     def _get_all_facts_for_metric(
@@ -648,11 +924,11 @@ class IncomeStatement:
     def _is_valid_unit_for_metric(self, unit: str, std_name: str) -> bool:
         """
         Check if a unit is valid for a given metric.
-        
+
         Args:
             unit: Unit string (e.g., "USD", "shares")
             std_name: Standardized metric name
-            
+
         Returns:
             True if the unit is valid for this metric
         """
@@ -661,6 +937,101 @@ class IncomeStatement:
             return unit == "shares" or unit.startswith("shares")
         # All other metrics use USD units
         return unit == "USD" or unit.startswith("USD")
+
+    def _is_disclosure_concept(self, concept: str) -> bool:
+        """
+        Return True if concept appears to be a disclosure/text-block (non-numeric).
+
+        Excludes concepts that typically contain narrative text rather than
+        numeric financial data (e.g., DesignAndDevelopmentCostsDisclosure).
+
+        Args:
+            concept: XBRL concept name (may include namespace prefix)
+
+        Returns:
+            True if concept should be excluded from numeric metric resolution
+        """
+        local = concept.split(":")[-1].split("_")[-1] if ":" in concept or "_" in concept else concept
+        local_lower = local.lower()
+        return (
+            "disclosure" in local_lower
+            or "textblock" in local_lower
+            or local_lower.endswith("policy")
+            or         local_lower.endswith("description")
+        )
+
+    def _format_dimension_member(self, member: Any) -> str:
+        """
+        Format dimension member for display (e.g., us-gaap:AmericasMember -> Americas).
+
+        Args:
+            member: Dimension member value (QName string or similar)
+
+        Returns:
+            Human-readable label
+        """
+        if member is None:
+            return "Unknown"
+        s = str(member).strip()
+        if ":" in s:
+            s = s.split(":")[-1]
+        if s.endswith("Member"):
+            s = s[:-6]  # Remove "Member" suffix
+        return s or "Unknown"
+
+    def _extract_segment_breakdowns(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Extract segment breakdown facts for SEGMENT_METRICS when view=detailed.
+
+        Returns dimensional facts (Revenue by geography, Cost of Revenue by segment, etc.)
+        with breakdown-type dimensions only.
+
+        Returns:
+            Dict mapping segment label (e.g., "Revenue — Americas") to period->value map
+        """
+        result: Dict[str, Dict[str, Any]] = {}
+
+        for std_name in self.SEGMENT_METRICS:
+            xbrl_concepts = self.STANDARD_MAPPING.get(std_name, [])
+            if not xbrl_concepts:
+                continue
+
+            concept_facts_map = self._get_all_facts_for_metric(xbrl_concepts)
+            if not concept_facts_map:
+                continue
+
+            # Collect dimensional facts with breakdown-type dimensions
+            segment_rows: Dict[tuple, Dict[str, Any]] = {}  # (axis, member) -> {period: value}
+
+            for concept, facts in concept_facts_map.items():
+                if self._is_disclosure_concept(concept):
+                    continue
+                for fact in facts:
+                    if not fact.dimensions:
+                        continue
+                    if not isinstance(fact.value, (int, float)):
+                        continue
+                    if fact.period.period_type != PeriodType.DURATION or not fact.period.is_annual():
+                        continue
+                    if not self._is_valid_unit_for_metric(fact.unit, std_name):
+                        continue
+
+                    dims = fact.dimensions or {}
+                    for dim_axis, dim_member in dims.items():
+                        if not is_breakdown_dimension(dim_axis):
+                            continue
+                        member_label = self._format_dimension_member(dim_member)
+                        key = (dim_axis, member_label)
+                        if key not in segment_rows:
+                            segment_rows[key] = {}
+                        period_key = str(fact.period.end)
+                        segment_rows[key][period_key] = fact.value
+
+            for (axis, member_label), period_map in segment_rows.items():
+                label = f"{std_name} — {member_label}"
+                result[label] = period_map
+
+        return result
 
     def _resolve_concepts_by_period(
         self,
@@ -696,6 +1067,31 @@ class IncomeStatement:
         if not concept_facts_map:
             return {}
 
+        # Exclude disclosure/text-block concepts for numeric metrics
+        # Prevents R&D and similar from using narrative disclosures (e.g., DesignAndDevelopmentCostsDisclosure)
+        if std_name in self.NUMERIC_METRICS:
+            concept_facts_map = {
+                c: facts
+                for c, facts in concept_facts_map.items()
+                if not self._is_disclosure_concept(c)
+            }
+            if not concept_facts_map:
+                return {}
+
+        # Outstanding Shares: exclude balance-sheet instant concepts; prefer duration WeightedAverage*
+        # (EdgarTools alignment - SharesAverage vs SharesYearEnd disambiguation)
+        if std_name in ("Outstanding Shares Basic", "Outstanding Shares Diluted"):
+            excluded_shares = {"CommonStockSharesOutstanding", "EntityCommonStockSharesOutstanding"}
+            concept_facts_map = {
+                c: facts
+                for c, facts in concept_facts_map.items()
+                if not any(
+                    ex in c for ex in excluded_shares
+                )
+            }
+            if not concept_facts_map:
+                return {}
+
         # Apply multi-tier filtering with preference for non-dimensional facts
         filtered_facts_by_concept = {}
         for concept, facts in concept_facts_map.items():
@@ -703,11 +1099,13 @@ class IncomeStatement:
             non_dimensional_facts = [f for f in facts if not f.dimensions]
             dimensional_facts = [f for f in facts if f.dimensions]
 
-            # Tier 1: Strict filter (annual 10-K, valid unit, no dimensions) - PREFERRED
+            # Tier 1: Strict filter (annual 10-K or 10-K/A, valid unit, no dimensions) - PREFERRED
+            # Accept 10-K/A for restatements and improved historical coverage (EdgarTools alignment)
             tier1_facts = [
                 f
                 for f in non_dimensional_facts
-                if f.is_annual_10k() and self._is_valid_unit_for_metric(f.unit, std_name)
+                if f.is_annual_10k_or_amended()
+                and self._is_valid_unit_for_metric(f.unit, std_name)
             ]
 
             # Tier 2: Lenient filter (annual, valid unit, no dimensions, any form)
@@ -768,6 +1166,13 @@ class IncomeStatement:
             filtered_facts_by_concept.items()
         ):
             for fact in facts:
+                # For numeric metrics, exclude facts with non-numeric values early
+                # (HTML, disclosure text, policy strings)
+                if std_name in self.NUMERIC_METRICS and not isinstance(
+                    fact.value, (int, float)
+                ):
+                    continue
+
                 period_key = str(fact.period.end)
 
                 if period_key not in period_facts_map:
@@ -784,12 +1189,14 @@ class IncomeStatement:
             if not fact_candidates:
                 continue
 
-            # Sort by priority: concept priority > has_dimensions (prefer non-dimensional) > form > unit > filing date
-            # Use tuple unpacking optimization
+            # Sort by priority: prefer non-dimensional (consolidated) over dimensional (segment)
+            # first—fixes ANF where RevenueFromContractWithCustomerExcludingAssessedTax
+            # (GiftCard segment, 141M) was chosen over Revenues (total, 4.9B) due to concept order.
+            # Then: concept priority > form > unit > filing date
             fact_candidates.sort(
                 key=lambda x: (
+                    0 if not x[1].dimensions else 1,  # Prefer non-dimensional (consolidated)
                     x[0],  # Concept priority (lower = higher priority)
-                    0 if not x[1].dimensions else 1,  # Prefer non-dimensional facts
                     0 if x[1].form == "10-K" else 1,  # Prefer 10-K
                     0 if self._is_valid_unit_for_metric(x[1].unit, std_name) else 1,  # Prefer valid unit
                     -(
@@ -806,7 +1213,37 @@ class IncomeStatement:
                 candidate_value = fact.value
                 is_valid = True
 
+                # Numeric-only filter: skip non-numeric values for numeric metrics
+                # Prevents HTML, disclosure text, and policy strings from appearing in cells
+                if std_name in self.NUMERIC_METRICS and not isinstance(
+                    candidate_value, (int, float)
+                ):
+                    is_valid = False
+                    log.debug(
+                        f"Skipping {std_name} fact for period {period_key}: "
+                        f"non-numeric value (type={type(candidate_value).__name__})"
+                    )
+
                 # Cross-validate with other metrics to prevent misclassification
+                # Cost of Revenue: for retailers, Revenue > COGS; reject if candidate COGS > Revenue
+                if (
+                    std_name == "Cost of Revenue"
+                    and other_metrics_data
+                    and isinstance(candidate_value, (int, float))
+                    and candidate_value > 0
+                ):
+                    rev_val = other_metrics_data.get("Revenue", {}).get(period_key)
+                    if (
+                        isinstance(rev_val, (int, float))
+                        and rev_val > 0
+                        and candidate_value > rev_val
+                    ):
+                        log.debug(
+                            f"Skipping Cost of Revenue candidate for period {period_key}: "
+                            f"value {candidate_value:,.0f} > Revenue {rev_val:,.0f} (likely swapped)"
+                        )
+                        is_valid = False
+
                 # For Interest Income, check against Operating Income AND Income Before Taxes
                 if std_name == "Interest Income" and other_metrics_data:
                     operating_income_data = other_metrics_data.get(
@@ -880,11 +1317,15 @@ class IncomeStatement:
                             is_valid = False
                     
                     # Negative Interest Income is always suspicious
-                    if candidate_value < 0:
+                    # Guard: some XBRL facts (e.g. ANF) have string values—skip numeric checks if not numeric
+                    if isinstance(candidate_value, (int, float)) and candidate_value < 0:
                         log.warning(
                             f"Skipping Interest Income fact candidate {candidate_idx} for period {period_key}: "
                             f"value {candidate_value} is negative, which is unusual. This may be misclassified."
                         )
+                        is_valid = False
+                    elif not isinstance(candidate_value, (int, float)):
+                        # Non-numeric (e.g. string) cannot be used for Interest Income
                         is_valid = False
                     
                     # NOTE: We DON'T reject values that are just large (> 10% ratio) but NOT close
@@ -1309,28 +1750,43 @@ class IncomeStatement:
         """
         Reorder DataFrame columns according to standard income statement order.
 
+        Segment columns (e.g., "Revenue — Americas") are placed inline after
+        their parent metric.
+
         Args:
             df: DataFrame with income statement data
 
         Returns:
             DataFrame with reordered columns
         """
-        # Get list of columns that exist in DataFrame
         existing_cols = list(df.columns)
+        segment_cols_by_parent: Dict[str, List[str]] = {}
+        remaining = []
+        for col in existing_cols:
+            if " — " in col:
+                parent = col.split(" — ", 1)[0]
+                segment_cols_by_parent.setdefault(parent, []).append(col)
+            else:
+                remaining.append(col)
 
-        # Build ordered list: metrics in METRIC_ORDER that exist, then any extras
         ordered_cols = []
         for metric in self.METRIC_ORDER:
-            if metric in existing_cols:
-                ordered_cols.append(metric)
+            if metric not in remaining:
+                continue
+            ordered_cols.append(metric)
+            remaining.remove(metric)
+            if metric in segment_cols_by_parent:
+                for seg in sorted(segment_cols_by_parent[metric]):
+                    ordered_cols.append(seg)
 
-        # Add any remaining columns that weren't in METRIC_ORDER
-        for col in existing_cols:
-            if col not in ordered_cols:
-                ordered_cols.append(col)
+        for col in remaining:
+            ordered_cols.append(col)
+        for parent, segs in segment_cols_by_parent.items():
+            for seg in segs:
+                if seg not in ordered_cols:
+                    ordered_cols.append(seg)
 
-        # Reorder DataFrame
-        return df[ordered_cols]
+        return df[[c for c in ordered_cols if c in df.columns]]
 
     def _apply_calculations(self, df: pd.DataFrame) -> pd.DataFrame:
         """

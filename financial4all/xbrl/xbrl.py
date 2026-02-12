@@ -158,34 +158,59 @@ class XBRL:
         return xbrl
     
     @classmethod
-    def from_filing(cls, filing: Any) -> 'XBRL':
+    def from_filing(cls, filing: Any, client: Optional[Any] = None) -> 'XBRL':
         """
         Create XBRL instance from a filing object.
-        
+
         Args:
-            filing: Filing object with XBRL data
-            
+            filing: Filing object with get_xbrl_content() or xbrl_content
+            client: Optional SECClient for fetching XBRL (passed to get_xbrl_content)
+
         Returns:
             XBRL instance
+
+        Raises:
+            XBRLFilingWithNoXbrlData: If filing has no XBRL content
         """
-        # Try to get XML content from filing
         xml_content = None
-        
-        if hasattr(filing, 'xbrl_content'):
-            xml_content = filing.xbrl_content
-        elif hasattr(filing, 'get_xbrl_content'):
-            xml_content = filing.get_xbrl_content()
+
+        if hasattr(filing, 'get_xbrl_content'):
+            xml_content = filing.get_xbrl_content(client)
+        elif hasattr(filing, 'xbrl_content'):
+            if client and hasattr(filing, 'get_xbrl_content'):
+                xml_content = filing.get_xbrl_content(client)
+            else:
+                xml_content = filing.xbrl_content
         elif hasattr(filing, 'content'):
             xml_content = filing.content
-        
+
         if not xml_content:
             raise XBRLFilingWithNoXbrlData("Filing does not contain XBRL data")
-        
+
+        # Detect Inline XBRL (HTML) vs standalone XML
+        content_str = (
+            xml_content[:500]
+            if isinstance(xml_content, str)
+            else xml_content.decode("utf-8", errors="replace")[:500]
+        )
+        content_lower = content_str.lower()
+        is_html = (
+            "<!doctype" in content_lower
+            or "<html" in content_lower
+            or (content_str.strip().startswith("<") and "<xbrl" not in content_lower and "<?xml" not in content_str[:50])
+        )
+
+        if is_html:
+            from financial4all.xbrl.ixbrl import extract_ixbrl_to_xml
+            xml_content = extract_ixbrl_to_xml(xml_content)
+            if not xml_content:
+                raise XBRLFilingWithNoXbrlData("Failed to extract XBRL from Inline XBRL HTML")
+
         # Try to get linkbase paths
         presentation_linkbase = getattr(filing, 'presentation_linkbase', None)
         calculation_linkbase = getattr(filing, 'calculation_linkbase', None)
         definition_linkbase = getattr(filing, 'definition_linkbase', None)
-        
+
         return cls.from_xml(
             xml_content,
             presentation_linkbase,

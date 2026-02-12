@@ -14,7 +14,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .exclusions import should_exclude, EXCLUDED_TAGS
 
@@ -288,10 +288,11 @@ class ReverseIndex:
         
         Args:
             xbrl_tag: The XBRL tag to look up
-            context: Optional context for disambiguation:
-                     - section: Balance sheet section (e.g., "Current Assets")
+            context: Optional context for disambiguation (EdgarTools-style):
+                     - section: Statement section (e.g., "Current Assets", "Revenue")
                      - balance: Debit/credit balance type
-                     - statement_type: Type of statement
+                     - statement_type: BalanceSheet, IncomeStatement, CashFlowStatement
+                     - calculation_parent: Parent concept from calculation linkbase
             log_ambiguous: If True, log ambiguous resolutions to UnmappedTagLogger
         
         Returns:
@@ -317,8 +318,8 @@ class ReverseIndex:
                 # Determine resolution method for logging
                 if context.get('is_total'):
                     resolution_method = "is_total"
-                elif context.get('section'):
-                    resolution_method = "section"
+                elif context.get('section') or context.get('calculation_parent'):
+                    resolution_method = "section" if context.get('section') else "calculation_parent"
                 logger.debug(
                     "Disambiguated %s to %s using context (section=%s)",
                     xbrl_tag, resolved, context.get('section')
@@ -361,12 +362,14 @@ class ReverseIndex:
         """
         Disambiguate between candidate concepts using context.
         
-        Uses section membership and label clues to resolve ambiguous tags.
+        Uses section membership, calculation_parent (from linkbase), and
+        label clues to resolve ambiguous tags (EdgarTools v5.9.0 alignment).
         
         Args:
             xbrl_tag: The original XBRL tag
             candidates: List of possible standard concepts
-            context: Context dict with section, balance, statement_type, is_total
+            context: Context dict with section, balance, statement_type,
+                     is_total, calculation_parent (from presentation/calc linkbase)
         
         Returns:
             The resolved concept, or None if disambiguation failed
@@ -374,6 +377,20 @@ class ReverseIndex:
         section = context.get('section')
         statement_type = context.get('statement_type', 'BalanceSheet')
         is_total = context.get('is_total', False)
+        calculation_parent = context.get('calculation_parent')
+
+        # Infer section from calculation_parent when presentation/calculation linkbase available
+        if not section and calculation_parent and statement_type:
+            try:
+                from .sections import get_section_for_concept
+                section = get_section_for_concept(calculation_parent, statement_type)
+                if section:
+                    logger.debug(
+                        "Inferred section '%s' from calculation_parent '%s'",
+                        section, calculation_parent
+                    )
+            except Exception:
+                pass
         
         try:
             from .sections import get_section_for_concept
@@ -475,10 +492,8 @@ class ReverseIndex:
         
         Args:
             xbrl_tag: The XBRL tag to look up
-            context: Optional context for disambiguation:
-                     - section: Balance sheet section (e.g., "Current Assets")
-                     - balance: Debit/credit balance type
-                     - statement_type: Type of statement
+            context: Optional context for disambiguation (EdgarTools-style):
+                     - section, statement_type, calculation_parent (see get_standard_concept)
         
         Returns:
             The display name, or None if not found/excluded
@@ -539,6 +554,23 @@ class ReverseIndex:
         """
         return self._display_names.get(standard_concept, standard_concept)
     
+    def get_ambiguous_mappings(self) -> Dict[str, List[str]]:
+        """
+        Get all tags that map to multiple concepts (for documentation and context rules).
+        
+        Used to document ambiguous mappings and add context rules (plan 1.2).
+        Callers should pass statement_type, section, or calculation_parent
+        when resolving these tags.
+        
+        Returns:
+            Dict mapping tag -> list of standard concept candidates
+        """
+        return {
+            tag: list(concepts)
+            for tag, concepts in self._index.items()
+            if isinstance(concepts, list) and len(concepts) > 1
+        }
+
     @property
     def stats(self) -> Dict[str, int]:
         """Get statistics about the reverse index."""

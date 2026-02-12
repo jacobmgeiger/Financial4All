@@ -1,9 +1,11 @@
 # financial4all/financials/balance_sheet.py
 """
-Balance sheet extraction and standardization.
+Balance sheet extraction and standardization from XBRL.
 
-This module provides functionality for extracting and standardizing
-balance sheets from XBRL data.
+BalanceSheet is built from a FactSet (e.g. from SEC company facts). It maps
+standardized display names (Total Assets, Current Assets, Stockholders Equity,
+etc.) to XBRL concepts via SynonymGroups, resolves one value per period
+(instant balance sheet dates), and returns a period-indexed DataFrame.
 """
 
 import pandas as pd
@@ -18,9 +20,11 @@ from financial4all.core import log
 
 class BalanceSheet:
     """
-    Balance sheet extracted from XBRL data.
+    Balance sheet built from XBRL facts with standardized metric names.
 
-    This class handles extraction and standardization of balance sheet metrics.
+    Uses DISPLAY_NAME_TO_CONCEPT and SynonymGroups to resolve concepts;
+    from_company_facts() builds from the SEC company facts API response.
+    to_dataframe() returns a period-indexed DataFrame (instant dates).
     """
 
     # Mapping from display names to normalized concept names in SynonymGroups
@@ -98,6 +102,88 @@ class BalanceSheet:
         """
         fact_set = FactSet.from_company_facts(company_facts, cik=cik)
         return cls(fact_set)
+
+    @classmethod
+    def from_filing(
+        cls, filing: Any, client: Optional[Any] = None
+    ) -> "BalanceSheet":
+        """
+        Create balance sheet from a SEC filing (statement-centric extraction).
+
+        Parses XBRL from the filing and builds the statement for consistent
+        per-filing structure.
+
+        Args:
+            filing: Filing object with get_xbrl_content()
+            client: Optional SECClient for fetching XBRL content
+
+        Returns:
+            BalanceSheet object
+        """
+        from financial4all.xbrl.xbrl import XBRL
+
+        xbrl = XBRL.from_filing(filing, client=client)
+        fact_set = FactSet.from_xbrl_instance(xbrl, cik=getattr(filing, "cik", None))
+        return cls(fact_set)
+
+    @classmethod
+    def from_filings(
+        cls,
+        filings: List[Any],
+        client: Optional[Any] = None,
+    ) -> "BalanceSheet":
+        """
+        Create balance sheet from multiple SEC filings (multi-year extraction).
+
+        Parses XBRL from each filing, merges FactSets (preferring most recent
+        filing for overlapping periods), and builds a unified statement.
+
+        Args:
+            filings: List of Filing objects (most recent first)
+            client: Optional SECClient for fetching XBRL content
+
+        Returns:
+            BalanceSheet object with merged multi-year data
+        """
+        from financial4all.xbrl.xbrl import XBRL
+
+        fact_sets: List[FactSet] = []
+        for filing in filings:
+            try:
+                xbrl = XBRL.from_filing(filing, client=client)
+                fs = FactSet.from_xbrl_instance(
+                    xbrl, cik=getattr(filing, "cik", None)
+                )
+                if fs.facts:
+                    fact_sets.append(fs)
+            except Exception as e:
+                log.debug(f"Skipping filing {getattr(filing, 'accession_number', '?')}: {e}")
+                continue
+
+        if not fact_sets:
+            raise ValueError("No XBRL data could be extracted from any filing")
+        merged = FactSet.merge(fact_sets, prefer_most_recent=True)
+        return cls(merged)
+
+    def supplement_from_company_facts(
+        self, company_facts: Dict[str, Any], cik: Optional[str] = None
+    ) -> None:
+        """
+        Fill gaps by merging facts from SEC company facts API (instant facts only).
+
+        Balance sheet uses instant periods; only supplements with instant facts
+        to avoid polluting with duration/quarterly data.
+
+        Args:
+            company_facts: Dictionary from SEC company facts API
+            cik: Optional CIK for entity info extraction
+        """
+        from financial4all.xbrl.periods import PeriodType
+
+        cf_fs = FactSet.from_company_facts(company_facts, cik=cik)
+        instant_only = lambda f: f.period.period_type == PeriodType.INSTANT
+        self.fact_set.supplement_from(cf_fs, filter_fn=instant_only)
+        self._dataframe = None  # Invalidate cache so to_dataframe() reflects new facts
 
     def to_dataframe(self) -> pd.DataFrame:
         """
